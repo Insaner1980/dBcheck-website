@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dbcheck-website",
+  "compatibility_date": "2026-07-12",
+  "workers_dev": false,
+  "assets": {
+    "directory": "./dist"
+  },
+  "routes": [
+    {
+      "pattern": "dbcheck.app",
+      "custom_domain": true
+    }
+  ]
+}

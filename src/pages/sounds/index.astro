@@ -1,0 +1,80 @@
+---
+import Base from '../../layouts/Base.astro';
+import SoundExplorer from '../../components/SoundExplorer.astro';
+import { commonSounds } from '../../data/sounds';
+import { socialImages } from '../../data/social';
+
+const publishedCount = commonSounds.filter((sound) => sound.articleRoute).length;
+---
+
+<Base title="Common sound levels | dBcheck" description="Explore typical decibel ranges for everyday sounds. Compare common examples and read sourced guides with distance and measurement context." socialImage={socialImages.sounds}>
+  <section class="sounds-page">
+    <header class="page-head">
+      <span class="kicker">Sound library</span>
+      <h1>Common sounds, placed on a useful scale.</h1>
+      <p>Explore typical ranges, compare examples and open a sourced guide where one is published. These are context-dependent reference ranges, not fixed readings.</p>
+    </header>
+
+    <SoundExplorer sounds={commonSounds} id="library-explorer" />
+
+    <div class="library-head">
+      <div>
+        <span class="kicker">Initial collection</span>
+        <h2>{publishedCount} complete guides, {commonSounds.length} comparisons</h2>
+      </div>
+      <p>Sounds without a full article remain available in the Explorer without linking to unfinished pages.</p>
+    </div>
+
+    <ul class="sound-list">
+      {commonSounds.map((sound) => (
+        <li>
+          {sound.articleRoute ? (
+            <a class="sound-row" href={sound.articleRoute}>
+              <span class="sound-category">{sound.category}</span>
+              <strong>{sound.name}</strong>
+              <span>{sound.typicalMinDb}–{sound.typicalMaxDb} dB</span>
+              <span class="sound-status">Read guide <span aria-hidden="true">→</span></span>
+            </a>
+          ) : (
+            <div class="sound-row">
+              <span class="sound-category">{sound.category}</span>
+              <strong>{sound.name}</strong>
+              <span>{sound.typicalMinDb}–{sound.typicalMaxDb} dB</span>
+              <span class="sound-status">Explorer only</span>
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+
+    <aside class="measurement-note" aria-labelledby="measurement-note-title">
+      <h2 id="measurement-note-title">About phone measurements</h2>
+      <p>Smartphone readings depend on the device microphone, audio processing and calibration. dBcheck is not a certified Class 1 or Class 2 sound level meter. Use these ranges and phone readings for education and personal awareness, not regulatory compliance.</p>
+    </aside>
+  </section>
+
+  <style>
+    .sounds-page { max-width: var(--max-w); margin: 0 auto; padding: 64px 20px 0; }
+    .page-head { display: grid; gap: 16px; max-width: 800px; margin-bottom: 48px; }
+    h1 { margin: 0; font: 700 clamp(40px, 7vw, 68px)/1.02 var(--font-data); letter-spacing: -.03em; }
+    .page-head p { max-width: 680px; margin: 0; color: var(--on-surface-v); font-size: 18px; }
+    .library-head { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: end; margin: 88px 0 28px; }
+    .library-head h2 { margin: 8px 0 0; font-size: 32px; }
+    .library-head p { margin: 0; color: var(--on-surface-v); }
+    .sound-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ghost); }
+    .sound-row { display: grid; grid-template-columns: 1fr 2fr 1fr 1fr; gap: 20px; align-items: center; padding: 22px 4px; border-bottom: 1px solid var(--ghost); text-decoration: none; }
+    a.sound-row:hover { background: var(--surface); }
+    .sound-category, .sound-status { color: var(--secondary); font-size: 13px; }
+    .sound-status { text-align: right; }
+    .measurement-note { display: grid; grid-template-columns: .65fr 1.35fr; gap: 40px; margin-top: 72px; padding: 32px; border: 1px solid var(--ghost); border-radius: var(--radius-card); background: var(--surface); }
+    .measurement-note h2, .measurement-note p { margin: 0; }
+    .measurement-note h2 { font-size: 22px; }
+    .measurement-note p { color: var(--on-surface-v); }
+    @media (max-width: 700px) {
+      .library-head, .measurement-note { grid-template-columns: 1fr; gap: 16px; }
+      .sound-row { grid-template-columns: 1fr auto; }
+      .sound-category, .sound-status { grid-row: 2; }
+      .sound-status { text-align: right; }
+    }
+  </style>
+</Base>

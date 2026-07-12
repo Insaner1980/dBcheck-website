@@ -1,0 +1,105 @@
+---
+interface Props {
+  id?: string;
+  compact?: boolean;
+  showLink?: boolean;
+}
+
+const { id = 'exposure-calculator', compact = false, showLink = true } = Astro.props;
+const defaultDb = 94;
+---
+
+<div class:list={['exposure-calculator', { compact }]} data-exposure-calculator>
+  <div class="calculator-copy">
+    <span class="kicker">NIOSH exposure estimate</span>
+    <h2>How does level change the daily estimate?</h2>
+    <p>NIOSH uses an occupational reference of 85 dBA for 8 hours. Each 3 dB increase halves the estimated duration.</p>
+    <p class="calculator-disclaimer">Educational occupational estimate only. It is not an individual guarantee of safety and does not account for every sound or exposure pattern.</p>
+    {showLink && <a class="calculator-link" href="/tools/safe-listening-time-calculator/">Open the full calculator <span aria-hidden="true">→</span></a>}
+  </div>
+
+  <div class="calculator-panel">
+    <div class="selected-level">
+      <span>Selected sound level</span>
+      <output for={`${id}-slider`} data-db-output>{defaultDb} dBA</output>
+    </div>
+    <label for={`${id}-slider`}>Sound level in A-weighted decibels</label>
+    <input id={`${id}-slider`} data-db-slider type="range" min="70" max="115" value={defaultDb} step="1" aria-describedby={`${id}-model`} />
+    <div class="range-labels" aria-hidden="true"><span>70</span><span>85</span><span>100</span><span>115 dBA</span></div>
+    <div class="calculator-result" role="status" aria-live="polite">
+      <span>Estimated time to 100% NIOSH daily occupational dose</span>
+      <strong data-time-output>1 hour</strong>
+    </div>
+    <p id={`${id}-model`} class="model-note">Model: 85 dBA = 8 hours, with a 3 dB exchange rate. Assumes a constant level.</p>
+    <noscript><p class="noscript-note">JavaScript is off. Reference points: 85 dBA = 8 h, 88 dBA = 4 h, 91 dBA = 2 h, 94 dBA = 1 h, 100 dBA = 15 min.</p></noscript>
+  </div>
+</div>
+
+<script>
+  const formatExposureTime = (hours: number) => {
+    const totalSeconds = hours * 3600;
+    if (totalSeconds >= 86400) {
+      const days = totalSeconds / 86400;
+      return `${Number.isInteger(days) ? days : days.toFixed(1)} days`;
+    }
+    if (totalSeconds >= 7200) return `${Math.round(hours)} hours`;
+    if (totalSeconds >= 3600) return `${hours === 1 ? '1' : hours.toFixed(1)} hour${hours === 1 ? '' : 's'}`;
+    if (totalSeconds >= 120) return `${Math.round(totalSeconds / 60)} minutes`;
+    if (totalSeconds >= 60) return '1 minute';
+    return `${Math.max(1, Math.round(totalSeconds))} seconds`;
+  };
+
+  document.querySelectorAll<HTMLElement>('[data-exposure-calculator]').forEach((calculator) => {
+    const slider = calculator.querySelector<HTMLInputElement>('[data-db-slider]');
+    const dbOutput = calculator.querySelector<HTMLOutputElement>('[data-db-output]');
+    const timeOutput = calculator.querySelector<HTMLElement>('[data-time-output]');
+    if (!slider || !dbOutput || !timeOutput) return;
+
+    const update = () => {
+      const db = Number(slider.value);
+      const hours = 8 * Math.pow(2, (85 - db) / 3);
+      dbOutput.value = `${db} dBA`;
+      timeOutput.textContent = formatExposureTime(hours);
+      slider.style.setProperty('--range-progress', `${(db - 70) / 45 * 100}%`);
+    };
+
+    slider.addEventListener('input', update);
+    update();
+  });
+</script>
+
+<style>
+  .exposure-calculator {
+    display: grid; grid-template-columns: minmax(0, .8fr) minmax(360px, 1.2fr); gap: 56px; align-items: center;
+    padding: 48px; border: 1px solid var(--ghost); border-radius: var(--radius-card);
+    background: linear-gradient(135deg, var(--surface-c), var(--surface));
+  }
+  .calculator-copy { display: grid; gap: 14px; }
+  .calculator-copy h2 { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.12; }
+  .calculator-copy p { margin: 0; color: var(--on-surface-v); }
+  .calculator-copy .calculator-disclaimer { color: var(--secondary); font-size: 13px; }
+  .calculator-link { justify-self: start; margin-top: 8px; color: var(--on-surface); font-weight: 600; text-underline-offset: 5px; }
+  .calculator-panel { display: grid; gap: 18px; padding: 28px; border-radius: var(--radius-tile); background: var(--bg); }
+  .selected-level { display: flex; align-items: end; justify-content: space-between; gap: 20px; color: var(--secondary); font-size: 13px; }
+  .selected-level output { color: var(--on-surface); font: 600 32px/1 var(--font-data); }
+  .calculator-panel label { font-size: 13px; font-weight: 600; }
+  input[type='range'] {
+    --range-progress: 53.333%; width: 100%; height: 28px; margin: 0; cursor: pointer;
+    accent-color: var(--primary); background: transparent;
+  }
+  input[type='range']:focus-visible { outline: 2px solid var(--on-surface); outline-offset: 5px; border-radius: 999px; }
+  .range-labels { display: flex; justify-content: space-between; margin-top: -12px; color: var(--tertiary); font: 10px/1 var(--font-data); }
+  .calculator-result { display: grid; gap: 8px; padding: 20px; border: 1px solid var(--ghost); border-radius: var(--radius-tile); background: var(--surface-c); }
+  .calculator-result span { color: var(--secondary); font-size: 12px; }
+  .calculator-result strong { font: 600 clamp(27px, 4vw, 38px)/1.1 var(--font-data); }
+  .model-note, .noscript-note { margin: 0; color: var(--tertiary); font-size: 12px; }
+  .compact { padding: 40px; }
+  @media (max-width: 850px) {
+    .exposure-calculator { grid-template-columns: 1fr; gap: 32px; padding: 32px; }
+  }
+  @media (max-width: 560px) {
+    .exposure-calculator, .compact { margin-inline: -20px; padding: 28px 20px; border-inline: 0; border-radius: 0; }
+    .calculator-panel { padding: 20px; }
+    .selected-level { align-items: start; flex-direction: column; }
+  }
+</style>
