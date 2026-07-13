@@ -62,7 +62,7 @@ const staticEntries = [
     kind: 'page',
     title: 'Articles and sound guides',
     description: 'Sourced guides about sound levels, phone measurement, exposure and common sounds',
-    tags: ['articles', 'guides', 'field notes'],
+    tags: ['articles', 'guides'],
     url: '/articles/',
   },
 ];
