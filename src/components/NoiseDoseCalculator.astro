@@ -1,0 +1,83 @@
+<section class="tool-calculator" aria-labelledby="noise-dose-title" data-noise-dose-calculator>
+  <form class="calculator-form" data-noise-dose-form>
+    <h2 id="noise-dose-title">Daily exposure periods</h2>
+    <p class="form-intro">Enter each approximately constant A-weighted sound level and its duration. Periods are combined into one NIOSH occupational reference dose.</p>
+
+    <div class="entry-list" data-exposure-list>
+      <fieldset class="entry-row" data-exposure-row>
+        <legend>Exposure period 1</legend>
+        <label class="field">
+          <span>Sound level (dBA)</span>
+          <input data-exposure-level type="number" min="70" max="115" step="0.1" value="85" inputmode="decimal" required />
+        </label>
+        <label class="field">
+          <span>Duration</span>
+          <input data-exposure-duration type="number" min="0.01" max="24" step="0.01" value="4" inputmode="decimal" required />
+        </label>
+        <label class="field">
+          <span>Duration unit</span>
+          <select data-exposure-unit>
+            <option value="hours" selected>Hours</option>
+            <option value="minutes">Minutes</option>
+          </select>
+        </label>
+        <button class="row-button" data-remove-exposure type="button">Remove</button>
+      </fieldset>
+      <fieldset class="entry-row" data-exposure-row>
+        <legend>Exposure period 2</legend>
+        <label class="field">
+          <span>Sound level (dBA)</span>
+          <input data-exposure-level type="number" min="70" max="115" step="0.1" value="88" inputmode="decimal" required />
+        </label>
+        <label class="field">
+          <span>Duration</span>
+          <input data-exposure-duration type="number" min="0.01" max="24" step="0.01" value="2" inputmode="decimal" required />
+        </label>
+        <label class="field">
+          <span>Duration unit</span>
+          <select data-exposure-unit>
+            <option value="hours" selected>Hours</option>
+            <option value="minutes">Minutes</option>
+          </select>
+        </label>
+        <button class="row-button" data-remove-exposure type="button">Remove</button>
+      </fieldset>
+    </div>
+
+    <button class="add-button" data-add-exposure type="button">Add exposure period</button>
+  </form>
+
+  <aside class="result-panel" aria-labelledby="noise-dose-result-title">
+    <h2 id="noise-dose-result-title">Estimated daily dose</h2>
+    <div class="calculator-result" role="status" aria-live="polite">
+      <span>NIOSH occupational reference dose</span>
+      <strong data-dose-output>100%</strong>
+      <p class="result-detail" data-dose-detail>At 100% of the daily reference dose.</p>
+    </div>
+    <p class="model-note">Model: 85 dBA for 8 hours, with a 3 dB exchange rate. Each input is treated as a constant A-weighted level for that period.</p>
+    <p class="result-note">This estimate cannot improve an uncertain measurement and does not guarantee that an exposure is harmless for an individual.</p>
+    <noscript><p class="noscript-note">JavaScript is required for live calculation. The shown example combines 4 hours at 85 dBA and 2 hours at 88 dBA, which equals 100% of the NIOSH daily reference dose.</p></noscript>
+  </aside>
+
+  <template data-exposure-template>
+    <fieldset class="entry-row" data-exposure-row>
+      <legend>Exposure period</legend>
+      <label class="field">
+        <span>Sound level (dBA)</span>
+        <input data-exposure-level type="number" min="70" max="115" step="0.1" value="85" inputmode="decimal" required />
+      </label>
+      <label class="field">
+        <span>Duration</span>
+        <input data-exposure-duration type="number" min="0.01" max="24" step="0.01" value="1" inputmode="decimal" required />
+      </label>
+      <label class="field">
+        <span>Duration unit</span>
+        <select data-exposure-unit>
+          <option value="hours" selected>Hours</option>
+          <option value="minutes">Minutes</option>
+        </select>
+      </label>
+      <button class="row-button" data-remove-exposure type="button">Remove</button>
+    </fieldset>
+  </template>
+</section>

@@ -1,0 +1,34 @@
+---
+import CalculatorPage from '../../components/CalculatorPage.astro';
+import NoiseDoseCalculator from '../../components/NoiseDoseCalculator.astro';
+import { socialImages } from '../../data/social';
+---
+
+<CalculatorPage
+  title="NIOSH noise dose calculator | dBcheck"
+  description="Combine multiple sound-level and duration periods into one estimated daily occupational noise dose using the NIOSH 85 dBA, 8 hour and 3 dB model."
+  kicker="Noise Dose Calculator"
+  heading="One day can contain many exposures."
+  intro="Combine several approximately constant sound levels and durations into one estimated NIOSH daily occupational reference dose."
+  socialImage={socialImages.exposure}
+>
+  <NoiseDoseCalculator />
+
+  <Fragment slot="references">
+    <section>
+      <span class="kicker">How it works</span>
+      <h2>Each period uses part of the dose</h2>
+      <p>The calculator finds the NIOSH reference duration for each level, divides the entered duration by that reference and adds the percentages. <a href="/articles/what-is-noise-dose/">Read what noise dose means</a>.</p>
+    </section>
+    <section>
+      <span class="kicker">Named framework</span>
+      <h2>NIOSH occupational model</h2>
+      <p>The model uses 85 dBA for 8 hours and halves the reference duration for each 3 dB increase. See the <a href="https://www.cdc.gov/niosh/noise/about/noise.html">NIOSH guidance</a>.</p>
+    </section>
+    <section>
+      <span class="kicker">Important limits</span>
+      <h2>An estimate, not personal advice</h2>
+      <p>Changing levels, impulse noise and uncertain phone readings need more context. The percentage is not a medical result or an individual safety guarantee.</p>
+    </section>
+  </Fragment>
+</CalculatorPage>

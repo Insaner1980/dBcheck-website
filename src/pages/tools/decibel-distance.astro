@@ -1,0 +1,34 @@
+---
+import CalculatorPage from '../../components/CalculatorPage.astro';
+import DistanceCalculator from '../../components/DistanceCalculator.astro';
+import { socialImages } from '../../data/social';
+---
+
+<CalculatorPage
+  title="Decibel distance calculator | dBcheck"
+  description="Estimate how a sound level may change with distance from an ideal point source under simplified free-field conditions."
+  kicker="Decibel Distance Calculator"
+  heading="Distance changes level, but the room changes the rule."
+  intro="Estimate the idealized level change between two distances while keeping real-world reflections, barriers and source behavior in view."
+  socialImage={socialImages.fundamentals}
+>
+  <DistanceCalculator />
+
+  <Fragment slot="references">
+    <section>
+      <span class="kicker">How it works</span>
+      <h2>Spherical spreading</h2>
+      <p>An ideal point source in a free field loses about 6 dB each time distance doubles. The calculation uses the ratio between the two entered distances.</p>
+    </section>
+    <section>
+      <span class="kicker">Model boundary</span>
+      <h2>Real places are not free fields</h2>
+      <p>Walls, floors, terrain, barriers and source directivity alter propagation. A line source can follow a different distance relationship.</p>
+    </section>
+    <section>
+      <span class="kicker">Reference</span>
+      <h2>Use the result as a comparison</h2>
+      <p>The <a href="https://www.fhwa.dot.gov/ENVIRonment/noise/measurement/handbook.cfm">FHWA measurement handbook</a> describes the free-field point-source assumption and its limits.</p>
+    </section>
+  </Fragment>
+</CalculatorPage>

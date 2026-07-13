@@ -1,6 +1,6 @@
 # dBcheck website memory
 
-Päivitetty: 2026-07-12
+Päivitetty: 2026-07-13
 
 ## Nykyinen rakenne
 
@@ -8,6 +8,8 @@ Päivitetty: 2026-07-12
 - Yhteinen shell: `src/layouts/Base.astro`.
 - Etusivu: `src/pages/index.astro`; alkuperäinen hero-video ja Web Audio -mittari on säilytetty.
 - Common sounds -tietojen ainoa lähde: `src/data/sounds.ts`.
+- Tools-indeksin ja haun työkalumetadatan ainoa lähde: `src/data/tools.ts`; kaikki viisi työkalua ovat julkaistuja linkkejä ilman status-badgeja.
+- Uusien laskurisivujen yhteinen shell ja lomaketyylit: `src/components/CalculatorPage.astro`; Noise Dose-, Distance- ja Add Decibels -laskentojen asiakaslogiikka: `src/scripts/tool-calculators.ts`.
 - Uudelleenkäytettävä sound-käyttöliittymä: `src/components/SoundExplorer.astro`.
 - Uudelleenkäytettävä NIOSH-laskuri: `src/components/ExposureCalculator.astro`.
 - Tavalliset Markdown-artikkelit: `src/content/articles`; common sound -artikkelit: `src/content/sounds`.
@@ -21,6 +23,10 @@ Päivitetty: 2026-07-12
 - `/sounds/` ja julkaistuille Markdown-sound-artikkeleille `/sounds/[slug]/`.
 - `/tools/`.
 - `/tools/safe-listening-time-calculator/`.
+- `/tools/noise-dose-calculator/`.
+- `/tools/decibel-distance/`.
+- `/tools/add-decibels/`.
+- `/sounds/` toimii myös Tools-indeksin Common Sounds Explorer -kohteena; erillistä `/tools/common-sounds/`-reittiä ei ole.
 - `/articles/` ja julkaistuille Markdown-artikkeleille `/articles/[slug]/`.
 - `/search.json` indeksoi sivut, työkalut sekä vain julkaistut article- ja sound-kokoelmat.
 - `@astrojs/sitemap` muodostaa sitemapin kanonisista julkisista reiteistä; legacy-sound-slugit ohjataan uusiin kanonisiin slugeihin tai `/sounds/`-indeksiin.
@@ -33,7 +39,19 @@ Päivitetty: 2026-07-12
 - Hearing Test ja recovery check ovat henkilökohtaista suhteellista baseline-seurantaa, eivät kliinistä diagnostiikkaa.
 - Sleep Monitor näyttää huomattavat melutapahtumat ja niiden voimakkuuden, ei varmaa heräämisen syytä.
 - Web-laskuri käyttää NIOSH REL -mallia 85 dBA / 8 h / 3 dB ja esittää tuloksen työperäisenä koulutuksellisena arviona.
+- Tools-indeksi linkittää Safe Exposure Time-, Noise Dose-, Decibel Distance- ja Add Decibels -laskureihin sekä `/sounds/`-reitillä toimivaan Common Sounds Exploreriin. Erillistä Concert-laskuria ei ole.
+- Noise Dose Calculator yhdistää useita vakioidun tason ja keston jaksoja NIOSH 85 dBA / 8 h / 3 dB -viiteannokseen.
+- Decibel Distance Calculator käyttää vapaan kentän pistelähteen `−20 log10(r2/r1)`-mallia ja kertoo näkyvästi sen reaalimaailman rajoista.
+- Add Decibels Calculator käyttää riippumattomille yhteensopiville tasoille kaavaa `10 log10(Σ10^(Li/10))` ja rajaa koherentit signaalit mallin ulkopuolelle.
 - Nykyinen verkkosivun Pro-hinta 12.99 euroa säilytettiin, koska `PROJECT.md` ei vahvistanut muuta hintaa.
+
+## Varmistettu 2026-07-13
+
+- Tools-indeksi käyttää viiden toimivan linkkikortin yhteistä `src/data/tools.ts`-metadataa ilman Planned- tai Available now -badgeja.
+- Concert Noise Exposure Calculator poistettiin erillisenä työkaluna; `/sounds/concert/` ja yhteinen sound-data säilyivät.
+- Noise Dose-, Decibel Distance- ja Add Decibels -laskurit julkaistiin omille reiteilleen. Haku ja sitemap sisältävät kaikki kolme uutta reittiä.
+- `npm run build`: onnistui, 28 staattista sivua. Desktop 1440 px ja mobile 390 px: Tools-ruudukko, navigaatio ja kaikkien kolmen uuden laskurin lomakkeet, live-tulokset sekä dynaamisten rivien lisäys ja poisto toimivat ilman selainkonsolin virheitä.
+- Varmistetut laskentaesimerkit: Noise Dose 4 h @ 85 dBA + 2 h @ 88 dBA = 100%; Distance 90 dB etäisyyksillä 1 -> 2 = 84.0 dB ja 1 -> 4 = 78.0 dB; Add Decibels 80 + 80 = 83.0 dB ja kolme 90 dB tasoa = 94.8 dB.
 
 ## Varmistettu 2026-07-12
 

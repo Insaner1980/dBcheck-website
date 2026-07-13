@@ -1,0 +1,34 @@
+---
+import AddDecibelsCalculator from '../../components/AddDecibelsCalculator.astro';
+import CalculatorPage from '../../components/CalculatorPage.astro';
+import { socialImages } from '../../data/social';
+---
+
+<CalculatorPage
+  title="Add decibels calculator | dBcheck"
+  description="Combine independent sound levels correctly with logarithmic addition instead of ordinary arithmetic."
+  kicker="Add Decibels Calculator"
+  heading="Sound levels add as energy, not ordinary numbers."
+  intro="Combine independent sound levels measured with compatible metrics and see their logarithmic total."
+  socialImage={socialImages.fundamentals}
+>
+  <AddDecibelsCalculator />
+
+  <Fragment slot="references">
+    <section>
+      <span class="kicker">How it works</span>
+      <h2>Convert, add, convert back</h2>
+      <p>Each decibel level is converted to a linear energy ratio, the ratios are added and the total is converted back to decibels.</p>
+    </section>
+    <section>
+      <span class="kicker">Quick check</span>
+      <h2>Equal levels add 3 dB</h2>
+      <p>Two independent 80 dB sources combine to approximately 83 dB, not 160 dB. <a href="/articles/why-is-the-decibel-scale-logarithmic/">Read why the decibel scale is logarithmic</a>.</p>
+    </section>
+    <section>
+      <span class="kicker">Important limits</span>
+      <h2>Match the metrics</h2>
+      <p>Do not combine incompatible averages, peaks or weightings as if they described the same quantity. Coherent phase-related signals need a different method. See the <a href="https://obis.osha.gov/dts/osta/otm/new_noise/">OSHA technical guidance</a>.</p>
+    </section>
+  </Fragment>
+</CalculatorPage>

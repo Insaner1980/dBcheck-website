@@ -1,0 +1,50 @@
+<section class="tool-calculator" aria-labelledby="add-decibels-title" data-add-decibels-calculator>
+  <form class="calculator-form" data-add-decibels-form>
+    <h2 id="add-decibels-title">Independent sound levels</h2>
+    <p class="form-intro">Enter levels measured with the same weighting and metric. The calculator combines their sound energies instead of adding the decibel numbers directly.</p>
+
+    <div class="entry-list" data-level-list>
+      <fieldset class="entry-row level-row" data-level-row>
+        <legend>Sound level 1</legend>
+        <label class="field">
+          <span>Level (dB)</span>
+          <input data-sound-level type="number" min="-100" max="200" step="0.1" value="80" inputmode="decimal" required />
+        </label>
+        <button class="row-button" data-remove-level type="button">Remove</button>
+      </fieldset>
+      <fieldset class="entry-row level-row" data-level-row>
+        <legend>Sound level 2</legend>
+        <label class="field">
+          <span>Level (dB)</span>
+          <input data-sound-level type="number" min="-100" max="200" step="0.1" value="80" inputmode="decimal" required />
+        </label>
+        <button class="row-button" data-remove-level type="button">Remove</button>
+      </fieldset>
+    </div>
+
+    <button class="add-button" data-add-level type="button">Add sound level</button>
+  </form>
+
+  <aside class="result-panel" aria-labelledby="add-decibels-result-title">
+    <h2 id="add-decibels-result-title">Combined level</h2>
+    <div class="calculator-result" role="status" aria-live="polite">
+      <span>Logarithmic sum</span>
+      <strong data-combined-output>83.0 dB</strong>
+      <p class="result-detail" data-combined-detail>Two equal 80 dB levels combine to 83.0 dB.</p>
+    </div>
+    <p class="model-note">Model: Ltotal = 10 log₁₀(Σ10^(Lᵢ/10)).</p>
+    <p class="result-note">Use this for independent sources or components expressed in compatible decibel metrics. Phase-related coherent signals require a different pressure-based treatment.</p>
+    <noscript><p class="noscript-note">JavaScript is required for live calculation. The shown example combines two independent 80 dB levels into 83.0 dB.</p></noscript>
+  </aside>
+
+  <template data-level-template>
+    <fieldset class="entry-row level-row" data-level-row>
+      <legend>Sound level</legend>
+      <label class="field">
+        <span>Level (dB)</span>
+        <input data-sound-level type="number" min="-100" max="200" step="0.1" value="80" inputmode="decimal" required />
+      </label>
+      <button class="row-button" data-remove-level type="button">Remove</button>
+    </fieldset>
+  </template>
+</section>

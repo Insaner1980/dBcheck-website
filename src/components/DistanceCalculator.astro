@@ -1,0 +1,33 @@
+<section class="tool-calculator" aria-labelledby="distance-title" data-distance-calculator>
+  <form class="calculator-form" data-distance-form>
+    <h2 id="distance-title">Source level and distance</h2>
+    <p class="form-intro">Use the same distance unit for both positions. The result applies only to an idealized point source in a free field.</p>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Reference sound level (dB)</span>
+        <input data-reference-level type="number" min="0" max="200" step="0.1" value="90" inputmode="decimal" required />
+      </label>
+      <label class="field">
+        <span>Reference distance</span>
+        <input data-reference-distance type="number" min="0.01" max="100000" step="0.01" value="1" inputmode="decimal" required />
+      </label>
+      <label class="field">
+        <span>Target distance</span>
+        <input data-target-distance type="number" min="0.01" max="100000" step="0.01" value="2" inputmode="decimal" required />
+      </label>
+    </div>
+  </form>
+
+  <aside class="result-panel" aria-labelledby="distance-result-title">
+    <h2 id="distance-result-title">Estimated level</h2>
+    <div class="calculator-result" role="status" aria-live="polite">
+      <span>At the target distance</span>
+      <strong data-distance-output>84.0 dB</strong>
+      <p class="result-detail" data-distance-change>Change from reference: −6.0 dB</p>
+    </div>
+    <p class="model-note">Model: L₂ = L₁ − 20 log₁₀(r₂ / r₁). Doubling distance gives approximately −6 dB for an ideal point source.</p>
+    <p class="result-note">Walls, ground, barriers, source size and direction, weather and atmospheric absorption can make real results differ substantially.</p>
+    <noscript><p class="noscript-note">JavaScript is required for live calculation. The shown example estimates that 90 dB at one distance becomes about 84 dB at twice that distance.</p></noscript>
+  </aside>
+</section>

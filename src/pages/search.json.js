@@ -1,5 +1,14 @@
 import { getCollection } from 'astro:content';
 import { commonSounds } from '../data/sounds';
+import { tools } from '../data/tools';
+
+const toolEntries = tools.map((tool) => ({
+  kind: tool.category === 'explorer' ? 'sound explorer' : 'tool',
+  title: tool.title,
+  description: tool.description,
+  tags: tool.searchTags,
+  url: tool.href,
+}));
 
 const staticEntries = [
   {
@@ -45,13 +54,6 @@ const staticEntries = [
     url: '/#pricing',
   },
   {
-    kind: 'tool',
-    title: 'Safe Exposure Time Calculator',
-    description: 'Estimate time to a 100% NIOSH daily occupational dose at a constant A-weighted level',
-    tags: ['calculator', 'niosh', 'exposure', 'time', '85 dba'],
-    url: '/tools/safe-listening-time-calculator/',
-  },
-  {
     kind: 'page',
     title: 'Sound tools',
     description: 'Free educational sound calculators from dBcheck',
@@ -91,7 +93,7 @@ export async function GET() {
     };
   });
 
-  return new Response(JSON.stringify([...soundEntries, ...articleEntries, ...staticEntries]), {
+  return new Response(JSON.stringify([...soundEntries, ...articleEntries, ...toolEntries, ...staticEntries]), {
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
   });
 }

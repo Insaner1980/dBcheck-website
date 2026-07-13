@@ -1,0 +1,97 @@
+---
+import Base from '../layouts/Base.astro';
+import type { SocialImage } from '../data/social';
+
+interface Props {
+  title: string;
+  description: string;
+  kicker: string;
+  heading: string;
+  intro: string;
+  socialImage: SocialImage;
+}
+
+const { title, description, kicker, heading, intro, socialImage } = Astro.props;
+---
+
+<Base title={title} description={description} socialImage={socialImage}>
+  <section class="calculator-page">
+    <header class="page-head">
+      <a href="/tools/"><span aria-hidden="true">←</span> All tools</a>
+      <span class="kicker">{kicker}</span>
+      <h1>{heading}</h1>
+      <p>{intro}</p>
+    </header>
+
+    <slot />
+
+    <div class="reference-grid">
+      <slot name="references" />
+    </div>
+  </section>
+
+  <script src="../scripts/tool-calculators.ts"></script>
+
+  <style>
+    .calculator-page { max-width: var(--max-w); margin: 0 auto; padding: 56px 20px 0; }
+    .page-head { display: grid; gap: 16px; max-width: 820px; margin-bottom: 48px; }
+    .page-head > a { justify-self: start; margin-bottom: 24px; color: var(--secondary); font-size: 13px; text-underline-offset: 4px; }
+    h1 { margin: 0; font: 700 clamp(42px, 8vw, 76px)/1 var(--font-data); letter-spacing: -.035em; }
+    .page-head p { max-width: 720px; margin: 0; color: var(--on-surface-v); font-size: 18px; }
+    .reference-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 36px; }
+    .reference-grid :global(section) { padding: 28px; border: 1px solid var(--ghost); border-radius: var(--radius-card); background: var(--surface); }
+    .reference-grid :global(h2) { margin: 10px 0; font-size: 21px; }
+    .reference-grid :global(p) { margin: 0; color: var(--on-surface-v); font-size: 14px; }
+    .reference-grid :global(a) { text-underline-offset: 4px; }
+
+    :global(.tool-calculator) {
+      display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 32px; align-items: start;
+      padding: 40px; border: 1px solid var(--ghost); border-radius: var(--radius-card);
+      background: linear-gradient(135deg, var(--surface-c), var(--surface));
+    }
+    :global(.calculator-form) { display: grid; gap: 24px; margin: 0; }
+    :global(.calculator-form h2), :global(.result-panel h2) { margin: 0; font-size: 24px; }
+    :global(.form-intro), :global(.result-note), :global(.model-note) { margin: 0; color: var(--on-surface-v); }
+    :global(.entry-list) { display: grid; gap: 12px; }
+    :global(.entry-row) {
+      display: grid; grid-template-columns: minmax(110px, 1fr) minmax(110px, 1fr) minmax(110px, .8fr) auto;
+      gap: 12px; align-items: end; margin: 0; padding: 18px;
+      border: 1px solid var(--ghost); border-radius: var(--radius-tile); background: var(--bg);
+    }
+    :global(.level-row) { grid-template-columns: minmax(0, 1fr) auto; }
+    :global(.entry-row legend) { grid-column: 1 / -1; padding: 0; color: var(--secondary); font: 11px/1 var(--font-data); letter-spacing: .08em; text-transform: uppercase; }
+    :global(.field), :global(.field-grid) { display: grid; gap: 8px; }
+    :global(.field-grid) { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    :global(.field span) { color: var(--on-surface-v); font-size: 13px; font-weight: 600; }
+    :global(.field input), :global(.field select) {
+      width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--ghost); border-radius: 10px;
+      background: var(--surface); color: var(--on-surface); font: 500 16px/1.2 var(--font-data);
+    }
+    :global(.field input:focus-visible), :global(.field select:focus-visible) { border-color: var(--outline-v); }
+    :global(.row-button), :global(.add-button) {
+      min-height: 44px; padding: 10px 14px; border: 1px solid var(--ghost); border-radius: 999px;
+      background: transparent; color: var(--on-surface-v); font: 600 13px/1 var(--font-body); cursor: pointer;
+    }
+    :global(.row-button:hover), :global(.add-button:hover) { border-color: var(--outline-v); color: var(--on-surface); }
+    :global(.row-button:disabled), :global(.add-button:disabled) { opacity: .4; cursor: not-allowed; }
+    :global(.add-button) { justify-self: start; }
+    :global(.result-panel) { position: sticky; top: 96px; display: grid; gap: 18px; padding: 28px; border-radius: var(--radius-tile); background: var(--bg); }
+    :global(.calculator-result) { display: grid; gap: 10px; padding: 24px; border: 1px solid var(--ghost); border-radius: var(--radius-tile); background: var(--surface-c); }
+    :global(.calculator-result span) { color: var(--secondary); font-size: 12px; }
+    :global(.calculator-result strong) { font: 600 clamp(32px, 5vw, 48px)/1.05 var(--font-data); }
+    :global(.result-detail) { margin: 0; color: var(--on-surface-v); font-size: 14px; }
+    :global(.model-note) { font-size: 12px; }
+    :global(.noscript-note) { margin: 0; padding: 16px; border: 1px solid var(--ghost); border-radius: var(--radius-tile); color: var(--secondary); font-size: 13px; }
+
+    @media (max-width: 850px) {
+      .reference-grid, :global(.tool-calculator) { grid-template-columns: 1fr; }
+      :global(.result-panel) { position: static; }
+    }
+    @media (max-width: 650px) {
+      :global(.tool-calculator) { margin-inline: -20px; padding: 28px 20px; border-inline: 0; border-radius: 0; }
+      :global(.entry-row), :global(.level-row), :global(.field-grid) { grid-template-columns: 1fr; }
+      :global(.entry-row legend) { grid-column: 1; }
+      :global(.row-button) { justify-self: start; }
+    }
+  </style>
+</Base>
