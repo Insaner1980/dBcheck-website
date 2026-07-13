@@ -18,6 +18,7 @@ const {
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const socialImageUrl = new URL(socialImage.src, Astro.site);
 const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value).replace(/</g, '\\u003c');
+const ga4MeasurementId = 'G-9J90097M6J';
 ---
 <!doctype html>
 <html lang="en">
@@ -51,6 +52,13 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script async src={`https://www.googletagmanager.com/gtag/js?id=${ga4MeasurementId}`}></script>
+  <script define:vars={{ ga4MeasurementId }}>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { window.dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', ga4MeasurementId);
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
