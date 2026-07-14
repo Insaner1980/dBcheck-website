@@ -1,3 +1,7 @@
+---
+import NumberField from './NumberField.astro';
+---
+
 <section class="tool-calculator" aria-labelledby="noise-dose-title" data-noise-dose-calculator>
   <form class="calculator-form" data-noise-dose-form>
     <h2 id="noise-dose-title">Daily exposure periods</h2>
@@ -6,14 +10,8 @@
     <div class="entry-list" data-exposure-list>
       <fieldset class="entry-row" data-exposure-row>
         <legend>Exposure period 1</legend>
-        <label class="field">
-          <span>Sound level (dBA)</span>
-          <input data-exposure-level type="number" min="70" max="115" step="0.1" value="85" inputmode="decimal" required />
-        </label>
-        <label class="field">
-          <span>Duration</span>
-          <input data-exposure-duration type="number" min="0.01" max="24" step="0.01" value="4" inputmode="decimal" required />
-        </label>
+        <NumberField id="exposure-level-1" label="Sound level (dBA)" inputAttributes={{ 'data-exposure-level': '', type: 'number', min: '70', max: '115', step: '0.1', value: '85', inputmode: 'decimal', required: true }} />
+        <NumberField id="exposure-duration-1" label="Duration" inputAttributes={{ 'data-exposure-duration': '', type: 'number', min: '0.01', max: '24', step: '0.01', value: '4', inputmode: 'decimal', required: true }} />
         <label class="field">
           <span>Duration unit</span>
           <select data-exposure-unit>
@@ -25,14 +23,8 @@
       </fieldset>
       <fieldset class="entry-row" data-exposure-row>
         <legend>Exposure period 2</legend>
-        <label class="field">
-          <span>Sound level (dBA)</span>
-          <input data-exposure-level type="number" min="70" max="115" step="0.1" value="88" inputmode="decimal" required />
-        </label>
-        <label class="field">
-          <span>Duration</span>
-          <input data-exposure-duration type="number" min="0.01" max="24" step="0.01" value="2" inputmode="decimal" required />
-        </label>
+        <NumberField id="exposure-level-2" label="Sound level (dBA)" inputAttributes={{ 'data-exposure-level': '', type: 'number', min: '70', max: '115', step: '0.1', value: '88', inputmode: 'decimal', required: true }} />
+        <NumberField id="exposure-duration-2" label="Duration" inputAttributes={{ 'data-exposure-duration': '', type: 'number', min: '0.01', max: '24', step: '0.01', value: '2', inputmode: 'decimal', required: true }} />
         <label class="field">
           <span>Duration unit</span>
           <select data-exposure-unit>
@@ -62,14 +54,8 @@
   <template data-exposure-template>
     <fieldset class="entry-row" data-exposure-row>
       <legend>Exposure period</legend>
-      <label class="field">
-        <span>Sound level (dBA)</span>
-        <input data-exposure-level type="number" min="70" max="115" step="0.1" value="85" inputmode="decimal" required />
-      </label>
-      <label class="field">
-        <span>Duration</span>
-        <input data-exposure-duration type="number" min="0.01" max="24" step="0.01" value="1" inputmode="decimal" required />
-      </label>
+      <NumberField id="exposure-level-template" label="Sound level (dBA)" inputAttributes={{ 'data-exposure-level': '', type: 'number', min: '70', max: '115', step: '0.1', value: '85', inputmode: 'decimal', required: true }} />
+      <NumberField id="exposure-duration-template" label="Duration" inputAttributes={{ 'data-exposure-duration': '', type: 'number', min: '0.01', max: '24', step: '0.01', value: '1', inputmode: 'decimal', required: true }} />
       <label class="field">
         <span>Duration unit</span>
         <select data-exposure-unit>

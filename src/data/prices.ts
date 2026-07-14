@@ -31,6 +31,11 @@ export function getProPriceForCountry(countryCode: string | undefined): string {
   return PRO_PRICE_BY_COUNTRY[countryCode.toUpperCase()] ?? DEFAULT_PRO_PRICE;
 }
 
+export function getFreePriceForCountry(countryCode: string | undefined): string {
+  const { prefix, suffix } = splitPriceDisplay(getProPriceForCountry(countryCode));
+  return `${prefix}0${suffix}`;
+}
+
 export function splitPriceDisplay(displayPrice: string) {
   const parts = displayPrice.match(/^(.*?)(\d(?:[\d\s.,]*\d)?)(.*)$/);
   return parts

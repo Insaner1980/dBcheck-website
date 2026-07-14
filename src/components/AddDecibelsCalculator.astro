@@ -1,3 +1,7 @@
+---
+import NumberField from './NumberField.astro';
+---
+
 <section class="tool-calculator" aria-labelledby="add-decibels-title" data-add-decibels-calculator>
   <form class="calculator-form" data-add-decibels-form>
     <h2 id="add-decibels-title">Independent sound levels</h2>
@@ -6,18 +10,12 @@
     <div class="entry-list" data-level-list>
       <fieldset class="entry-row level-row" data-level-row>
         <legend>Sound level 1</legend>
-        <label class="field">
-          <span>Level (dB)</span>
-          <input data-sound-level type="number" min="-100" max="200" step="0.1" value="80" inputmode="decimal" required />
-        </label>
+        <NumberField id="sound-level-1" label="Level (dB)" inputAttributes={{ 'data-sound-level': '', type: 'number', min: '-100', max: '200', step: '0.1', value: '80', inputmode: 'decimal', required: true }} />
         <button class="row-button" data-remove-level type="button">Remove</button>
       </fieldset>
       <fieldset class="entry-row level-row" data-level-row>
         <legend>Sound level 2</legend>
-        <label class="field">
-          <span>Level (dB)</span>
-          <input data-sound-level type="number" min="-100" max="200" step="0.1" value="80" inputmode="decimal" required />
-        </label>
+        <NumberField id="sound-level-2" label="Level (dB)" inputAttributes={{ 'data-sound-level': '', type: 'number', min: '-100', max: '200', step: '0.1', value: '80', inputmode: 'decimal', required: true }} />
         <button class="row-button" data-remove-level type="button">Remove</button>
       </fieldset>
     </div>
@@ -40,10 +38,7 @@
   <template data-level-template>
     <fieldset class="entry-row level-row" data-level-row>
       <legend>Sound level</legend>
-      <label class="field">
-        <span>Level (dB)</span>
-        <input data-sound-level type="number" min="-100" max="200" step="0.1" value="80" inputmode="decimal" required />
-      </label>
+      <NumberField id="sound-level-template" label="Level (dB)" inputAttributes={{ 'data-sound-level': '', type: 'number', min: '-100', max: '200', step: '0.1', value: '80', inputmode: 'decimal', required: true }} />
       <button class="row-button" data-remove-level type="button">Remove</button>
     </fieldset>
   </template>

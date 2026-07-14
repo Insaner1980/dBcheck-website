@@ -1,6 +1,6 @@
 # dBcheck website memory
 
-Päivitetty: 2026-07-13
+Päivitetty: 2026-07-14
 
 ## Nykyinen rakenne
 
@@ -9,7 +9,8 @@ Päivitetty: 2026-07-13
 - Etusivu: `src/pages/index.astro`; alkuperäinen hero-video ja Web Audio -mittari on säilytetty.
 - Common sounds -tietojen ainoa lähde: `src/data/sounds.ts`.
 - Tools-indeksin ja haun työkalumetadatan ainoa lähde: `src/data/tools.ts`; kaikki viisi työkalua ovat julkaistuja linkkejä ilman status-badgeja.
-- Uusien laskurisivujen yhteinen shell ja lomaketyylit: `src/components/CalculatorPage.astro`; Noise Dose-, Distance- ja Add Decibels -laskentojen asiakaslogiikka: `src/scripts/tool-calculators.ts`.
+- Uusien laskurisivujen yhteinen shell ja lomaketyylit: `src/components/CalculatorPage.astro`; numerokenttien yhteinen saavutettava askellussäädin: `src/components/NumberField.astro`; Noise Dose-, Distance- ja Add Decibels -laskentojen asiakaslogiikka: `src/scripts/tool-calculators.ts`.
+- Etusivun Free- ja Pro-hintojen alueellisen esitysmuodon lähde: `src/data/prices.ts`; molemmat kortit lokalisoidaan samalla Cloudflare-maatunnistuksella ja staattinen EUR-esitys toimii varavaihtoehtona.
 - Uudelleenkäytettävä sound-käyttöliittymä: `src/components/SoundExplorer.astro`.
 - Uudelleenkäytettävä NIOSH-laskuri: `src/components/ExposureCalculator.astro`.
 - Tavalliset Markdown-artikkelit: `src/content/articles`; common sound -artikkelit: `src/content/sounds`.
@@ -43,7 +44,13 @@ Päivitetty: 2026-07-13
 - Noise Dose Calculator yhdistää useita vakioidun tason ja keston jaksoja NIOSH 85 dBA / 8 h / 3 dB -viiteannokseen.
 - Decibel Distance Calculator käyttää vapaan kentän pistelähteen `−20 log10(r2/r1)`-mallia ja kertoo näkyvästi sen reaalimaailman rajoista.
 - Add Decibels Calculator käyttää riippumattomille yhteensopiville tasoille kaavaa `10 log10(Σ10^(Li/10))` ja rajaa koherentit signaalit mallin ulkopuolelle.
-- Nykyinen verkkosivun Pro-hinta 12.99 euroa säilytettiin, koska `PROJECT.md` ei vahvistanut muuta hintaa.
+- Verkkosivun Pro-hinnan EUR-varavaihtoehto on 12,99 euroa; tuetuille maille näytetään `src/data/prices.ts`:n alueellinen Google Play -hinta.
+
+## Varmistettu 2026-07-14
+
+- Free- ja Pro-kortit käyttävät samaa alueellista valuuttamuotoa: FI `0 €` / `12,99 €`, US `$0` / `$14.99`. Molempien korttien hintatypografia säilyy yhtenäisenä lokalisoinnin jälkeen.
+- Noise Dose-, Decibel Distance- ja Add Decibels -laskureiden numerokentät käyttävät yhteistä `NumberField.astro`-askellussäädintä. Säädin noudattaa search-scrollin tummaa, kapeaa ulkoasua, käyttää kentän omaa `step`-arvoa ja säilyttää natiivin säätimen ilman JavaScriptiä.
+- Desktop 1440 px ja mobile 390 px: askellus, dynaamisesti lisättyjen rivien säätimet ja laskentatulosten päivitys toimivat ilman vaakasuuntaista ylivuotoa. `npm run build` onnistui, 28 staattista sivua.
 
 ## Varmistettu 2026-07-13
 

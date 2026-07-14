@@ -3,6 +3,48 @@ const MAX_ROWS = 12;
 const formatDecimal = (value: number, digits = 1) => value.toFixed(digits).replace('-0.0', '0.0');
 const formatSigned = (value: number) => `${value < 0 ? '−' : value > 0 ? '+' : ''}${formatDecimal(Math.abs(value))}`;
 
+let numberInputId = 0;
+
+const updateNumberStepperState = (input: HTMLInputElement) => {
+  const stepper = input.closest<HTMLElement>('[data-number-stepper]');
+  const upButton = stepper?.querySelector<HTMLButtonElement>('[data-number-step="up"]');
+  const downButton = stepper?.querySelector<HTMLButtonElement>('[data-number-step="down"]');
+  if (!upButton || !downButton) return;
+
+  const value = input.valueAsNumber;
+  upButton.disabled = Number.isFinite(value) && input.max !== '' && value >= Number(input.max);
+  downButton.disabled = Number.isFinite(value) && input.min !== '' && value <= Number(input.min);
+};
+
+const initializeNumberSteppers = (root: ParentNode) => {
+  root.querySelectorAll<HTMLElement>('[data-number-stepper]').forEach((stepper) => {
+    if (stepper.dataset.numberStepperReady === 'true') return;
+
+    const label = stepper.querySelector<HTMLLabelElement>('[data-number-label]');
+    const input = stepper.querySelector<HTMLInputElement>('input[type="number"]');
+    const upButton = stepper.querySelector<HTMLButtonElement>('[data-number-step="up"]');
+    const downButton = stepper.querySelector<HTMLButtonElement>('[data-number-step="down"]');
+    if (!label || !input || !upButton || !downButton) return;
+
+    numberInputId += 1;
+    input.id = `calculator-number-${numberInputId}`;
+    label.htmlFor = input.id;
+    stepper.dataset.numberStepperReady = 'true';
+
+    const changeByStep = (direction: 'up' | 'down') => {
+      if (direction === 'up') input.stepUp();
+      else input.stepDown();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      updateNumberStepperState(input);
+    };
+
+    upButton.addEventListener('click', () => changeByStep('up'));
+    downButton.addEventListener('click', () => changeByStep('down'));
+    input.addEventListener('input', () => updateNumberStepperState(input));
+    updateNumberStepperState(input);
+  });
+};
+
 const initializeNoiseDoseCalculator = (calculator: HTMLElement) => {
   const form = calculator.querySelector<HTMLFormElement>('[data-noise-dose-form]');
   const list = calculator.querySelector<HTMLElement>('[data-exposure-list]');
@@ -23,7 +65,10 @@ const initializeNoiseDoseCalculator = (calculator: HTMLElement) => {
       const durationUnit = row.querySelector<HTMLSelectElement>('[data-exposure-unit]');
       if (legend) legend.textContent = `Exposure period ${index + 1}`;
       if (removeButton) removeButton.disabled = currentRows.length === 1;
-      if (durationInput) durationInput.max = durationUnit?.value === 'minutes' ? '1440' : '24';
+      if (durationInput) {
+        durationInput.max = durationUnit?.value === 'minutes' ? '1440' : '24';
+        updateNumberStepperState(durationInput);
+      }
     });
     addButton.disabled = currentRows.length >= MAX_ROWS;
   };
@@ -67,6 +112,7 @@ const initializeNoiseDoseCalculator = (calculator: HTMLElement) => {
   addButton.addEventListener('click', () => {
     if (rows().length >= MAX_ROWS) return;
     list.append(template.content.cloneNode(true));
+    initializeNumberSteppers(rows().at(-1) ?? list);
     updateRowControls();
     update();
     rows().at(-1)?.querySelector<HTMLInputElement>('input')?.focus();
@@ -154,6 +200,7 @@ const initializeAddDecibelsCalculator = (calculator: HTMLElement) => {
   addButton.addEventListener('click', () => {
     if (rows().length >= MAX_ROWS) return;
     list.append(template.content.cloneNode(true));
+    initializeNumberSteppers(rows().at(-1) ?? list);
     updateRowControls();
     update();
     rows().at(-1)?.querySelector<HTMLInputElement>('input')?.focus();
@@ -170,6 +217,8 @@ const initializeAddDecibelsCalculator = (calculator: HTMLElement) => {
   update();
 };
 
+initializeNumberSteppers(document);
+document.documentElement.classList.add('number-steppers-ready');
 document.querySelectorAll<HTMLElement>('[data-noise-dose-calculator]').forEach(initializeNoiseDoseCalculator);
 document.querySelectorAll<HTMLElement>('[data-distance-calculator]').forEach(initializeDistanceCalculator);
 document.querySelectorAll<HTMLElement>('[data-add-decibels-calculator]').forEach(initializeAddDecibelsCalculator);

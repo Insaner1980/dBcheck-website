@@ -4,7 +4,7 @@ import SoundExplorer from '../components/SoundExplorer.astro';
 import { getCollection } from 'astro:content';
 import { commonSounds } from '../data/sounds';
 import { socialImages } from '../data/social';
-import { DEFAULT_PRO_PRICE, splitPriceDisplay } from '../data/prices';
+import { DEFAULT_PRO_PRICE, getFreePriceForCountry, splitPriceDisplay } from '../data/prices';
 import measurementAnalysis from '../assets/features/measurement-analysis.webp';
 import protectionMonitoring from '../assets/features/protection-monitoring.webp';
 import historyAccess from '../assets/features/history-access.webp';
@@ -141,6 +141,7 @@ const proPlan = [
 ];
 
 const proPriceParts = splitPriceDisplay(DEFAULT_PRO_PRICE);
+const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
 ---
 <Base
   title="dBcheck: sound information, tools and an Android sound meter"
@@ -315,7 +316,11 @@ const proPriceParts = splitPriceDisplay(DEFAULT_PRO_PRICE);
       <div class="plan">
         <div class="plan-head">
           <h3>Free</h3>
-          <p class="plan-price"><span class="plan-amount">0</span><span class="plan-cur"> €</span></p>
+          <p class="plan-price" data-localized-free-price>
+            <span class="plan-cur" data-price-prefix>{freePriceParts.prefix}</span>
+            <span class="plan-amount" data-price-amount>{freePriceParts.amount}</span>
+            <span class="plan-cur" data-price-suffix>{freePriceParts.suffix}</span>
+          </p>
           <p class="plan-sub">The full meter. Forever.</p>
         </div>
         <ul>
@@ -327,9 +332,9 @@ const proPriceParts = splitPriceDisplay(DEFAULT_PRO_PRICE);
         <div class="plan-head">
           <h3>Pro</h3>
           <p class="plan-price" data-localized-pro-price>
-            {proPriceParts.prefix && <span class="plan-cur">{proPriceParts.prefix}</span>}
-            <span class="plan-amount">{proPriceParts.amount}</span>
-            {proPriceParts.suffix && <span class="plan-cur">{proPriceParts.suffix}</span>}
+            <span class="plan-cur" data-price-prefix>{proPriceParts.prefix}</span>
+            <span class="plan-amount" data-price-amount>{proPriceParts.amount}</span>
+            <span class="plan-cur" data-price-suffix>{proPriceParts.suffix}</span>
           </p>
           <p class="plan-sub">A single one-time purchase. No subscription, ever.</p>
           <p class="plan-price-note">Final price is charged in your local currency on Google Play.</p>

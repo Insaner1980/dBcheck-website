@@ -51,6 +51,35 @@ const initial = sounds[0];
     </div>
   </article>
 
+  <div class="mobile-sound-view">
+    <div class="mobile-scale-key" aria-hidden="true"><span>0</span><span>130 dB</span></div>
+    <ul class="mobile-sound-list" aria-label="Common sound examples by typical decibel range">
+      {sounds.map((sound, index) => (
+        <li>
+          <details name={`${id}-mobile-sounds`} open={index === 0}>
+            <summary>
+              <span class:list={['mobile-risk-dot', sound.riskLevel]} aria-hidden="true"></span>
+              <span class="mobile-sound-name">{sound.name}</span>
+              <strong>{sound.typicalMinDb}–{sound.typicalMaxDb} dB</strong>
+              <span class="mobile-disclosure" aria-hidden="true"></span>
+              <span class="mobile-range-track" aria-hidden="true">
+                <span
+                  class:list={['mobile-range-fill', sound.riskLevel]}
+                  style={`--range-start:${sound.typicalMinDb / 130 * 100}%;--range-end:${Math.min(sound.typicalMaxDb, 130) / 130 * 100}%`}
+                ></span>
+              </span>
+            </summary>
+            <div class="mobile-sound-detail">
+              <p>{sound.shortDescription}</p>
+              <p class="mobile-exposure-note">{sound.exposureNote}</p>
+              {sound.articleRoute && <a href={sound.articleRoute}>Read sound guide <span aria-hidden="true">→</span></a>}
+            </div>
+          </details>
+        </li>
+      ))}
+    </ul>
+  </div>
+
   <p class="sound-disclaimer">Typical ranges vary with distance, environment, source and measurement method.</p>
 </div>
 
@@ -137,11 +166,55 @@ const initial = sounds[0];
   .detail-reading strong { font: 600 24px/1 var(--font-data); white-space: nowrap; }
   .detail-reading a { color: var(--on-surface-v); font-size: 14px; text-underline-offset: 4px; }
   .sound-disclaimer { margin: 0; color: var(--tertiary); font-size: 12px; }
+  .mobile-sound-view { display: none; }
   .compact .sound-scale { min-height: 230px; }
   @media (max-width: 700px) {
     .sound-scale { margin-inline: -20px; border-radius: 0; border-inline: 0; padding-inline: 20px; }
     .scale-track { left: 20px; right: 20px; }
     .sound-detail { grid-template-columns: 1fr; align-items: start; gap: 20px; padding: 22px; }
     .detail-reading { justify-items: start; }
+    .sound-explorer:not(.compact) .sound-scale,
+    .sound-explorer:not(.compact) .sound-detail { display: none; }
+    .sound-explorer:not(.compact) .mobile-sound-view {
+      display: grid; margin-inline: -20px; border-block: 1px solid var(--ghost); background: var(--surface);
+    }
+    .mobile-scale-key {
+      display: flex; justify-content: space-between; padding: 10px 20px 8px;
+      color: var(--tertiary); font: 10px/1 var(--font-data); letter-spacing: .08em;
+    }
+    .mobile-sound-list { display: grid; list-style: none; margin: 0; padding: 0; }
+    .mobile-sound-list > li + li { border-top: 1px solid var(--ghost); }
+    .mobile-sound-list details[open] { background: var(--surface-c); }
+    .mobile-sound-list summary {
+      position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto 10px;
+      gap: 8px 12px; align-items: center; min-height: 62px; padding: 12px 20px;
+      color: var(--on-surface-v); cursor: pointer; list-style: none;
+    }
+    .mobile-sound-list summary::-webkit-details-marker { display: none; }
+    .mobile-sound-list summary:focus-visible { outline: 2px solid var(--on-surface); outline-offset: -4px; }
+    .mobile-risk-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--secondary); }
+    .mobile-risk-dot.warning { background: var(--warning); }
+    .mobile-risk-dot.danger { background: var(--error); }
+    .mobile-sound-name { overflow: hidden; color: var(--on-surface); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .mobile-sound-list summary strong { font: 500 12px/1 var(--font-data); white-space: nowrap; }
+    .mobile-disclosure {
+      width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+      rotate: 45deg; transition: rotate 160ms ease;
+    }
+    details[open] .mobile-disclosure { rotate: 225deg; }
+    .mobile-range-track {
+      position: relative; grid-column: 2 / -1; height: 3px; overflow: hidden;
+      border-radius: 999px; background: var(--ghost);
+    }
+    .mobile-range-fill {
+      position: absolute; inset-block: 0; left: var(--range-start); width: calc(var(--range-end) - var(--range-start));
+      min-width: 5px; border-radius: inherit; background: var(--secondary);
+    }
+    .mobile-range-fill.warning { background: var(--warning); }
+    .mobile-range-fill.danger { background: var(--error); }
+    .mobile-sound-detail { display: grid; gap: 8px; padding: 0 20px 16px 42px; }
+    .mobile-sound-detail p { margin: 0; color: var(--on-surface-v); font-size: 14px; }
+    .mobile-sound-detail .mobile-exposure-note { color: var(--secondary); font-size: 13px; }
+    .mobile-sound-detail a { justify-self: start; margin-top: 4px; color: var(--on-surface); font-size: 14px; font-weight: 600; text-underline-offset: 4px; }
   }
 </style>

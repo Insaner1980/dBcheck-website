@@ -1,4 +1,5 @@
 import {
+  getFreePriceForCountry,
   getProPriceForCountry,
   parseCloudflareTraceCountry,
   splitPriceDisplay,
@@ -6,37 +7,32 @@ import {
 
 function renderPrice(element: HTMLElement, displayPrice: string) {
   const { prefix, amount, suffix } = splitPriceDisplay(displayPrice);
-  const priceParts = [];
-  if (prefix) {
-    priceParts.push(Object.assign(document.createElement('span'), {
-      className: 'plan-cur', textContent: prefix,
-    }));
-  }
-  priceParts.push(Object.assign(document.createElement('span'), {
-      className: 'plan-amount',
-      textContent: amount,
-  }));
-  if (suffix) {
-    priceParts.push(Object.assign(document.createElement('span'), {
-      className: 'plan-cur', textContent: suffix,
-    }));
-  }
-  element.replaceChildren(...priceParts);
+  const prefixElement = element.querySelector<HTMLElement>('[data-price-prefix]');
+  const amountElement = element.querySelector<HTMLElement>('[data-price-amount]');
+  const suffixElement = element.querySelector<HTMLElement>('[data-price-suffix]');
+
+  if (!prefixElement || !amountElement || !suffixElement) return;
+
+  prefixElement.textContent = prefix;
+  amountElement.textContent = amount;
+  suffixElement.textContent = suffix;
 }
 
-async function localizeProPrice() {
-  const priceElement = document.querySelector<HTMLElement>('[data-localized-pro-price]');
-  if (!priceElement) return;
+async function localizePrices() {
+  const freePriceElement = document.querySelector<HTMLElement>('[data-localized-free-price]');
+  const proPriceElement = document.querySelector<HTMLElement>('[data-localized-pro-price]');
+  if (!freePriceElement || !proPriceElement) return;
 
   try {
     const response = await fetch('/cdn-cgi/trace', { cache: 'no-store' });
     if (!response.ok) return;
 
     const countryCode = parseCloudflareTraceCountry(await response.text());
-    renderPrice(priceElement, getProPriceForCountry(countryCode));
+    renderPrice(freePriceElement, getFreePriceForCountry(countryCode));
+    renderPrice(proPriceElement, getProPriceForCountry(countryCode));
   } catch {
     // Staattinen EUR-hinta on tarkoituksellinen varavaihtoehto.
   }
 }
 
-void localizeProPrice();
+void localizePrices();

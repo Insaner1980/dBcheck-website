@@ -56,7 +56,7 @@ const publishedCount = commonSounds.filter((sound) => sound.articleRoute).length
   <style>
     .sounds-page { max-width: var(--max-w); margin: 0 auto; padding: 64px 20px 0; }
     .page-head { display: grid; gap: 16px; max-width: 800px; margin-bottom: 48px; }
-    h1 { margin: 0; font: 700 clamp(40px, 7vw, 68px)/1.02 var(--font-data); letter-spacing: -.03em; }
+    h1 { margin: 0; font: 700 var(--font-size-page-title)/1.02 var(--font-data); letter-spacing: -.03em; }
     .page-head p { max-width: 680px; margin: 0; color: var(--on-surface-v); font-size: 18px; }
     .library-head { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: end; margin: 88px 0 28px; }
     .library-head h2 { margin: 8px 0 0; font-size: 32px; }
@@ -71,10 +71,9 @@ const publishedCount = commonSounds.filter((sound) => sound.articleRoute).length
     .measurement-note h2 { font-size: 22px; }
     .measurement-note p { color: var(--on-surface-v); }
     @media (max-width: 700px) {
-      .library-head, .measurement-note { grid-template-columns: 1fr; gap: 16px; }
-      .sound-row { grid-template-columns: 1fr auto; }
-      .sound-category, .sound-status { grid-row: 2; }
-      .sound-status { text-align: right; }
+      .page-head { margin-bottom: 32px; }
+      .library-head, .sound-list { display: none; }
+      .measurement-note { grid-template-columns: 1fr; gap: 16px; margin-top: 40px; }
     }
   </style>
 </Base>
