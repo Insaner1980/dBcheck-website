@@ -21,7 +21,7 @@ const initial = sounds[0];
         <button
           type="button"
           class:list={['sound-marker', sound.riskLevel, { active: index === 0 }]}
-          style={`--position:${Math.min((sound.typicalMinDb + sound.typicalMaxDb) / 2, 130) / 130 * 100}%`}
+          style={`--position:${Math.min((sound.typicalMinDb + sound.typicalMaxDb) / 2, 130) / 130 * 100}%;--marker-index:${index}`}
           aria-pressed={index === 0 ? 'true' : 'false'}
           aria-controls={`${id}-detail`}
           data-name={sound.name}
@@ -55,8 +55,8 @@ const initial = sounds[0];
     <div class="mobile-scale-key" aria-hidden="true"><span>0</span><span>130 dB</span></div>
     <ul class="mobile-sound-list" aria-label="Common sound examples by typical decibel range">
       {sounds.map((sound, index) => (
-        <li>
-          <details name={`${id}-mobile-sounds`} open={index === 0}>
+        <li style={`--sound-index:${index}`}>
+          <details name={`${id}-mobile-sounds`}>
             <summary>
               <span class:list={['mobile-risk-dot', sound.riskLevel]} aria-hidden="true"></span>
               <span class="mobile-sound-name">{sound.name}</span>
@@ -91,8 +91,10 @@ const initial = sounds[0];
     const description = explorer.querySelector<HTMLElement>('[data-sound-description]');
     const note = explorer.querySelector<HTMLElement>('[data-sound-note]');
     const route = explorer.querySelector<HTMLAnchorElement>('[data-sound-route]');
+    const scale = explorer.querySelector<HTMLElement>('.sound-scale');
+    const detail = explorer.querySelector<HTMLElement>('.sound-detail');
 
-    const select = (marker: HTMLButtonElement) => {
+    const select = (marker: HTMLButtonElement, animate = false) => {
       markers.forEach((item) => {
         const active = item === marker;
         item.classList.toggle('active', active);
@@ -107,10 +109,21 @@ const initial = sounds[0];
         route.hidden = !target;
         route.href = target || '/sounds/';
       }
+      if (animate) {
+        marker.classList.remove('is-pulsing');
+        scale?.classList.remove('is-scanning');
+        detail?.classList.remove('is-changing');
+        scale?.style.setProperty('--active-position', marker.style.getPropertyValue('--position'));
+        requestAnimationFrame(() => {
+          marker.classList.add('is-pulsing');
+          scale?.classList.add('is-scanning');
+          detail?.classList.add('is-changing');
+        });
+      }
     };
 
     markers.forEach((marker) => {
-      marker.addEventListener('click', () => select(marker));
+      marker.addEventListener('click', () => select(marker, true));
       marker.addEventListener('pointerenter', (event) => {
         if ((event as PointerEvent).pointerType !== 'touch') select(marker);
       });
@@ -119,18 +132,41 @@ const initial = sounds[0];
 </script>
 
 <style>
-  .sound-explorer { display: grid; gap: 20px; }
+  .sound-explorer {
+    --sound-selection-duration: 900ms;
+    --sound-selection-ease: cubic-bezier(.2,.7,.2,1);
+    display: grid; gap: 20px;
+  }
   .sound-scale {
+    --active-position: 26%;
     position: relative; min-height: 250px; overflow-x: auto; overflow-y: hidden;
     border: 1px solid var(--ghost); border-radius: var(--radius-card);
     background: linear-gradient(180deg, rgba(255,255,255,.025), transparent), var(--surface);
     padding: 28px 24px 22px;
   }
+  .sound-scale::after {
+    content: ''; position: absolute; z-index: 0; top: 22px; bottom: 30px;
+    left: clamp(24px, var(--active-position), calc(100% - 24px)); width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--on-surface-v) 22% 78%, transparent);
+    opacity: 0; transform: scaleY(0); transform-origin: top; pointer-events: none;
+  }
+  .sound-scale.is-scanning::after {
+    animation: scale-selection-scan var(--sound-selection-duration) var(--sound-selection-ease);
+  }
+  @keyframes scale-selection-scan {
+    20% { opacity: .7; }
+    70% { opacity: .5; transform: scaleY(1); }
+    to { opacity: 0; transform: scaleY(1); }
+  }
   .scale-track {
     position: absolute; left: 24px; right: 24px; bottom: 30px;
     display: flex; justify-content: space-between;
-    border-top: 1px solid var(--outline-v); padding-top: 9px;
+    padding-top: 9px;
     color: var(--tertiary); font: 10px/1 var(--font-data); letter-spacing: .08em;
+  }
+  .scale-track::before {
+    content: ''; position: absolute; right: 0; left: 0; top: 0; height: 1px;
+    background: var(--outline-v); transform-origin: left;
   }
   .scale-track::after {
     content: ''; position: absolute; left: calc(85 / 130 * 100%); top: -1px; bottom: 17px;
@@ -146,17 +182,53 @@ const initial = sounds[0];
   .sound-marker[data-lane="middle"] { bottom: 82px; }
   .sound-marker[data-lane="top"] { bottom: 128px; }
   .marker-dot {
-    width: 11px; height: 11px; border-radius: 50%; background: var(--secondary);
+    position: relative; width: 11px; height: 11px; border-radius: 50%; background: var(--secondary);
     box-shadow: 0 0 0 5px var(--surface);
+  }
+  .marker-dot::after {
+    content: ''; position: absolute; inset: -8px; border: 1px solid currentColor; border-radius: 50%;
+    opacity: 0; transform: scale(.35); pointer-events: none;
   }
   .sound-marker.warning .marker-dot { background: var(--warning); }
   .sound-marker.danger .marker-dot { background: var(--error); }
   .sound-marker:hover, .sound-marker.active { color: var(--on-surface); }
   .sound-marker.active .marker-dot { box-shadow: 0 0 0 5px var(--surface), 0 0 0 7px currentColor; }
+  .sound-marker.is-pulsing .marker-dot::after { animation: sound-marker-ping 700ms ease-out; }
+  @media (min-width: 701px) {
+    .sound-explorer.reveal.in .scale-track::before { animation: scale-line-draw 680ms cubic-bezier(.2,.7,.2,1) 80ms both; }
+    .sound-explorer.reveal.in .scale-track > span { animation: scale-label-enter 260ms ease-out 620ms both; }
+    .sound-explorer.reveal.in .sound-marker {
+      animation: sound-marker-settle 540ms cubic-bezier(.18,.85,.25,1.15) both;
+      animation-delay: calc(470ms + var(--marker-index) * 70ms);
+    }
+  }
+  @keyframes scale-line-draw { from { transform: scaleX(0); } }
+  @keyframes scale-label-enter { from { opacity: 0; transform: translateY(4px); } }
+  @keyframes sound-marker-settle {
+    from { opacity: 0; transform: translateY(-28px) scale(.76); }
+    72% { opacity: 1; transform: translateY(3px) scale(1.06); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes sound-marker-ping { 35% { opacity: .8; } to { opacity: 0; transform: scale(1.75); } }
   .sound-marker:focus-visible { outline: 2px solid var(--on-surface); outline-offset: 7px; border-radius: 4px; }
   .sound-detail {
-    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: end;
+    position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: end; overflow: hidden;
     padding: 28px; border: 1px solid var(--ghost); border-radius: var(--radius-card); background: var(--surface-c);
+  }
+  .sound-detail::before {
+    content: ''; position: absolute; top: 0; right: 0; left: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--on-surface), transparent);
+    opacity: 0; transform: scaleX(0); transform-origin: left; pointer-events: none;
+  }
+  .sound-detail.is-changing { animation: sound-detail-enter 360ms var(--sound-selection-ease); }
+  .sound-detail.is-changing::before {
+    animation: sound-detail-scan var(--sound-selection-duration) var(--sound-selection-ease) 120ms;
+  }
+  @keyframes sound-detail-enter { from { opacity: .22; transform: translateY(10px); } }
+  @keyframes sound-detail-scan {
+    25%, 70% { opacity: .7; }
+    70%, 100% { transform: scaleX(1); }
+    to { opacity: 0; }
   }
   .detail-category { color: var(--tertiary); font: 10px/1 var(--font-data); letter-spacing: .12em; text-transform: uppercase; }
   .sound-detail h3 { margin: 8px 0; font-size: 24px; }
@@ -210,11 +282,29 @@ const initial = sounds[0];
       position: absolute; inset-block: 0; left: var(--range-start); width: calc(var(--range-end) - var(--range-start));
       min-width: 5px; border-radius: inherit; background: var(--secondary);
     }
+    .sound-explorer.reveal.in .mobile-range-fill {
+      animation: mobile-range-enter 420ms cubic-bezier(.2,.7,.2,1) both;
+      animation-delay: calc(var(--sound-index) * 40ms); transform-origin: left;
+    }
+    @keyframes mobile-range-enter { from { opacity: 0; transform: scaleX(0); } }
     .mobile-range-fill.warning { background: var(--warning); }
     .mobile-range-fill.danger { background: var(--error); }
     .mobile-sound-detail { display: grid; gap: 8px; padding: 0 20px 16px 42px; }
+    details[open] .mobile-sound-detail { animation: mobile-detail-enter 180ms ease-out; }
+    @keyframes mobile-detail-enter { from { opacity: 0; transform: translateY(-5px); } }
     .mobile-sound-detail p { margin: 0; color: var(--on-surface-v); font-size: 14px; }
     .mobile-sound-detail .mobile-exposure-note { color: var(--secondary); font-size: 13px; }
     .mobile-sound-detail a { justify-self: start; margin-top: 4px; color: var(--on-surface); font-size: 14px; font-weight: 600; text-underline-offset: 4px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sound-explorer.reveal.in .sound-marker,
+    .sound-marker.is-pulsing .marker-dot::after,
+    .sound-scale.is-scanning::after,
+    .sound-explorer.reveal.in .scale-track::before,
+    .sound-explorer.reveal.in .scale-track > span,
+    .sound-detail.is-changing,
+    .sound-detail.is-changing::before,
+    .sound-explorer.reveal.in .mobile-range-fill,
+    details[open] .mobile-sound-detail { animation: none; }
   }
 </style>

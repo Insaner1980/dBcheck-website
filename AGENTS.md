@@ -3,7 +3,7 @@
 ## Arkkitehtuuri
 
 - Sivusto on Astro 7 -staattinen sivusto. Älä lisää raskasta frontend-kehystä kevyitä vuorovaikutuksia varten.
-- `src/layouts/Base.astro` omistaa yhteisen navigaation, haun, footerin, design tokenit ja sivukohtaisista propseista muodostuvat metatiedot.
+- `src/layouts/Base.astro` omistaa yhteisen navigaation, haun, footerin, design tokenit, sivunvaihto-motionin, laskuritulosten yhteisen motion-palautteen sekä sivukohtaisista propseista muodostuvat metatiedot. Kaiken koristeellisen liikkeen pitää kunnioittaa `prefers-reduced-motion`-asetusta.
 - `src/data/sounds.ts` on Common Sounds Explorerin ja julkaistujen sound-yhteenvetojen ainoa rakenteisen datan lähde. Etusivu, `/sounds`, sound-sivut ja Explorer käyttävät samaa dataa.
 - `src/data/tools.ts` on Tools-indeksin ja haun työkalumetadatan ainoa lähde. Kaikki viisi työkalua ovat julkaistuja linkkejä; laskureiden yhteinen sivurakenne ja lomaketyylit kuuluvat `src/components/CalculatorPage.astro`:lle, numerokenttien yhteinen rakenne `src/components/NumberField.astro`:lle ja kolmen monikenttälaskurin yhteinen asiakaslogiikka `src/scripts/tool-calculators.ts`:lle.
 - `src/data/prices.ts` on Free- ja Pro-hintojen alueellisen esitysmuodon ainoa lähde. Etusivun hintakortit käyttävät samaa maatunnistusta ja säilyttävät staattisen EUR-hinnan varavaihtoehtona.

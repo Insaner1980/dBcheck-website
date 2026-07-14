@@ -53,7 +53,6 @@ const initializeNoiseDoseCalculator = (calculator: HTMLElement) => {
   const doseOutput = calculator.querySelector<HTMLElement>('[data-dose-output]');
   const doseDetail = calculator.querySelector<HTMLElement>('[data-dose-detail]');
   if (!form || !list || !template || !addButton || !doseOutput || !doseDetail) return;
-
   const rows = () => Array.from(list.querySelectorAll<HTMLElement>('[data-exposure-row]'));
 
   const updateRowControls = () => {

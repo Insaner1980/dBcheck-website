@@ -82,7 +82,6 @@ const ga4MeasurementId = 'G-9J90097M6J';
         <span class="menu-icon" aria-hidden="true"></span>
       </button>
       <div class="nav-links" id="primary-links">
-        <a href="/sounds/">Sound Library</a>
         <a href="/tools/">Tools</a>
         <a href="/#features">Features</a>
         <a href="/#pricing">Pricing</a>
@@ -144,6 +143,8 @@ const ga4MeasurementId = 'G-9J90097M6J';
   </footer>
 
   <script>
+    const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     // ---- Mobile navigation ----
     const menuToggle = document.getElementById('menu-toggle');
     const primaryLinks = document.getElementById('primary-links');
@@ -153,6 +154,16 @@ const ga4MeasurementId = 'G-9J90097M6J';
     };
     menuToggle?.addEventListener('click', () => setMenuOpen(menuToggle.getAttribute('aria-expanded') !== 'true'));
     primaryLinks?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setMenuOpen(false)));
+
+    // ---- Shared heading transition ----
+    document.addEventListener('click', (event) => {
+      const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[href^="/"]');
+      const card = link?.closest('.article-card, .tool-card');
+      const cardHeading = card?.querySelector<HTMLElement>('h2, h3');
+      if (!cardHeading) return;
+      document.querySelector<HTMLElement>('main h1')?.style.setProperty('view-transition-name', 'none');
+      cardHeading.style.setProperty('view-transition-name', 'page-heading');
+    });
 
     // ---- Search overlay ----
     const overlay = document.getElementById('search-overlay') as HTMLDialogElement | null;
@@ -173,13 +184,30 @@ const ga4MeasurementId = 'G-9J90097M6J';
       if (!overlay || overlay.open) return;
       searchTrigger = document.activeElement as HTMLElement | null;
       overlay.hidden = false;
+      overlay.classList.remove('is-closing');
       overlay.showModal();
+      document.body.classList.add('search-open');
       loadIndex();
       requestAnimationFrame(() => input?.focus());
     }
     function closeSearch() {
       if (!overlay?.open) return;
-      overlay.close();
+      const finish = () => {
+        overlay.close();
+        overlay.classList.remove('is-closing');
+      };
+      const panel = overlay.querySelector('.search-panel');
+      if (prefersReduced || !panel) {
+        finish();
+        return;
+      }
+      overlay.classList.add('is-closing');
+      const onAnimationEnd = (event: AnimationEvent) => {
+        if (event.target !== panel) return;
+        panel.removeEventListener('animationend', onAnimationEnd as EventListener);
+        finish();
+      };
+      panel.addEventListener('animationend', onAnimationEnd as EventListener);
     }
 
     document.getElementById('search-open')?.addEventListener('click', openSearch);
@@ -190,10 +218,15 @@ const ga4MeasurementId = 'G-9J90097M6J';
       const outside = event.clientX < panel.left || event.clientX > panel.right || event.clientY < panel.top || event.clientY > panel.bottom;
       if (outside) closeSearch();
     });
+    overlay?.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      closeSearch();
+    });
     if (overlay?.open) overlay.close();
     if (overlay) overlay.hidden = true;
     overlay?.addEventListener('close', () => {
       overlay.hidden = true;
+      document.body.classList.remove('search-open');
       searchTrigger?.focus();
     });
     document.addEventListener('keydown', (e) => {
@@ -204,7 +237,6 @@ const ga4MeasurementId = 'G-9J90097M6J';
     });
 
     // ---- Scroll reveal ----
-    const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const revealSelectors = [
       '.hero-copy', '.hero-hud', '.section-head', '.why-card', '.feature-row',
       '.feature-group-head', '.plan', '.article-card', '.strip-inner',
@@ -231,6 +263,25 @@ const ga4MeasurementId = 'G-9J90097M6J';
       revealEls.forEach((el) => io.observe(el));
     }
 
+    // ---- Live result motion ----
+    if (!prefersReduced) {
+      const resultFrames = new WeakMap<Element, number>();
+      document.querySelectorAll('.calculator-result strong').forEach((output) => {
+        const observer = new MutationObserver(() => {
+          const result = output.closest('.calculator-result');
+          if (!result) return;
+          const pendingFrame = resultFrames.get(result);
+          if (pendingFrame) cancelAnimationFrame(pendingFrame);
+          result.classList.remove('result-updated');
+          resultFrames.set(result, requestAnimationFrame(() => {
+            result.classList.add('result-updated');
+            resultFrames.delete(result);
+          }));
+        });
+        observer.observe(output, { childList: true, characterData: true, subtree: true });
+      });
+    }
+
     input?.addEventListener('input', async () => {
       const q = input.value.trim().toLowerCase();
       const data = (await loadIndex()) ?? [];
@@ -243,8 +294,9 @@ const ga4MeasurementId = 'G-9J90097M6J';
         d.tags.some((t) => t.toLowerCase().includes(q))
       ).slice(0, 12);
       emptyEl.hidden = hits.length > 0;
-      for (const hit of hits) {
+      for (const [hitIndex, hit] of hits.entries()) {
         const li = document.createElement('li');
+        li.style.setProperty('--hit-index', String(hitIndex));
         const a = document.createElement('a');
         a.href = hit.url;
         const kind = document.createElement('span');
@@ -264,6 +316,8 @@ const ga4MeasurementId = 'G-9J90097M6J';
   </script>
 
   <style is:global>
+    @view-transition { navigation: auto; }
+
     :root {
       /* dBcheck dark theme tokens (from app UI spec) */
       --bg: #080808;
@@ -279,6 +333,7 @@ const ga4MeasurementId = 'G-9J90097M6J';
       --tertiary: #5E5E5E;
       --outline-v: #8C8C8C;
       --ghost: rgba(140, 140, 140, 0.15);
+      --result-border-color: var(--on-surface);
       --error: #E07A7A;
       --warning: #C9A24D;
       --success: #8EA58E;
@@ -320,6 +375,17 @@ const ga4MeasurementId = 'G-9J90097M6J';
     }
 
     /* ---- Motion ---- */
+    @keyframes page-exit {
+      to { opacity: 0; transform: translateY(-8px); }
+    }
+    @keyframes page-enter {
+      from { opacity: 0; transform: translateY(10px); }
+    }
+    ::view-transition-old(root) { animation: page-exit 160ms ease-in both; }
+    ::view-transition-new(root) { animation: page-enter 280ms cubic-bezier(.2,.7,.2,1) both; }
+    ::view-transition-group(page-heading) { animation-duration: 380ms; animation-timing-function: cubic-bezier(.2,.7,.2,1); }
+    main h1 { view-transition-name: page-heading; }
+
     .reveal {
       opacity: 0;
       translate: 0 26px;
@@ -347,11 +413,20 @@ const ga4MeasurementId = 'G-9J90097M6J';
     }
     .why-card:hover, .article-card:hover, .plan:hover { translate: 0 -4px; }
 
+    .calculator-result.result-updated strong { animation: result-value-enter 220ms cubic-bezier(.2,.7,.2,1); }
+    @keyframes result-value-enter {
+      from { opacity: .3; transform: translateY(7px); }
+    }
+
     @media (prefers-reduced-motion: reduce) {
+      ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
       html { scroll-behavior: auto; }
       .reveal { opacity: 1; translate: none; transition: none; }
       .wordmark-eq rect { animation: none !important; }
       .why-card:hover, .article-card:hover, .plan:hover { translate: none; }
+      .calculator-result.result-updated strong { animation: none; }
+      .search-panel, .search-results li { animation: none !important; }
+      body.search-open .search-btn { scale: 1; opacity: 1; }
     }
 
     /* ---- Header ---- */
@@ -391,9 +466,10 @@ const ga4MeasurementId = 'G-9J90097M6J';
       border: 1px solid var(--ghost);
       background: transparent; color: var(--on-surface-v);
       cursor: pointer;
-      transition: color 160ms ease, border-color 160ms ease;
+      transition: color 160ms ease, border-color 160ms ease, scale 180ms ease, opacity 180ms ease;
     }
     .search-btn:hover { color: var(--on-surface); border-color: var(--outline-v); }
+    body.search-open .search-btn { scale: .86; opacity: .35; }
 
     /* ---- Search overlay ---- */
     .search-overlay {
@@ -414,6 +490,15 @@ const ga4MeasurementId = 'G-9J90097M6J';
       border: 1px solid var(--ghost);
       border-radius: var(--radius-card);
       padding: 24px;
+      transform-origin: calc(100% - 24px) 0;
+      animation: search-panel-enter 280ms cubic-bezier(.16,.8,.2,1) both;
+    }
+    .search-overlay.is-closing .search-panel { animation: search-panel-exit 160ms ease-in both; }
+    @keyframes search-panel-enter {
+      from { opacity: 0; transform: translate(18px, -18px) scale(.82); }
+    }
+    @keyframes search-panel-exit {
+      to { opacity: 0; transform: translate(18px, -18px) scale(.9); }
     }
     .search-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .search-kicker { font-family: var(--font-data); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--secondary); }
@@ -473,6 +558,8 @@ const ga4MeasurementId = 'G-9J90097M6J';
       text-decoration: none;
     }
     .search-results a:hover { background: var(--surface-ch); }
+    .search-results li { animation: search-hit-enter 220ms cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--hit-index) * 35ms); }
+    @keyframes search-hit-enter { from { opacity: 0; transform: translateY(6px); } }
     .hit-kind { font-family: var(--font-data); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tertiary); }
     .hit-title { font-weight: 600; }
     .hit-desc { font-size: 13px; color: var(--on-surface-v); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -571,7 +571,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
 
     /* ---------- hero HUD (compact meter) ---------- */
     .hero-hud {
-      flex: none;
+      position: relative; flex: none; overflow: hidden; isolation: isolate;
       display: flex; gap: 20px; align-items: center;
       padding: 18px 20px;
       background: rgba(8, 8, 8, 0.55);
@@ -579,6 +579,21 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       border-radius: 24px;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
+    }
+    .hero-hud::after {
+      content: ''; position: absolute; z-index: 3; right: 0; left: 0; top: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--on-surface), transparent);
+      opacity: 0; pointer-events: none; transform: translateY(-2px);
+    }
+    .hero-hud.is-booting::after { animation: hud-calibration-scan 1.15s cubic-bezier(.2,.7,.2,1) 120ms both; }
+    .hero-hud.is-booting .gauge-sweep { animation: gauge-calibrate 1.15s cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes hud-calibration-scan {
+      12%, 70% { opacity: .55; }
+      to { opacity: 0; transform: translateY(174px); }
+    }
+    @keyframes gauge-calibrate {
+      0%, 100% { stroke-dasharray: 0 999; }
+      58% { stroke-dasharray: 395.84 999; }
     }
     .hud-gauge {
       position: relative; flex: none;
@@ -1000,6 +1015,8 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     @media (prefers-reduced-motion: reduce) {
       .ghost-word { animation: none; }
       :global(body.is-listening) .hud-gauge { animation: none; }
+      .hero-hud.is-booting::after,
+      .hero-hud.is-booting .gauge-sweep { animation: none; }
       .pro-feature-category,
       .pro-feature-category::after,
       .pro-feature-button,
@@ -1255,6 +1272,21 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
 
     // ---- idle spectrum: a faint synthetic "noise floor" while in standby ----
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const heroHud = document.getElementById('instrument');
+    let bootTimer = 0;
+    if (!reducedMotion) {
+      heroHud?.classList.add('is-booting');
+      statusEl.textContent = 'Initializing';
+      pill.textContent = 'CALIBRATING';
+      bootTimer = window.setTimeout(() => {
+        heroHud?.classList.remove('is-booting');
+        heroHud?.classList.add('has-booted');
+        if (!listening) {
+          statusEl.textContent = 'Standby';
+          pill.textContent = 'STANDBY';
+        }
+      }, 1350);
+    }
     let idleRaf = 0;
     function idleSpectrum(t: number) {
       if (listening) return;
@@ -1281,6 +1313,8 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     if (!reducedMotion) idleRaf = requestAnimationFrame(idleSpectrum);
 
     function setListening(on: boolean) {
+      window.clearTimeout(bootTimer);
+      heroHud?.classList.remove('is-booting');
       listening = on;
       video.muted = !on;
       document.body.classList.toggle('is-listening', on);

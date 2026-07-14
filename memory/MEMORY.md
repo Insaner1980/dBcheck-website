@@ -5,7 +5,7 @@ Päivitetty: 2026-07-14
 ## Nykyinen rakenne
 
 - Astro 7, staattinen build, julkinen perus-URL `https://dbcheck.app`.
-- Yhteinen shell: `src/layouts/Base.astro`.
+- Yhteinen shell: `src/layouts/Base.astro`; se omistaa myös natiivin MPA-sivunvaihdon, haun motionin ja laskuritulosten yhteisen päivitysanimaation. Koristeellinen liike poistuu `prefers-reduced-motion`-asetuksella.
 - Etusivu: `src/pages/index.astro`; alkuperäinen hero-video ja Web Audio -mittari on säilytetty.
 - Common sounds -tietojen ainoa lähde: `src/data/sounds.ts`.
 - Tools-indeksin ja haun työkalumetadatan ainoa lähde: `src/data/tools.ts`; kaikki viisi työkalua ovat julkaistuja linkkejä ilman status-badgeja.
