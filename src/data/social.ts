@@ -26,15 +26,15 @@ export const socialImages = {
   },
 } satisfies Record<string, SocialImage>;
 
-export function socialImageForEditorial(kind: 'article' | 'sound', contentCluster: string): SocialImage {
+export function socialImageForEditorial(kind: 'article' | 'sound', clusterKey: string): SocialImage {
   if (kind === 'sound') return socialImages.sounds;
 
-  switch (contentCluster) {
-    case 'Decibel fundamentals':
+  switch (clusterKey) {
+    case 'fundamentals':
       return socialImages.fundamentals;
-    case 'Smartphone sound measurement':
+    case 'smartphone':
       return socialImages.measurement;
-    case 'Noise exposure and hearing risk':
+    case 'exposure':
       return socialImages.exposure;
     default:
       return socialImages.app;

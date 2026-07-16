@@ -1,0 +1,64 @@
+---
+import Base from '../layouts/Base.astro';
+import { socialImages } from '../data/social';
+import ExposureCalculator from './ExposureCalculator.astro';
+import type { Locale } from '../i18n/config';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const de = locale === 'de';
+---
+
+<Base
+  title={de ? 'Expositionsdauer-Rechner | dBcheck' : 'NIOSH exposure time calculator | dBcheck'}
+  description={de ? 'Berechnen Sie, nach welcher konstanten Expositionsdauer ein Schallpegel dem oberen deutschen Auslösewert L_EX,8h = 85 dB(A) entspricht.' : 'Estimate the time to a 100% NIOSH daily occupational noise dose using the 85 dBA, 8 hour and 3 dB exchange-rate model.'}
+  socialImage={socialImages.exposure}
+  locale={locale}
+>
+  <section class="calculator-page">
+    <header class="page-head">
+      <a href={de ? '/de/werkzeuge/' : '/tools/'}><span aria-hidden="true">←</span> {de ? 'Alle Werkzeuge' : 'All tools'}</a>
+      <span class="kicker">{de ? 'Expositionsdauer-Rechner' : 'Safe Exposure Time Calculator'}</span>
+      <h1>{de ? 'Pegel und Dauer teilen sich dieselbe Schallenergie.' : 'Level and time share the same budget.'}</h1>
+      <p>{de ? 'Verschieben Sie den Regler, um die konstante Dauer bis zum oberen Auslösewert L_EX,8h = 85 dB(A) nach dem deutschen Arbeitsschutzmodell zu berechnen.' : 'Move the slider to see how a constant A-weighted level changes the NIOSH daily occupational exposure estimate.'}</p>
+    </header>
+
+    <ExposureCalculator id="full-exposure-calculator" showLink={false} locale={locale} />
+
+    <div class="reference-grid">
+      <section>
+        <span class="kicker">{de ? 'Berechnungsmodell' : 'How it works'}</span>
+        <h2>{de ? 'Auf acht Stunden normiert' : 'The 3 dB exchange rate'}</h2>
+        {de
+          ? <p>Die <a href="https://www.baua.de/DE/Themen/Arbeitsgestaltung/Gefaehrdungsbeurteilung/Handbuch-Gefaehrdungsbeurteilung/Expertenwissen/Physikalische-Einwirkungen/Laerm/Autorenbeitraege/grenzwerte.html">BAuA-Formel</a> lautet L_EX,8h = L_Aeq,T + 10 lg(T / 8 h). Daraus wird die Dauer T berechnet, bei der L_EX,8h genau 85 dB(A) erreicht.</p>
+          : <p>The model starts at 85 dBA for 8 hours. Every 3 dB increase doubles sound energy and halves the estimated duration: 88 dBA for 4 hours, 91 dBA for 2 hours and 94 dBA for 1 hour.</p>}
+      </section>
+      <section>
+        <span class="kicker">{de ? 'Arbeitsschutz' : 'Important limits'}</span>
+        <h2>{de ? 'Kein Sicherheitsversprechen' : 'An occupational estimate, not a promise'}</h2>
+        {de
+          ? <p>Die <a href="https://www.gesetze-im-internet.de/l_rmvibrationsarbschv/__6.html">LärmVibrationsArbSchV</a> setzt Auslösewerte bei 80 und 85 dB(A). Das Ergebnis ist weder eine erlaubte Höchstdauer noch eine individuelle Garantie gegen Gehörschäden.</p>
+          : <p>NIOSH REL is designed for workplace exposure. Individual susceptibility varies, and impulse sounds, changing levels and non-work listening need more context than this single-level estimate provides.</p>}
+      </section>
+      <section>
+        <span class="kicker">{de ? 'Messkontext' : 'Measurement context'}</span>
+        <h2>{de ? 'Der Eingabewert entscheidet' : 'Your input matters'}</h2>
+        <p>{de ? 'Smartphone-Messungen hängen von Mikrofon, Verarbeitung und Kalibrierung ab. dBcheck ist kein Messgerät der Klasse 1 oder 2; ungeprüfte Werte eignen sich nicht für rechtliche Nachweise.' : 'Phone measurements depend on the microphone, processing and calibration. dBcheck is not a certified Class 1 or Class 2 instrument, so do not use an unverified reading for regulatory decisions.'}</p>
+      </section>
+    </div>
+  </section>
+
+  <style>
+    .calculator-page { max-width: var(--max-w); margin: 0 auto; padding: 56px 20px 0; }
+    .page-head { display: grid; gap: 16px; max-width: 820px; margin-bottom: 48px; }
+    .page-head > a { justify-self: start; margin-bottom: 24px; color: var(--secondary); font-size: 13px; text-underline-offset: 4px; }
+    h1 { margin: 0; font: 700 var(--font-size-page-title)/1 var(--font-data); letter-spacing: -.035em; }
+    .page-head p { max-width: 700px; margin: 0; color: var(--on-surface-v); font-size: 18px; }
+    .reference-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 36px; }
+    .reference-grid section { padding: 28px; border: 1px solid var(--ghost); border-radius: var(--radius-card); background: var(--surface); }
+    .reference-grid h2 { margin: 10px 0; font-size: 21px; }
+    .reference-grid p { margin: 0; color: var(--on-surface-v); font-size: 14px; }
+    .reference-grid a { color: inherit; text-underline-offset: 3px; }
+    @media (max-width: 850px) { .reference-grid { grid-template-columns: 1fr; } }
+  </style>
+</Base>

@@ -1,5 +1,8 @@
 ---
 import { socialImages, type SocialImage } from '../data/social';
+import { defaultLocale, isLocale, localeTags, openGraphLocales, type Locale } from '../i18n/config';
+import { alternatesForPath, findRoutePair, type AlternateLink } from '../i18n/routes';
+import { getUi, ui } from '../i18n/ui';
 
 interface Props {
   title: string;
@@ -7,6 +10,8 @@ interface Props {
   ogType?: 'website' | 'article';
   jsonLd?: Record<string, unknown>[];
   socialImage?: SocialImage;
+  locale?: Locale;
+  alternates?: AlternateLink[];
 }
 const {
   title,
@@ -14,14 +19,22 @@ const {
   ogType = 'website',
   jsonLd = [],
   socialImage = socialImages.app,
+  locale: localeProp,
+  alternates: alternateProp,
 } = Astro.props;
+const locale = localeProp ?? (isLocale(Astro.currentLocale) ? Astro.currentLocale : defaultLocale);
+const copy = getUi(locale);
 const canonical = new URL(Astro.url.pathname, Astro.site);
+const alternates = alternateProp ?? alternatesForPath(Astro.url.pathname);
+const isLocalized = locale !== defaultLocale;
+const localizedRoute = (defaultPath: string) => findRoutePair(defaultPath)?.[locale] ?? defaultPath;
+const searchIndexUrl = isLocalized ? `/${locale}/search.json` : '/search.json';
 const socialImageUrl = new URL(socialImage.src, Astro.site);
 const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value).replace(/</g, '\\u003c');
 const ga4MeasurementId = 'G-9J90097M6J';
 ---
 <!doctype html>
-<html lang="en">
+<html lang={locale}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -30,7 +43,9 @@ const ga4MeasurementId = 'G-9J90097M6J';
   <meta name="generator" content={Astro.generator} />
   <meta name="theme-color" content="#080808" />
   <link rel="canonical" href={canonical} />
-  <link rel="sitemap" href="/sitemap.xml" />
+  {alternates.map((alternate) => <link rel="alternate" hreflang={localeTags[alternate.locale]} href={new URL(alternate.href, Astro.site)} />)}
+  {alternates.some((alternate) => alternate.locale === 'en') && <link rel="alternate" hreflang="x-default" href={new URL(alternates.find((alternate) => alternate.locale === 'en')!.href, Astro.site)} />}
+  <link rel="sitemap" href="/sitemap-index.xml" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
@@ -42,7 +57,7 @@ const ga4MeasurementId = 'G-9J90097M6J';
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content={socialImage.alt} />
-  <meta property="og:locale" content="en_GB" />
+  <meta property="og:locale" content={openGraphLocales[locale]} />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content={title} />
   <meta name="twitter:description" content={description} />
@@ -61,10 +76,10 @@ const ga4MeasurementId = 'G-9J90097M6J';
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+  <a class="skip-link" href="#main">{copy.skip}</a>
 
   <header class="site-header">
-    <nav class="nav" aria-label="Main">
+    <nav class="nav" aria-label={copy.mainNav}>
       <a class="wordmark" href="/">
         <svg class="wordmark-eq" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
           <g fill="currentColor">
@@ -78,16 +93,17 @@ const ga4MeasurementId = 'G-9J90097M6J';
         <span>dB<em>check</em></span>
       </a>
       <button class="menu-btn" id="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-links">
-        <span class="menu-label">Explore</span>
+        <span class="menu-label">{copy.menu}</span>
         <span class="menu-icon" aria-hidden="true"></span>
       </button>
       <div class="nav-links" id="primary-links">
-        <a href="/tools/">Tools</a>
-        <a href="/#features">Features</a>
-        <a href="/#pricing">Pricing</a>
-        <a href="/articles/">Articles</a>
+        {isLocalized ? <>
+          <a href={localizedRoute('/tools/')}>{copy.tools}</a><a href={localizedRoute('/articles/')}>{copy.articles}</a>
+        </> : <>
+          <a href="/tools/">Tools</a><a href="/#features">Features</a><a href="/#pricing">Pricing</a><a href="/articles/">Articles</a>
+        </>}
       </div>
-      <button class="search-btn" id="search-open" aria-label="Search" title="Search ( / )">
+      <button class="search-btn" id="search-open" aria-label={copy.search} title={`${copy.search} ( / )`}>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
         </svg>
@@ -95,19 +111,19 @@ const ga4MeasurementId = 'G-9J90097M6J';
     </nav>
   </header>
 
-  <dialog class="search-overlay" id="search-overlay" aria-labelledby="search-title" closedby="any" hidden>
+  <dialog class="search-overlay" id="search-overlay" aria-labelledby="search-title" data-search-index={searchIndexUrl} closedby="any" hidden>
     <div class="search-panel">
       <div class="search-head">
-        <span class="search-kicker" id="search-title">Search sounds, tools &amp; pages</span>
-        <button class="search-close" id="search-close" aria-label="Close search">ESC</button>
+        <span class="search-kicker" id="search-title">{copy.searchTitle}</span>
+        <button class="search-close" id="search-close" aria-label={copy.closeSearch}>ESC</button>
       </div>
-      <label class="search-label" for="search-input">Search the dBcheck website</label>
-      <input id="search-input" type="search" placeholder="Try “concert” or “calculator”…" autocomplete="off" spellcheck="false" autofocus />
+      <label class="search-label" for="search-input">{copy.searchLabel}</label>
+      <input id="search-input" type="search" placeholder={copy.searchPlaceholder} autocomplete="off" spellcheck="false" autofocus />
       <div class="search-scale" aria-hidden="true">
         <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span><span>130 dB</span>
       </div>
       <ul id="search-results" class="search-results"></ul>
-      <p id="search-empty" class="search-empty" hidden>No matching sounds or pages yet. Try another term.</p>
+      <p id="search-empty" class="search-empty" hidden>{copy.searchEmpty}</p>
     </div>
   </dialog>
 
@@ -116,29 +132,31 @@ const ga4MeasurementId = 'G-9J90097M6J';
   </main>
 
   <footer class="site-footer">
-    <div class="footer-inner">
+    <div class:list={['footer-inner', { 'footer-inner--localized': locale === 'de' }]}>
       <div class="footer-brand">
         <span class="wordmark-sm">dB<em>check</em></span>
-        <p>A quiet instrument for a loud world.<br/>Sound level meter &amp; hearing health companion for Android.</p>
+        <p>{copy.footerTagline.split('\n').map((line, index) => <Fragment>{index > 0 && <br />}{line}</Fragment>)}</p>
       </div>
       <div class="footer-col">
-        <span class="footer-label">Explore</span>
-        <a href="/sounds/">Sound Library</a>
-        <a href="/tools/">Tools</a>
-        <a href="/#features">Features</a>
-        <a href="/#pricing">Pricing</a>
-        <a href="/articles/">Articles</a>
+        <span class="footer-label">{copy.footerExplore}</span>
+        {locale === 'de' ? <>
+          <a href="/de/werkzeuge/">{copy.tools}</a><a href="/de/artikel/">{copy.articles}</a><a href="mailto:contact@finnvek.com">{copy.contact}</a>
+        </> : <>
+          <a href="/tools/">Tools</a><a href="/#features">Features</a><a href="/#pricing">Pricing</a><a href="/articles/">Articles</a>
+        </>}
       </div>
-      <div class="footer-col">
-        <span class="footer-label">App</span>
-        <a href="/#get">Coming soon to Google Play</a>
-        <a href="/#hero">Listen to the page</a>
-        <a href="mailto:contact@finnvek.com">Contact</a>
-      </div>
+      {locale !== 'de' && (
+        <div class="footer-col">
+          <span class="footer-label">{ui.en.app}</span>
+          <a href="/#get">{ui.en.comingSoon}</a>
+          <a href="/#hero">{ui.en.listen}</a>
+          <a href="mailto:contact@finnvek.com">{ui.en.contact}</a>
+        </div>
+      )}
     </div>
     <div class="footer-meta">
-      <span>© {new Date().getFullYear()} dBcheck</span>
-      <span>dBcheck supports education, awareness and personal relative tracking. It is not a certified sound level meter or a clinical diagnostic tool.</span>
+      <span class="footer-copyright"><span>© {new Date().getFullYear()} dBcheck</span><a href="https://finnvek.com">Finnvek</a></span>
+      <span>{copy.disclaimer}</span>
     </div>
   </footer>
 
@@ -175,7 +193,7 @@ const ga4MeasurementId = 'G-9J90097M6J';
 
     async function loadIndex() {
       if (index) return index;
-      const res = await fetch('/search.json');
+      const res = await fetch(overlay?.dataset.searchIndex ?? '/search.json');
       index = await res.json();
       return index;
     }
@@ -572,6 +590,7 @@ const ga4MeasurementId = 'G-9J90097M6J';
       display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px;
       padding: 48px 20px 32px;
     }
+    .footer-inner--localized { grid-template-columns: 2fr 1fr; }
     .wordmark-sm { font-family: var(--font-body); font-weight: 600; font-size: 16px; }
     .footer-brand p { color: var(--secondary); font-size: 14px; margin: 12px 0 0; max-width: 320px; }
     .footer-col { display: grid; gap: 10px; align-content: start; }
@@ -584,6 +603,9 @@ const ga4MeasurementId = 'G-9J90097M6J';
       padding: 0 20px 32px;
       color: var(--tertiary); font-size: 12px;
     }
+    .footer-meta a { color: inherit; text-underline-offset: 3px; }
+    .footer-meta a:hover { color: var(--secondary); }
+    .footer-copyright { display: grid; gap: 2px; }
     @media (max-width: 900px) {
       .nav { position: relative; gap: 12px; }
       .menu-btn {

@@ -1,0 +1,33 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import { socialImages } from '../data/social';
+import type { Locale } from '../i18n/config';
+import { localeTags } from '../i18n/config';
+import { getUi } from '../i18n/ui';
+import { routeForContent } from '../i18n/routes';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const copy = getUi(locale);
+const [articles, sounds] = await Promise.all([
+  getCollection('articles', ({ data }) => !data.draft && data.locale === locale),
+  getCollection('sounds', ({ data }) => !data.draft && data.locale === locale),
+]);
+const byCluster = { fundamentals: articles.filter((entry) => entry.data.clusterKey === 'fundamentals'), exposure: articles.filter((entry) => entry.data.clusterKey === 'exposure'), smartphone: articles.filter((entry) => entry.data.clusterKey === 'smartphone'), 'common-sounds': sounds };
+const groups = (Object.keys(byCluster) as (keyof typeof byCluster)[]).map((key) => ({ key, title: copy.clusters[key][0], description: copy.clusters[key][1], entries: byCluster[key].sort((a, b) => a.data.title.localeCompare(b.data.title, locale)) }));
+---
+<Base title={`${copy.indexTitle} | dBcheck`} description={copy.indexDescription} socialImage={socialImages.fundamentals} locale={locale}>
+  <section class="articles-page">
+    <header class="page-head"><h1>{copy.indexTitle}</h1><p>{copy.indexIntro}</p></header>
+    <div class="article-groups">
+      {groups.map((group) => <section class="article-group" aria-labelledby={`group-${group.key}`}>
+        <header><div><span class="kicker">{group.entries.length} {copy.guides}</span><h2 id={`group-${group.key}`}>{group.title}</h2></div><p>{group.description}</p></header>
+        <ul>{group.entries.map((entry) => <li><a href={routeForContent(locale, entry.collection, entry.data.slug)}><strong>{entry.data.title}</strong><p>{entry.data.description}</p><span>{copy.reviewed} {entry.data.lastReviewed.toLocaleDateString(localeTags[locale], { year: 'numeric', month: 'short', day: 'numeric' })}</span></a></li>)}</ul>
+      </section>)}
+    </div>
+  </section>
+  <style>
+    .articles-page{max-width:var(--max-w);margin:0 auto;padding:64px 20px 0}.page-head{display:grid;gap:16px;max-width:820px;margin-bottom:72px}h1{margin:0;font:700 var(--font-size-page-title)/1 var(--font-data);letter-spacing:-.035em}.page-head p{max-width:700px;margin:0;color:var(--on-surface-v);font-size:18px}.article-groups{display:grid;gap:80px}.article-group>header{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:end;margin-bottom:24px}.article-group h2{margin:8px 0 0;font-size:32px}.article-group>header p{margin:0;color:var(--on-surface-v)}.article-group ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;list-style:none;margin:0;padding:0}.article-group a{display:grid;gap:12px;height:100%;padding:24px;border:1px solid var(--ghost);border-radius:var(--radius-tile);background:var(--surface);text-decoration:none}.article-group a:hover{background:var(--surface-c)}.article-group strong{font-size:19px}.article-group p{margin:0;color:var(--on-surface-v);font-size:14px}.article-group span{align-self:end;color:var(--tertiary);font:10px/1.4 var(--font-data);letter-spacing:.08em;text-transform:uppercase}@media(max-width:700px){.article-group>header,.article-group ul{grid-template-columns:1fr}.article-group>header{gap:12px}}
+  </style>
+</Base>

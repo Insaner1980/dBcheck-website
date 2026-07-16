@@ -1,18 +1,21 @@
 ---
 import type { CommonSound } from '../data/sounds';
+import type { Locale } from '../i18n/config';
 
 interface Props {
   sounds: CommonSound[];
   id?: string;
   compact?: boolean;
+  locale?: Locale;
 }
 
-const { sounds, id = 'sound-explorer', compact = false } = Astro.props;
+const { sounds, id = 'sound-explorer', compact = false, locale = 'en' } = Astro.props;
 const initial = sounds[0];
+const isGerman = locale === 'de';
 ---
 
 <div id={id} class:list={['sound-explorer', { compact }]} data-sound-explorer>
-  <div class="sound-scale" aria-label="Common sound examples on a 0 to 130 decibel display scale">
+  <div class="sound-scale" aria-label={isGerman ? 'Alltagsgeräusche auf einer Skala von 0 bis 130 Dezibel' : 'Common sound examples on a 0 to 130 decibel display scale'}>
     <div class="scale-track" aria-hidden="true">
       <span>0</span><span>40</span><span>70</span><span>85</span><span>100</span><span>130 dB</span>
     </div>
@@ -40,20 +43,20 @@ const initial = sounds[0];
 
   <article class="sound-detail" id={`${id}-detail`} aria-live="polite">
     <div>
-      <span class="detail-category">Typical example</span>
+      <span class="detail-category">{isGerman ? 'Typisches Beispiel' : 'Typical example'}</span>
       <h3 data-sound-name>{initial.name}</h3>
       <p data-sound-description>{initial.shortDescription}</p>
       <p class="exposure-note" data-sound-note>{initial.exposureNote}</p>
     </div>
     <div class="detail-reading">
       <strong data-sound-range>{initial.typicalMinDb}–{initial.typicalMaxDb} dB</strong>
-      <a data-sound-route href={initial.articleRoute ?? '/sounds/'} hidden={!initial.articleRoute}>Read sound guide <span aria-hidden="true">→</span></a>
+      <a data-sound-route href={initial.articleRoute ?? (isGerman ? '/de/alltagsgeraeusche/' : '/sounds/')} hidden={!initial.articleRoute}>{isGerman ? 'Ratgeber lesen' : 'Read sound guide'} <span aria-hidden="true">→</span></a>
     </div>
   </article>
 
   <div class="mobile-sound-view">
     <div class="mobile-scale-key" aria-hidden="true"><span>0</span><span>130 dB</span></div>
-    <ul class="mobile-sound-list" aria-label="Common sound examples by typical decibel range">
+    <ul class="mobile-sound-list" aria-label={isGerman ? 'Alltagsgeräusche nach typischem Dezibelbereich' : 'Common sound examples by typical decibel range'}>
       {sounds.map((sound, index) => (
         <li style={`--sound-index:${index}`}>
           <details name={`${id}-mobile-sounds`}>
@@ -72,7 +75,7 @@ const initial = sounds[0];
             <div class="mobile-sound-detail">
               <p>{sound.shortDescription}</p>
               <p class="mobile-exposure-note">{sound.exposureNote}</p>
-              {sound.articleRoute && <a href={sound.articleRoute}>Read sound guide <span aria-hidden="true">→</span></a>}
+              {sound.articleRoute && <a href={sound.articleRoute}>{isGerman ? 'Ratgeber lesen' : 'Read sound guide'} <span aria-hidden="true">→</span></a>}
             </div>
           </details>
         </li>
@@ -80,7 +83,7 @@ const initial = sounds[0];
     </ul>
   </div>
 
-  <p class="sound-disclaimer">Typical ranges vary with distance, environment, source and measurement method.</p>
+  <p class="sound-disclaimer">{isGerman ? 'Typische Bereiche variieren mit Abstand, Umgebung, Quelle und Messmethode.' : 'Typical ranges vary with distance, environment, source and measurement method.'}</p>
 </div>
 
 <script>
@@ -92,7 +95,6 @@ const initial = sounds[0];
     const note = explorer.querySelector<HTMLElement>('[data-sound-note]');
     const route = explorer.querySelector<HTMLAnchorElement>('[data-sound-route]');
     const scale = explorer.querySelector<HTMLElement>('.sound-scale');
-    const detail = explorer.querySelector<HTMLElement>('.sound-detail');
 
     const select = (marker: HTMLButtonElement, animate = false) => {
       markers.forEach((item) => {
@@ -112,12 +114,10 @@ const initial = sounds[0];
       if (animate) {
         marker.classList.remove('is-pulsing');
         scale?.classList.remove('is-scanning');
-        detail?.classList.remove('is-changing');
         scale?.style.setProperty('--active-position', marker.style.getPropertyValue('--position'));
         requestAnimationFrame(() => {
           marker.classList.add('is-pulsing');
           scale?.classList.add('is-scanning');
-          detail?.classList.add('is-changing');
         });
       }
     };
@@ -215,21 +215,6 @@ const initial = sounds[0];
     position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: end; overflow: hidden;
     padding: 28px; border: 1px solid var(--ghost); border-radius: var(--radius-card); background: var(--surface-c);
   }
-  .sound-detail::before {
-    content: ''; position: absolute; top: 0; right: 0; left: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--on-surface), transparent);
-    opacity: 0; transform: scaleX(0); transform-origin: left; pointer-events: none;
-  }
-  .sound-detail.is-changing { animation: sound-detail-enter 360ms var(--sound-selection-ease); }
-  .sound-detail.is-changing::before {
-    animation: sound-detail-scan var(--sound-selection-duration) var(--sound-selection-ease) 120ms;
-  }
-  @keyframes sound-detail-enter { from { opacity: .22; transform: translateY(10px); } }
-  @keyframes sound-detail-scan {
-    25%, 70% { opacity: .7; }
-    70%, 100% { transform: scaleX(1); }
-    to { opacity: 0; }
-  }
   .detail-category { color: var(--tertiary); font: 10px/1 var(--font-data); letter-spacing: .12em; text-transform: uppercase; }
   .sound-detail h3 { margin: 8px 0; font-size: 24px; }
   .sound-detail p { max-width: 680px; margin: 0; color: var(--on-surface-v); }
@@ -302,8 +287,6 @@ const initial = sounds[0];
     .sound-scale.is-scanning::after,
     .sound-explorer.reveal.in .scale-track::before,
     .sound-explorer.reveal.in .scale-track > span,
-    .sound-detail.is-changing,
-    .sound-detail.is-changing::before,
     .sound-explorer.reveal.in .mobile-range-fill,
     details[open] .mobile-sound-detail { animation: none; }
   }

@@ -1,28 +1,30 @@
 ---
 import NumberField from './NumberField.astro';
+interface Props { locale?: 'en' | 'de' }
+const { locale = 'en' } = Astro.props; const de = locale === 'de';
 ---
 
-<section class="tool-calculator" aria-labelledby="distance-title" data-distance-calculator>
+<section class="tool-calculator" aria-labelledby="distance-title" data-distance-calculator data-locale={locale} data-invalid-message={de ? 'Geben Sie positive Abstände und einen gültigen Referenzpegel ein.' : 'Enter valid positive distances and a reference level.'} data-change-label={de ? 'Änderung gegenüber der Referenz' : 'Change from reference'}>
   <form class="calculator-form" data-distance-form>
-    <h2 id="distance-title">Source level and distance</h2>
-    <p class="form-intro">Use the same distance unit for both positions. The result applies only to an idealized point source in a free field.</p>
+    <h2 id="distance-title">{de ? 'Ausgangspegel und Entfernung' : 'Source level and distance'}</h2>
+    <p class="form-intro">{de ? 'Verwenden Sie für beide Entfernungen dieselbe Einheit. Das Ergebnis gilt nur für eine idealisierte Punktquelle im Freifeld.' : 'Use the same distance unit for both positions. The result applies only to an idealized point source in a free field.'}</p>
 
     <div class="field-grid">
-      <NumberField id="reference-level" label="Reference sound level (dB)" inputAttributes={{ 'data-reference-level': '', type: 'number', min: '0', max: '200', step: '0.1', value: '90', inputmode: 'decimal', required: true }} />
-      <NumberField id="reference-distance" label="Reference distance" inputAttributes={{ 'data-reference-distance': '', type: 'number', min: '0.01', max: '100000', step: '0.01', value: '1', inputmode: 'decimal', required: true }} />
-      <NumberField id="target-distance" label="Target distance" inputAttributes={{ 'data-target-distance': '', type: 'number', min: '0.01', max: '100000', step: '0.01', value: '2', inputmode: 'decimal', required: true }} />
+      <NumberField locale={locale} id="reference-level" label={de ? 'Referenz-Schallpegel (dB)' : 'Reference sound level (dB)'} inputAttributes={{ 'data-reference-level': '', type: 'number', min: '0', max: '200', step: '0.1', value: '90', inputmode: 'decimal', required: true }} />
+      <NumberField locale={locale} id="reference-distance" label={de ? 'Referenzentfernung' : 'Reference distance'} inputAttributes={{ 'data-reference-distance': '', type: 'number', min: '0.01', max: '100000', step: '0.01', value: '1', inputmode: 'decimal', required: true }} />
+      <NumberField locale={locale} id="target-distance" label={de ? 'Zielentfernung' : 'Target distance'} inputAttributes={{ 'data-target-distance': '', type: 'number', min: '0.01', max: '100000', step: '0.01', value: '2', inputmode: 'decimal', required: true }} />
     </div>
   </form>
 
   <aside class="result-panel" aria-labelledby="distance-result-title">
-    <h2 id="distance-result-title">Estimated level</h2>
+    <h2 id="distance-result-title">{de ? 'Geschätzter Pegel' : 'Estimated level'}</h2>
     <div class="calculator-result" role="status" aria-live="polite">
-      <span>At the target distance</span>
-      <strong data-distance-output>84.0 dB</strong>
-      <p class="result-detail" data-distance-change>Change from reference: −6.0 dB</p>
+      <span>{de ? 'In der Zielentfernung' : 'At the target distance'}</span>
+      <strong data-distance-output>{de ? '84,0 dB' : '84.0 dB'}</strong>
+      <p class="result-detail" data-distance-change>{de ? 'Änderung gegenüber der Referenz: −6,0 dB' : 'Change from reference: −6.0 dB'}</p>
     </div>
-    <p class="model-note">Model: L₂ = L₁ − 20 log₁₀(r₂ / r₁). Doubling distance gives approximately −6 dB for an ideal point source.</p>
-    <p class="result-note">Walls, ground, barriers, source size and direction, weather and atmospheric absorption can make real results differ substantially.</p>
-    <noscript><p class="noscript-note">JavaScript is required for live calculation. The shown example estimates that 90 dB at one distance becomes about 84 dB at twice that distance.</p></noscript>
+    <p class="model-note">{de ? 'Modell: L₂ = L₁ − 20 log₁₀(r₂ / r₁). Bei einer idealen Punktquelle führt die Verdopplung der Entfernung zu ungefähr −6 dB.' : 'Model: L₂ = L₁ − 20 log₁₀(r₂ / r₁). Doubling distance gives approximately −6 dB for an ideal point source.'}</p>
+    <p class="result-note">{de ? 'Wände, Boden, Hindernisse, Größe und Richtwirkung der Quelle sowie Wetter und Luftabsorption können das reale Ergebnis deutlich verändern.' : 'Walls, ground, barriers, source size and direction, weather and atmospheric absorption can make real results differ substantially.'}</p>
+    <noscript><p class="noscript-note">{de ? 'Für die Live-Berechnung ist JavaScript erforderlich. Das Beispiel zeigt ungefähr 84 dB bei doppelter Entfernung, wenn der Referenzwert 90 dB beträgt.' : 'JavaScript is required for live calculation. The shown example estimates that 90 dB at one distance becomes about 84 dB at twice that distance.'}</p></noscript>
   </aside>
 </section>

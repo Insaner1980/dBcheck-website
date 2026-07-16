@@ -1,10 +1,11 @@
 # dBcheck website memory
 
-Päivitetty: 2026-07-14
+Päivitetty: 2026-07-15
 
 ## Nykyinen rakenne
 
 - Astro 7, staattinen build, julkinen perus-URL `https://dbcheck.app`.
+- Natiivi Astro i18n: englanti oletuslocalena ilman etuliitettä, saksa `/de/`-etuliitteellä. Locale/UI/reittirekisteri ovat `src/i18n/config.ts`, `src/i18n/ui.ts` ja `src/i18n/routes.ts`.
 - Yhteinen shell: `src/layouts/Base.astro`; se omistaa myös natiivin MPA-sivunvaihdon, haun motionin ja laskuritulosten yhteisen päivitysanimaation. Koristeellinen liike poistuu `prefers-reduced-motion`-asetuksella.
 - Etusivu: `src/pages/index.astro`; alkuperäinen hero-video ja Web Audio -mittari on säilytetty.
 - Common sounds -tietojen ainoa lähde: `src/data/sounds.ts`.
@@ -13,8 +14,8 @@ Päivitetty: 2026-07-14
 - Etusivun Free- ja Pro-hintojen alueellisen esitysmuodon lähde: `src/data/prices.ts`; molemmat kortit lokalisoidaan samalla Cloudflare-maatunnistuksella ja staattinen EUR-esitys toimii varavaihtoehtona.
 - Uudelleenkäytettävä sound-käyttöliittymä: `src/components/SoundExplorer.astro`.
 - Uudelleenkäytettävä NIOSH-laskuri: `src/components/ExposureCalculator.astro`.
-- Tavalliset Markdown-artikkelit: `src/content/articles`; common sound -artikkelit: `src/content/sounds`.
-- Molemmat sisältökokoelmat käyttävät `src/content.config.ts`:n yhteistä frontmatter-skeemaa ja frontmatterin `slug`-arvoa reittitunnisteena.
+- Tavalliset Markdown-artikkelit: `src/content/articles/{en,de}`; common sound -artikkelit: `src/content/sounds/{en,de}`. Molemmissa on 20 täydellistä `translationKey`-paria yhteensä.
+- Frontmatterin `locale`, `translationKey`, `clusterKey` ja lokalisoitu `slug` muodostavat sisältö- ja reittisopimuksen.
 - Yhteinen artikkelirenderöinti: `src/components/EditorialPage.astro`; se omistaa breadcrumbit, typografian, related-linkit, CTA:n sekä Article- ja BreadcrumbList-structured datan.
 - Sound-yhteenvetojen ja Explorerin rakenteisen datan lähde: `src/data/sounds.ts`.
 - Draftit suodatetaan reiteistä, indekseistä, etusivulta ja hausta.
@@ -27,9 +28,12 @@ Päivitetty: 2026-07-14
 - `/tools/noise-dose-calculator/`.
 - `/tools/decibel-distance/`.
 - `/tools/add-decibels/`.
+- `/tools/daily-noise-exposure-level-calculator/` käyttää EU:n kahdeksaan tuntiin normalisoitua `L_EX,8h`-mallia.
 - `/sounds/` toimii myös Tools-indeksin Common Sounds Explorer -kohteena; erillistä `/tools/common-sounds/`-reittiä ei ole.
 - `/articles/` ja julkaistuille Markdown-artikkeleille `/articles/[slug]/`.
 - `/search.json` indeksoi sivut, työkalut sekä vain julkaistut article- ja sound-kokoelmat.
+- Saksankieliset pääreitit ovat `/de/artikel/`, `/de/alltagsgeraeusche/` ja `/de/werkzeuge/`; `/de/`-etusivua ei ole. Saksan työkalut ovat Expositionsdauer-Rechner, Lärmexpositionsrechner, etäisyyslaskuri ja Dezibel addieren sekä Alltagsgeräusche Explorer. `/de/search.json` sisältää vain saksankielisiä kohteita.
+- `src/i18n/routes.ts` omistaa aidot en–de-vastineet. Base käyttää niitä canonical-, hreflang- ja `x-default`-linkeissä ja sitemap käyttää samoja pareja. Etusivua ei lokalisoida eikä `/de/`-etusivua ole; lokalisoitujen sivujen logo ja Startseite-breadcrumb johtavat englanninkieliselle `/`-etusivulle. Lokalisoidut sisältö- ja työkalusivut säilyttävät englanninkielisten vastineidensa komponentit, rakenteen ja elementtipaikat. Yläpalkissa ovat vain paikalliset työkalut, artikkelit ja haku eikä näkyvää kielivalitsinta ole.
 - `@astrojs/sitemap` muodostaa sitemapin kanonisista julkisista reiteistä; legacy-sound-slugit ohjataan uusiin kanonisiin slugeihin tai `/sounds/`-indeksiin.
 
 ## Tuotefaktat
@@ -44,6 +48,12 @@ Päivitetty: 2026-07-14
 - Noise Dose Calculator yhdistää useita vakioidun tason ja keston jaksoja NIOSH 85 dBA / 8 h / 3 dB -viiteannokseen.
 - Decibel Distance Calculator käyttää vapaan kentän pistelähteen `−20 log10(r2/r1)`-mallia ja kertoo näkyvästi sen reaalimaailman rajoista.
 - Add Decibels Calculator käyttää riippumattomille yhteensopiville tasoille kaavaa `10 log10(Σ10^(Li/10))` ja rajaa koherentit signaalit mallin ulkopuolelle.
+- Daily Noise Exposure Level Calculator käyttää kaavaa `10 log10(Σ[(Ti/8 h) × 10^(LAeq,i/10)])`, luokittelee 80/85 dB(A) Auslösewerte -tasot ja kertoo 87 dB(A):n EU-raja-arvon erillisestä kuulonsuojainkäsittelystä.
+
+## Varmistettu 2026-07-15
+
+- Saksa-vaiheen i18n-arkkitehtuuri toteutettu: 15+15 tavallista artikkelia, 5+5 sound-artikkelia, locale-kohtaiset indeksit, haku, navigaatio, footer, Sound Explorer ja neljä saksankielistä laskuria. Expositionsdauer-Rechner käyttää BAuA:n L_EX,8h-kaavaa 85 dB(A):n ylempään Auslösewert-arvoon; se jakaa sivurakenteen englannin NIOSH-laskurin kanssa mutta ei esitä tulosta turvallisena aikana.
+- Englannin vanhat sisältö- ja työkalureitit säilyvät; uusi englanninkielinen EU-laskuri muodostaa aidon hreflang-parin saksan Lärmexpositionsrechnerille.
 - Verkkosivun Pro-hinnan EUR-varavaihtoehto on 12,99 euroa; tuetuille maille näytetään `src/data/prices.ts`:n alueellinen Google Play -hinta.
 
 ## Varmistettu 2026-07-14

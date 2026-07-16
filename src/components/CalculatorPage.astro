@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import type { SocialImage } from '../data/social';
+import type { Locale } from '../i18n/config';
 
 interface Props {
   title: string;
@@ -9,15 +10,17 @@ interface Props {
   heading: string;
   intro: string;
   socialImage: SocialImage;
+  locale?: Locale;
 }
 
-const { title, description, kicker, heading, intro, socialImage } = Astro.props;
+const { title, description, kicker, heading, intro, socialImage, locale = 'en' } = Astro.props;
+const de = locale === 'de';
 ---
 
-<Base title={title} description={description} socialImage={socialImage}>
+<Base title={title} description={description} socialImage={socialImage} locale={locale}>
   <section class="calculator-page">
     <header class="page-head">
-      <a href="/tools/"><span aria-hidden="true">←</span> All tools</a>
+      <a href={de ? '/de/werkzeuge/' : '/tools/'}><span aria-hidden="true">←</span> {de ? 'Alle Werkzeuge' : 'All tools'}</a>
       <span class="kicker">{kicker}</span>
       <h1>{heading}</h1>
       <p>{intro}</p>

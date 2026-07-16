@@ -1,7 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import SoundExplorer from '../components/SoundExplorer.astro';
-import { getCollection } from 'astro:content';
 import { commonSounds } from '../data/sounds';
 import { socialImages } from '../data/social';
 import { DEFAULT_PRO_PRICE, getFreePriceForCountry, splitPriceDisplay } from '../data/prices';
@@ -9,22 +8,6 @@ import measurementAnalysis from '../assets/features/measurement-analysis.webp';
 import protectionMonitoring from '../assets/features/protection-monitoring.webp';
 import historyAccess from '../assets/features/history-access.webp';
 import hearingRecovery from '../assets/features/hearing-recovery.webp';
-
-const [homeArticles, homeSounds] = await Promise.all([
-  getCollection('articles', ({ data }) => !data.draft),
-  getCollection('sounds', ({ data }) => !data.draft),
-]);
-const homeEntries = new Map([
-  ...homeArticles.map((entry) => [`articles:${entry.id}`, entry] as const),
-  ...homeSounds.map((entry) => [`sounds:${entry.id}`, entry] as const),
-]);
-const featuredArticles = [
-  { key: 'articles:why-does-85-db-matter', featured: true },
-  { key: 'articles:are-decibel-meter-apps-accurate', featured: false },
-  { key: 'sounds:concert', featured: false },
-  { key: 'articles:what-is-a-safe-decibel-level', featured: false },
-  { key: 'articles:how-to-measure-decibels-with-android-phone', featured: false },
-].map((selection) => ({ ...selection, entry: homeEntries.get(selection.key) })).filter((selection) => selection.entry);
 
 const freeFeatures = [
   {
@@ -158,7 +141,19 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
   <!-- ============ HERO ============ -->
   <section class="hero" id="hero">
     <div class="hero-media" aria-hidden="true">
-      <video id="hero-video" src="/dBcheck-hero.mp4" muted autoplay loop playsinline crossorigin="anonymous"></video>
+      <video
+        id="hero-video"
+        muted
+        loop
+        playsinline
+        preload="none"
+        poster="/images/hero-poster.webp"
+        data-mobile-src="/dBcheck-hero-mobile.mp4"
+        data-desktop-src="/dBcheck-hero-desktop.mp4"
+        width="1920"
+        height="1080"
+        crossorigin="anonymous"
+      ></video>
       <div class="hero-scrim"></div>
     </div>
 
@@ -451,30 +446,6 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       Optional Health Connect features can share supported session data when
       the user explicitly enables them. Raw audio is not uploaded for analysis.
     </p>
-  </section>
-
-  <!-- ============ ARTICLES ============ -->
-  <section class="articles-preview">
-    <div class="section-head section-head-row">
-      <div>
-        <h2>Articles and sound guides</h2>
-        <p class="section-sub">Sourced guides for understanding sound levels, phone measurements and exposure context.</p>
-      </div>
-      <a class="btn btn-tertiary" href="/articles/">View all</a>
-    </div>
-    <div class="article-layout">
-      {featuredArticles.map(({ entry, featured }) => entry && (
-        <a
-          class:list={['article-card', { featured }]}
-          href={entry.collection === 'sounds' ? `/sounds/${entry.id}/` : `/articles/${entry.id}/`}
-        >
-          <span class="article-date">{entry.data.contentCluster}</span>
-          <h3>{entry.data.title}</h3>
-          <p>{entry.data.description}</p>
-          <span class="article-more">Read article <span aria-hidden="true">→</span></span>
-        </a>
-      ))}
-    </div>
   </section>
 
   <!-- ============ CTA ============ -->
@@ -981,20 +952,6 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     .plan-btn { justify-self: start; }
     .web-tools-note { max-width: 700px; margin: 28px auto 0; text-align: center; color: var(--secondary); font-size: 14px; }
 
-    /* ---------- articles ---------- */
-    .article-layout { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 20px; }
-    .article-card {
-      display: flex; flex-direction: column; gap: 12px; min-height: 220px;
-      background: var(--surface-ch); border-radius: var(--radius-card);
-      padding: 28px; text-decoration: none;
-    }
-    .article-card.featured { grid-row: span 2; min-height: 460px; justify-content: end; background: linear-gradient(145deg, var(--surface-chh), var(--surface)); }
-    .article-date { font-family: var(--font-data); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tertiary); }
-    .article-card h3 { font-size: 19px; font-weight: 600; }
-    .article-card.featured h3 { font-size: clamp(26px, 4vw, 38px); line-height: 1.1; }
-    .article-card p { margin: 0; color: var(--on-surface-v); font-size: 14px; }
-    .article-more { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary); margin-top: auto; }
-
     /* ---------- CTA ---------- */
     .cta { margin-top: 112px; }
     .cta-inner {
@@ -1049,8 +1006,6 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     @media (max-width: 900px) {
       .why-grid { grid-template-columns: 1fr; }
       .plans { grid-template-columns: 1fr; }
-      .article-layout { grid-template-columns: 1fr 1fr; }
-      .article-card.featured { grid-column: 1 / -1; grid-row: auto; min-height: 340px; }
       .pro-feature-showcase { display: block; }
       .pro-feature-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .pro-feature-panels { margin-top: 22px; }
@@ -1069,8 +1024,6 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     }
     @media (max-width: 620px) {
       .section-head-row { align-items: start; flex-direction: column; }
-      .article-layout { grid-template-columns: 1fr; }
-      .article-card.featured { grid-column: auto; min-height: 300px; }
       .feature-tier + .feature-tier { margin-top: 56px; }
       .pro-feature-category { min-height: 70px; padding: 14px 16px; }
       .pro-feature-category[aria-selected="true"] small { display: none; }
@@ -1150,6 +1103,11 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     // ================= The page that listens =================
     // Browser demo: hero-film audio → Web Audio RMS → display dB scale (0–130).
     const video = document.getElementById('hero-video') as HTMLVideoElement;
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const mobileVideo = matchMedia('(max-width: 700px)').matches;
+    const saveData = Boolean((navigator as Navigator & {
+      connection?: { saveData?: boolean };
+    }).connection?.saveData);
     const listenBtn = document.getElementById('listen-btn') as HTMLButtonElement;
     const listenText = document.getElementById('listen-text')!;
     const listenIcon = document.getElementById('listen-icon')!;
@@ -1175,6 +1133,19 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     let listening = false;
     let smoothed = 0;
     let minDb = Infinity, maxDb = -Infinity, energySum = 0, sampleCount = 0;
+
+    function ensureVideoSource() {
+      if (video.getAttribute('src')) return;
+      const source = mobileVideo ? video.dataset.mobileSrc : video.dataset.desktopSrc;
+      if (!source) return;
+      video.src = source;
+      video.load();
+    }
+
+    if (!reducedMotion && !saveData) {
+      ensureVideoSource();
+      void video.play().catch(() => {});
+    }
 
     const css = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
     const COLORS = {
@@ -1271,7 +1242,6 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     }
 
     // ---- idle spectrum: a faint synthetic "noise floor" while in standby ----
-    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const heroHud = document.getElementById('instrument');
     let bootTimer = 0;
     if (!reducedMotion) {
@@ -1338,6 +1308,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
 
     listenBtn.addEventListener('click', async () => {
       try {
+        ensureVideoSource();
         if (!audioCtx) setupAudio();
         if (audioCtx!.state === 'suspended') await audioCtx!.resume();
         if (listening) { setListening(false); return; }

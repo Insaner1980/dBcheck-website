@@ -1,45 +1,47 @@
 ---
 import NumberField from './NumberField.astro';
+interface Props { locale?: 'en' | 'de' }
+const { locale = 'en' } = Astro.props; const de = locale === 'de';
 ---
 
-<section class="tool-calculator" aria-labelledby="add-decibels-title" data-add-decibels-calculator>
+<section class="tool-calculator" aria-labelledby="add-decibels-title" data-add-decibels-calculator data-locale={locale} data-invalid-message={de ? 'Geben Sie für jeden Schallpegel einen gültigen Wert ein.' : 'Enter a valid value for every sound level.'} data-row-label={de ? 'Schallpegel' : 'Sound level'} data-detail-template={de ? '{count} unabhängige Pegel ergeben {value} dB.' : '{count} independent levels combine to {value} dB.'}>
   <form class="calculator-form" data-add-decibels-form>
-    <h2 id="add-decibels-title">Independent sound levels</h2>
-    <p class="form-intro">Enter levels measured with the same weighting and metric. The calculator combines their sound energies instead of adding the decibel numbers directly.</p>
+    <h2 id="add-decibels-title">{de ? 'Unabhängige Schallpegel' : 'Independent sound levels'}</h2>
+    <p class="form-intro">{de ? 'Geben Sie Pegel mit derselben Bewertung und Messgröße ein. Der Rechner kombiniert die Schallenergien, statt die Dezibelwerte direkt zu addieren.' : 'Enter levels measured with the same weighting and metric. The calculator combines their sound energies instead of adding the decibel numbers directly.'}</p>
 
     <div class="entry-list" data-level-list>
       <fieldset class="entry-row level-row" data-level-row>
-        <legend>Sound level 1</legend>
-        <NumberField id="sound-level-1" label="Level (dB)" inputAttributes={{ 'data-sound-level': '', type: 'number', min: '-100', max: '200', step: '0.1', value: '80', inputmode: 'decimal', required: true }} />
-        <button class="row-button" data-remove-level type="button">Remove</button>
+        <legend>{de ? 'Schallpegel 1' : 'Sound level 1'}</legend>
+        <NumberField locale={locale} id="sound-level-1" label={de ? 'Pegel (dB)' : 'Level (dB)'} inputAttributes={{ 'data-sound-level': '', type: 'number', min: '-100', max: '200', step: '0.1', value: '80', inputmode: 'decimal', required: true }} />
+        <button class="row-button" data-remove-level type="button">{de ? 'Entfernen' : 'Remove'}</button>
       </fieldset>
       <fieldset class="entry-row level-row" data-level-row>
-        <legend>Sound level 2</legend>
-        <NumberField id="sound-level-2" label="Level (dB)" inputAttributes={{ 'data-sound-level': '', type: 'number', min: '-100', max: '200', step: '0.1', value: '80', inputmode: 'decimal', required: true }} />
-        <button class="row-button" data-remove-level type="button">Remove</button>
+        <legend>{de ? 'Schallpegel 2' : 'Sound level 2'}</legend>
+        <NumberField locale={locale} id="sound-level-2" label={de ? 'Pegel (dB)' : 'Level (dB)'} inputAttributes={{ 'data-sound-level': '', type: 'number', min: '-100', max: '200', step: '0.1', value: '80', inputmode: 'decimal', required: true }} />
+        <button class="row-button" data-remove-level type="button">{de ? 'Entfernen' : 'Remove'}</button>
       </fieldset>
     </div>
 
-    <button class="add-button" data-add-level type="button">Add sound level</button>
+    <button class="add-button" data-add-level type="button">{de ? 'Schallpegel hinzufügen' : 'Add sound level'}</button>
   </form>
 
   <aside class="result-panel" aria-labelledby="add-decibels-result-title">
-    <h2 id="add-decibels-result-title">Combined level</h2>
+    <h2 id="add-decibels-result-title">{de ? 'Gesamtpegel' : 'Combined level'}</h2>
     <div class="calculator-result" role="status" aria-live="polite">
-      <span>Logarithmic sum</span>
-      <strong data-combined-output>83.0 dB</strong>
-      <p class="result-detail" data-combined-detail>Two equal 80 dB levels combine to 83.0 dB.</p>
+      <span>{de ? 'Logarithmische Summe' : 'Logarithmic sum'}</span>
+      <strong data-combined-output>{de ? '83,0 dB' : '83.0 dB'}</strong>
+      <p class="result-detail" data-combined-detail>{de ? 'Zwei gleiche Pegel von 80 dB ergeben 83,0 dB.' : 'Two equal 80 dB levels combine to 83.0 dB.'}</p>
     </div>
-    <p class="model-note">Model: Ltotal = 10 log₁₀(Σ10^(Lᵢ/10)).</p>
-    <p class="result-note">Use this for independent sources or components expressed in compatible decibel metrics. Phase-related coherent signals require a different pressure-based treatment.</p>
-    <noscript><p class="noscript-note">JavaScript is required for live calculation. The shown example combines two independent 80 dB levels into 83.0 dB.</p></noscript>
+    <p class="model-note">{de ? 'Modell' : 'Model'}: Ltotal = 10 log₁₀(Σ10^(Lᵢ/10)).</p>
+    <p class="result-note">{de ? 'Verwenden Sie dies für unabhängige Quellen mit kompatiblen Dezibel-Messgrößen. Phasengebundene kohärente Signale benötigen eine andere, druckbasierte Berechnung.' : 'Use this for independent sources or components expressed in compatible decibel metrics. Phase-related coherent signals require a different pressure-based treatment.'}</p>
+    <noscript><p class="noscript-note">{de ? 'Für die Live-Berechnung ist JavaScript erforderlich. Das Beispiel kombiniert zwei unabhängige Pegel von 80 dB zu 83,0 dB.' : 'JavaScript is required for live calculation. The shown example combines two independent 80 dB levels into 83.0 dB.'}</p></noscript>
   </aside>
 
   <template data-level-template>
     <fieldset class="entry-row level-row" data-level-row>
-      <legend>Sound level</legend>
-      <NumberField id="sound-level-template" label="Level (dB)" inputAttributes={{ 'data-sound-level': '', type: 'number', min: '-100', max: '200', step: '0.1', value: '80', inputmode: 'decimal', required: true }} />
-      <button class="row-button" data-remove-level type="button">Remove</button>
+      <legend>{de ? 'Schallpegel' : 'Sound level'}</legend>
+      <NumberField locale={locale} id="sound-level-template" label={de ? 'Pegel (dB)' : 'Level (dB)'} inputAttributes={{ 'data-sound-level': '', type: 'number', min: '-100', max: '200', step: '0.1', value: '80', inputmode: 'decimal', required: true }} />
+      <button class="row-button" data-remove-level type="button">{de ? 'Entfernen' : 'Remove'}</button>
     </fieldset>
   </template>
 </section>

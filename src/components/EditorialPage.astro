@@ -5,6 +5,8 @@ import 'katex/dist/katex.min.css';
 import Base from '../layouts/Base.astro';
 import type { CommonSound } from '../data/sounds';
 import { socialImageForEditorial } from '../data/social';
+import { localeTags } from '../i18n/config';
+import { routeForContent } from '../i18n/routes';
 
 type EditorialEntry = CollectionEntry<'articles'> | CollectionEntry<'sounds'>;
 
@@ -15,18 +17,18 @@ interface Props {
 }
 
 const { entry, kind, sound } = Astro.props;
+const locale = entry.data.locale;
+const isGerman = locale === 'de';
 const { Content } = await render(entry);
 const [articles, sounds] = await Promise.all([
-  getCollection('articles', ({ data }) => !data.draft),
-  getCollection('sounds', ({ data }) => !data.draft),
+  getCollection('articles', ({ data }) => !data.draft && data.locale === locale),
+  getCollection('sounds', ({ data }) => !data.draft && data.locale === locale),
 ]);
 
-const routeFor = (item: EditorialEntry) => item.collection === 'sounds'
-  ? `/sounds/${item.id}/`
-  : `/articles/${item.id}/`;
+const routeFor = (item: EditorialEntry) => routeForContent(item.data.locale, item.collection, item.data.slug);
 const allEntries = [...articles, ...sounds];
 const entriesByRoute = new Map(allEntries.map((item) => [routeFor(item), item]));
-const linkedRoutes = Array.from(entry.body?.matchAll(/\]\((\/(?:articles|sounds)\/[^)#?]+\/)\)/g) ?? [])
+const linkedRoutes = Array.from(entry.body?.matchAll(/\]\((\/(?:de\/)?(?:articles|sounds)\/[^)#?]+\/)\)/g) ?? [])
   .map((match) => match[1]);
 const related = Array.from(new Set(linkedRoutes))
   .map((route) => ({ route, entry: entriesByRoute.get(route) }))
@@ -35,13 +37,20 @@ const related = Array.from(new Set(linkedRoutes))
 
 const pagePath = routeFor(entry);
 const pageUrl = new URL(pagePath, Astro.site).href;
-const indexPath = kind === 'sound' ? '/sounds/' : '/articles/';
-const indexLabel = kind === 'sound' ? 'Common sounds' : 'Articles';
-const reviewed = entry.data.lastReviewed.toLocaleDateString('en-GB', {
+const indexPath = routeForContent(locale, kind === 'sound' ? 'sounds' : 'articles', '').replace(/\/\/$/, '/');
+const indexLabel = kind === 'sound' ? (isGerman ? 'Alltagsgeräusche' : 'Common sounds') : (isGerman ? 'Artikel' : 'Articles');
+const reviewed = entry.data.lastReviewed.toLocaleDateString(localeTags[locale], {
   year: 'numeric', month: 'long', day: 'numeric',
 });
-const reviewedIso = entry.data.lastReviewed.toISOString().slice(0, 10);
-const socialImage = socialImageForEditorial(kind, entry.data.contentCluster);
+const published = entry.data.publishedAt.toLocaleDateString(localeTags[locale], {
+  year: 'numeric', month: 'long', day: 'numeric',
+});
+const publishedIso = entry.data.publishedAt.toISOString();
+const modifiedIso = new Date(Math.max(
+  entry.data.publishedAt.getTime(),
+  entry.data.lastReviewed.getTime(),
+)).toISOString();
+const socialImage = socialImageForEditorial(kind, entry.data.clusterKey);
 const socialImageUrl = new URL(socialImage.src, Astro.site).href;
 
 const articleJsonLd = {
@@ -50,20 +59,34 @@ const articleJsonLd = {
   headline: entry.data.title,
   description: entry.data.description,
   image: socialImageUrl,
-  dateModified: reviewedIso,
+  author: {
+    '@type': 'Organization',
+    name: 'dBcheck',
+    url: new URL('/', Astro.site).href,
+  },
+  datePublished: publishedIso,
+  dateModified: modifiedIso,
   mainEntityOfPage: pageUrl,
+  inLanguage: localeTags[locale],
 };
 const breadcrumbJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: new URL('/', Astro.site).href },
+    { '@type': 'ListItem', position: 1, name: isGerman ? 'Startseite' : 'Home', item: new URL('/', Astro.site).href },
     { '@type': 'ListItem', position: 2, name: indexLabel, item: new URL(indexPath, Astro.site).href },
     { '@type': 'ListItem', position: 3, name: entry.data.title, item: pageUrl },
   ],
 };
 
-const cta = kind === 'sound'
+const cta = isGerman ? (kind === 'sound'
+  ? { kicker: 'Vergleichen', title: 'Ordnen Sie den Bereich immer in seinen Messkontext ein.', copy: 'Vergleichen Sie typische Bereiche, ohne einen einzelnen Wert als allgemeingültig zu behandeln.', label: 'Weitere Alltagsgeräusche vergleichen', href: '/de/alltagsgeraeusche/' }
+  : entry.data.clusterKey === 'exposure'
+    ? { kicker: 'Berechnen', title: 'Vergleichen Sie Pegel und Dauer mit einem benannten Modell.', copy: 'Der L_EX,8h-Rechner liefert eine arbeitsbezogene Orientierung, keine persönliche Sicherheitsgarantie.', label: 'Lärmexpositionspegel berechnen', href: '/de/werkzeuge/laermexpositionsrechner/' }
+    : entry.data.clusterKey === 'smartphone'
+      ? { kicker: 'Messen', title: 'Gestalten Sie Smartphone-Messungen wiederholbar.', copy: 'Beachten Sie Hardware, Verarbeitung, Position, Dauer und Kalibrierung.', label: 'Messanleitung lesen', href: '/de/artikel/dezibel-messen-mit-android-handy/' }
+      : { kicker: 'Anwenden', title: 'Setzen Sie das Konzept in einen Alltagskontext.', copy: 'Vergleichen Sie typische Bereiche und beachten Sie Abstand, Umgebung und Messmethode.', label: 'Alltagsgeräusche entdecken', href: '/de/alltagsgeraeusche/' })
+  : kind === 'sound'
   ? {
       kicker: 'Compare',
       title: 'Keep the range beside its measurement context.',
@@ -102,11 +125,12 @@ const cta = kind === 'sound'
   ogType="article"
   socialImage={socialImage}
   jsonLd={[articleJsonLd, breadcrumbJsonLd]}
+  locale={locale}
 >
   <article class="editorial">
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <ol>
-        <li><a href="/">Home</a></li>
+        <li><a href="/">{isGerman ? 'Startseite' : 'Home'}</a></li>
         <li><a href={indexPath}>{indexLabel}</a></li>
         <li aria-current="page">{entry.data.title}</li>
       </ol>
@@ -115,18 +139,21 @@ const cta = kind === 'sound'
     <header class="editorial-head">
       <div class="eyebrow-row">
         <span class="kicker">{entry.data.contentCluster}</span>
-        <span>Reviewed {reviewed}</span>
+        <span>
+          {isGerman ? 'Von dBcheck · Veröffentlicht' : 'By dBcheck · Published'} {published}
+          {' · '}{isGerman ? 'Geprüft' : 'Reviewed'} {reviewed}
+        </span>
       </div>
       <h1>{entry.data.title}</h1>
       <p class="lede">{entry.data.description}</p>
     </header>
 
     {kind === 'sound' && sound && (
-      <section class="sound-summary" aria-label={`${sound.name} measurement summary`}>
-        <div><span>Typical range</span><strong>{sound.typicalMinDb}–{sound.typicalMaxDb} dBA</strong></div>
-        <div><span>Measurement distance</span><strong>{sound.measurementDistance}</strong></div>
-        <div><span>Sound type</span><strong>{sound.soundType}</strong></div>
-        <div><span>Exposure context</span><strong>{sound.exposureNote}</strong></div>
+      <section class="sound-summary" aria-label={isGerman ? `Messübersicht für ${sound.name}` : `${sound.name} measurement summary`}>
+        <div><span>{isGerman ? 'Typischer Bereich' : 'Typical range'}</span><strong>{sound.typicalMinDb}–{sound.typicalMaxDb} dBA</strong></div>
+        <div><span>{isGerman ? 'Messabstand' : 'Measurement distance'}</span><strong>{sound.measurementDistance}</strong></div>
+        <div><span>{isGerman ? 'Geräuschtyp' : 'Sound type'}</span><strong>{sound.soundType}</strong></div>
+        <div><span>{isGerman ? 'Expositionskontext' : 'Exposure context'}</span><strong>{sound.exposureNote}</strong></div>
       </section>
     )}
 
@@ -136,8 +163,8 @@ const cta = kind === 'sound'
 
     {related.length > 0 && (
       <section class="related" aria-labelledby="related-title">
-        <span class="kicker">Continue reading</span>
-        <h2 id="related-title">Related articles</h2>
+        <span class="kicker">{isGerman ? 'Weiterlesen' : 'Continue reading'}</span>
+        <h2 id="related-title">{isGerman ? 'Verwandte Artikel' : 'Related articles'}</h2>
         <ul>
           {related.map((item) => (
             <li><a href={item.route}><strong>{item.entry.data.title}</strong><span>{item.entry.data.description}</span></a></li>

@@ -3,9 +3,10 @@ interface Props {
   id: string;
   label: string;
   inputAttributes: Record<string, string | number | boolean>;
+  locale?: 'en' | 'de';
 }
 
-const { id, label, inputAttributes } = Astro.props;
+const { id, label, inputAttributes, locale = 'en' } = Astro.props;
 ---
 
 <div class="field" data-number-stepper>
@@ -13,10 +14,10 @@ const { id, label, inputAttributes } = Astro.props;
   <div class="number-control">
     <input id={id} {...inputAttributes} />
     <span class="number-stepper">
-      <button type="button" data-number-step="up" aria-label={`Increase ${label}`}>
+      <button type="button" data-number-step="up" aria-label={locale === 'de' ? `${label} erhöhen` : `Increase ${label}`}>
         <svg aria-hidden="true" viewBox="0 0 12 8"><path d="m2 6 4-4 4 4" /></svg>
       </button>
-      <button type="button" data-number-step="down" aria-label={`Decrease ${label}`}>
+      <button type="button" data-number-step="down" aria-label={locale === 'de' ? `${label} verringern` : `Decrease ${label}`}>
         <svg aria-hidden="true" viewBox="0 0 12 8"><path d="m2 2 4 4 4-4" /></svg>
       </button>
     </span>

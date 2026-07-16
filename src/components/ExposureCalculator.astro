@@ -3,62 +3,54 @@ interface Props {
   id?: string;
   compact?: boolean;
   showLink?: boolean;
+  locale?: 'en' | 'de';
 }
 
-const { id = 'exposure-calculator', compact = false, showLink = true } = Astro.props;
+const { id = 'exposure-calculator', compact = false, showLink = true, locale = 'en' } = Astro.props;
+const de = locale === 'de';
 const defaultDb = 94;
 ---
 
-<div class:list={['exposure-calculator', { compact }]} data-exposure-calculator>
+<div class:list={['exposure-calculator', { compact }]} data-exposure-calculator data-locale={locale}>
   <div class="calculator-copy">
-    <span class="kicker">NIOSH exposure estimate</span>
-    <h2>How does level change the daily estimate?</h2>
-    <p>NIOSH uses an occupational reference of 85 dBA for 8 hours. Each 3 dB increase halves the estimated duration.</p>
-    <p class="calculator-disclaimer">Educational occupational estimate only. It is not an individual guarantee of safety and does not account for every sound or exposure pattern.</p>
-    {showLink && <a class="calculator-link" href="/tools/safe-listening-time-calculator/">Open the full calculator <span aria-hidden="true">→</span></a>}
+    <span class="kicker">{de ? 'Expositionsdauer nach L_EX,8h' : 'NIOSH exposure estimate'}</span>
+    <h2>{de ? 'Wie verändern Pegel und Dauer die Tagesexposition?' : 'How does level change the daily estimate?'}</h2>
+    <p>{de ? 'Das deutsche Arbeitsschutzmodell bezieht die Exposition auf acht Stunden. Der Rechner zeigt, nach welcher konstanten Dauer der obere Auslösewert L_EX,8h = 85 dB(A) erreicht wird.' : 'NIOSH uses an occupational reference of 85 dBA for 8 hours. Each 3 dB increase halves the estimated duration.'}</p>
+    <p class="calculator-disclaimer">{de ? 'Arbeitsbezogene Modellrechnung, kein sicherer Zeitraum. Schon der untere Auslösewert von 80 dB(A) kann Schutzpflichten auslösen.' : 'Educational occupational estimate only. It is not an individual guarantee of safety and does not account for every sound or exposure pattern.'}</p>
+    {showLink && <a class="calculator-link" href={de ? '/de/werkzeuge/expositionsdauer-rechner/' : '/tools/safe-listening-time-calculator/'}>{de ? 'Vollständigen Rechner öffnen' : 'Open the full calculator'} <span aria-hidden="true">→</span></a>}
   </div>
 
   <div class="calculator-panel">
     <div class="selected-level">
-      <span>Selected sound level</span>
+      <span>{de ? 'Gewählter Schallpegel' : 'Selected sound level'}</span>
       <output for={`${id}-slider`} data-db-output>{defaultDb} dBA</output>
     </div>
-    <label for={`${id}-slider`}>Sound level in A-weighted decibels</label>
+    <label for={`${id}-slider`}>{de ? 'Schallpegel in A-bewerteten Dezibel' : 'Sound level in A-weighted decibels'}</label>
     <input id={`${id}-slider`} data-db-slider type="range" min="70" max="115" value={defaultDb} step="1" aria-describedby={`${id}-model`} />
     <div class="range-labels" aria-hidden="true"><span>70</span><span>85</span><span>100</span><span>115 dBA</span></div>
     <div class="calculator-result" role="status" aria-live="polite">
-      <span>Estimated time to 100% NIOSH daily occupational dose</span>
-      <strong data-time-output>1 hour</strong>
+      <span>{de ? 'Dauer bis L_EX,8h = 85 dB(A)' : 'Estimated time to 100% NIOSH daily occupational dose'}</span>
+      <strong data-time-output>{de ? '1 Stunde' : '1 hour'}</strong>
     </div>
-    <p id={`${id}-model`} class="model-note">Model: 85 dBA = 8 hours, with a 3 dB exchange rate. Assumes a constant level.</p>
-    <noscript><p class="noscript-note">JavaScript is off. Reference points: 85 dBA = 8 h, 88 dBA = 4 h, 91 dBA = 2 h, 94 dBA = 1 h, 100 dBA = 15 min.</p></noscript>
+    <p id={`${id}-model`} class="model-note">{de ? 'Modell: L_EX,8h = L_Aeq,T + 10 lg(T / 8 h). Konstanter A-bewerteter Mittelungspegel ohne Impulsbewertung.' : 'Model: 85 dBA = 8 hours, with a 3 dB exchange rate. Assumes a constant level.'}</p>
+    <noscript><p class="noscript-note">{de ? 'JavaScript ist deaktiviert. Richtwerte: 85 dB(A) = 8 h, 88 dB(A) ≈ 4 h, 91 dB(A) ≈ 2 h, 94 dB(A) ≈ 1 h.' : 'JavaScript is off. Reference points: 85 dBA = 8 h, 88 dBA = 4 h, 91 dBA = 2 h, 94 dBA = 1 h, 100 dBA = 15 min.'}</p></noscript>
   </div>
 </div>
 
 <script>
-  const formatExposureTime = (hours: number) => {
-    const totalSeconds = hours * 3600;
-    if (totalSeconds >= 86400) {
-      const days = totalSeconds / 86400;
-      return `${Number.isInteger(days) ? days : days.toFixed(1)} days`;
-    }
-    if (totalSeconds >= 7200) return `${Math.round(hours)} hours`;
-    if (totalSeconds >= 3600) return `${hours === 1 ? '1' : hours.toFixed(1)} hour${hours === 1 ? '' : 's'}`;
-    if (totalSeconds >= 120) return `${Math.round(totalSeconds / 60)} minutes`;
-    if (totalSeconds >= 60) return '1 minute';
-    return `${Math.max(1, Math.round(totalSeconds))} seconds`;
-  };
+  import { calculateExposureHours, formatExposureTime } from '../lib/exposure-time';
 
   document.querySelectorAll<HTMLElement>('[data-exposure-calculator]').forEach((calculator) => {
+    const locale = calculator.dataset.locale === 'de' ? 'de' : 'en';
     const slider = calculator.querySelector<HTMLInputElement>('[data-db-slider]');
     const dbOutput = calculator.querySelector<HTMLOutputElement>('[data-db-output]');
     const timeOutput = calculator.querySelector<HTMLElement>('[data-time-output]');
     if (!slider || !dbOutput || !timeOutput) return;
     const update = () => {
       const db = Number(slider.value);
-      const hours = 8 * Math.pow(2, (85 - db) / 3);
+      const hours = calculateExposureHours(db, locale === 'de' ? 'eu-upper-action' : 'niosh');
       dbOutput.value = `${db} dBA`;
-      timeOutput.textContent = formatExposureTime(hours);
+      timeOutput.textContent = formatExposureTime(hours, locale);
       slider.style.setProperty('--range-progress', `${(db - 70) / 45 * 100}%`);
     };
 

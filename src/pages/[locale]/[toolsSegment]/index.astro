@@ -1,0 +1,6 @@
+---
+import ToolsIndexPage from '../../../components/ToolsIndexPage.astro';
+export function getStaticPaths() { return [{ params: { locale: 'de', toolsSegment: 'werkzeuge' }, props: { locale: 'de' } }]; }
+const { locale } = Astro.props;
+---
+<ToolsIndexPage locale={locale} />

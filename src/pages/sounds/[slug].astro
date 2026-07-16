@@ -4,12 +4,12 @@ import EditorialPage from '../../components/EditorialPage.astro';
 import { findCommonSound } from '../../data/sounds';
 
 export async function getStaticPaths() {
-  const sounds = await getCollection('sounds', ({ data }) => !data.draft);
-  return sounds.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+  const sounds = await getCollection('sounds', ({ data }) => !data.draft && data.locale === 'en');
+  return sounds.map((entry) => ({ params: { slug: entry.data.slug }, props: { entry } }));
 }
 
 const { entry } = Astro.props;
-const sound = findCommonSound(entry.id);
+const sound = findCommonSound(entry.data.slug, 'en');
 ---
 
 <EditorialPage entry={entry} kind="sound" sound={sound} />

@@ -1,0 +1,9 @@
+---
+import CalculatorPage from '../../components/CalculatorPage.astro';
+import DailyNoiseExposureCalculator from '../../components/DailyNoiseExposureCalculator.astro';
+import { socialImages } from '../../data/social';
+---
+<CalculatorPage title="Daily noise exposure level calculator | dBcheck" description="Calculate an eight-hour-normalized L_EX,8h daily noise exposure level from multiple work periods using the EU occupational model." kicker="Daily Noise Exposure Level" heading="Combine work periods into one L_EX,8h value." intro="Use A-weighted equivalent levels and durations to calculate an eight-hour-normalized occupational exposure level. This is educational support, not a compliant workplace assessment." socialImage={socialImages.exposure} locale="en">
+  <DailyNoiseExposureCalculator locale="en" />
+  <Fragment slot="references"><section><span class="kicker">Model</span><h2>Eight-hour normalization</h2><p>Each period contributes energy in proportion to its duration. The sum is normalized to a nominal eight-hour workday.</p></section><section><span class="kicker">Action values</span><h2>80 and 85 dB(A)</h2><p>The EU model uses lower and upper action values of 80 and 85 dB(A). These values trigger workplace duties; they are not personal safety guarantees.</p></section><section><span class="kicker">Official sources</span><h2>EU and German framework</h2><p><a href="https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=CELEX%3A32003L0010">Directive 2003/10/EC</a>, <a href="https://www.gesetze-im-internet.de/l_rmvibrationsarbschv/__6.html">LärmVibrationsArbSchV §6</a>, <a href="https://laermexposition.ifa.dguv.de/">IFA calculator</a>, and <a href="https://www.baua.de/DE/Themen/Arbeitsgestaltung/Physikalische-Faktoren/Laerm/Vorschriften">BAuA guidance</a>.</p></section></Fragment>
+</CalculatorPage>
