@@ -15,7 +15,7 @@ researchSources:
   - "ISO 532-1, offizielle Kurzbeschreibung"
   - "ISO 532-2:2017, offizielle Kurzbeschreibung"
   - "Moore, Glasberg and Varathanathan, A Loudness Model for Time-Varying Sounds"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 ---
 

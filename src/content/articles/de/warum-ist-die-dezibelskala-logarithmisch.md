@@ -13,7 +13,7 @@ researchSources:
   - "Umweltbundesamt, Dezibel und Pegelsummation"
   - "Umweltbundesamt, Messgrößen und Pegel"
   - "BAuA, Safe and Sound, Ratgeber zur Gehörerhaltung in der Musik"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 ---
 
@@ -22,6 +22,8 @@ lastReviewed: "2026-07-15"
 Sie verkürzt sehr große Zahlenverhältnisse. Zugleich bildet sie typische Rechenvorgänge in der Akustik so ab, dass aus Multiplikation eine Addition von Pegeldifferenzen wird.
 
 [Was ist ein Dezibel? Schallpegel einfach erklärt](/de/artikel/was-ist-ein-dezibel/)
+
+![Vier gleich große Schritte von jeweils 10 dB entsprechen relativen Schallintensitätsverhältnissen von 1, 10, 100 und 1000.](../../../assets/articles/logarithmic-decibel-scale.webp)
 
 ## Eine lineare Skala wäre kaum lesbar
 

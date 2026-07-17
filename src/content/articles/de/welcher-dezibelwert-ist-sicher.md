@@ -14,7 +14,7 @@ researchSources:
   - "BAuA, Handbuch Gefährdungsbeurteilung: Lärm"
   - "Umweltbundesamt, Gehörschäden"
   - "EU-Richtlinie 2003/10/EG"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 ---
 

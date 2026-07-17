@@ -14,7 +14,7 @@ researchSources:
   - "DGUV Information 215-443, Akustik im Büro"
   - "Evaluation of smartphone sound measurement applications using external microphones"
   - "Smartphone-based sound level measurement apps: Evaluation of directional response"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-12"
 ---
 

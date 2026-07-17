@@ -14,7 +14,7 @@ researchSources:
   - "WHO, Deafness and hearing loss: Safe listening"
   - "Smartphone-based sound level measurement apps: Evaluation of directional response"
   - "Evaluation of smartphone sound measurement applications using external microphones"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-12"
 ---
 

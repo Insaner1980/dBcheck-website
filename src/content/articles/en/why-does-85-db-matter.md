@@ -26,6 +26,9 @@ The number 85 matters because NIOSH uses 85 dBA as the criterion level for its r
 The more precise notation is 85 dBA because the recommendation uses A-weighted sound. The A-weighting filter changes how different frequencies contribute to the reported level.
 
 [dB vs dBA: What Is the Difference?](/articles/db-vs-dba/)
+
+![Under the NIOSH 3 dB exchange rate, the reference duration halves from 8 hours at 85 dBA to 1 hour at 94 dBA.](../../../assets/articles/85-dba-exposure-duration-relationship.webp)
+
 ## What 85 dBA means in the NIOSH recommendation
 
 NIOSH recommends limiting occupational noise exposure to an eight-hour time-weighted average of 85 dBA. The recommendation is commonly called the NIOSH REL, or recommended exposure limit. [NIOSH][1]

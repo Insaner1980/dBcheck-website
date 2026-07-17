@@ -14,7 +14,7 @@ researchSources:
   - "Umweltbundesamt, Gehörschäden"
   - "WHO, Deafness and hearing loss: Safe listening"
   - "EU-Richtlinie 2003/10/EG"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 ---
 
@@ -23,6 +23,8 @@ lastReviewed: "2026-07-15"
 Für die tatsächliche Belastung zählen Pegel, Dauer, Wiederholung, Spitzen, Frequenzverteilung und die individuelle Empfindlichkeit.
 
 [Welcher Dezibelwert ist sicher?](/de/artikel/welcher-dezibelwert-ist-sicher/)
+
+![Bei einer energieäquivalenten 3-dB-Beziehung halbiert sich die Dauer von 8 Stunden bei 85 dB(A) auf 1 Stunde bei 94 dB(A).](../../../assets/articles/85-dba-exposure-duration-relationship.webp)
 
 ## 85 dB(A) sind ein Acht-Stunden-Wert
 

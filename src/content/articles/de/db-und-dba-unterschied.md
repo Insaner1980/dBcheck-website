@@ -14,7 +14,7 @@ researchSources:
   - "BAuA, TRLV Lärm Teil 2: Messung von Lärm"
   - "Umweltbundesamt, Messgrößen und Pegel"
   - "Umweltbundesamt, tieffrequente Geräusche"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 ---
 

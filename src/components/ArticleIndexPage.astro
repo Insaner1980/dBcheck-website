@@ -23,7 +23,7 @@ const groups = (Object.keys(byCluster) as (keyof typeof byCluster)[]).map((key) 
     <div class="article-groups">
       {groups.map((group) => <section class="article-group" aria-labelledby={`group-${group.key}`}>
         <header><div><span class="kicker">{group.entries.length} {copy.guides}</span><h2 id={`group-${group.key}`}>{group.title}</h2></div><p>{group.description}</p></header>
-        <ul>{group.entries.map((entry) => <li><a href={routeForContent(locale, entry.collection, entry.data.slug)}><strong>{entry.data.title}</strong><p>{entry.data.description}</p><span>{copy.reviewed} {entry.data.lastReviewed.toLocaleDateString(localeTags[locale], { year: 'numeric', month: 'short', day: 'numeric' })}</span></a></li>)}</ul>
+        <ul>{group.entries.map((entry) => <li><a href={routeForContent(locale, entry.collection, entry.data.slug)}><strong>{entry.data.title}</strong><p>{entry.data.description}</p><span>{locale === 'de' ? 'Veröffentlicht' : 'Published'} {entry.data.publishedAt.toLocaleDateString(localeTags[locale], { year: 'numeric', month: 'short', day: 'numeric' })}</span></a></li>)}</ul>
       </section>)}
     </div>
   </section>

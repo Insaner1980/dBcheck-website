@@ -14,7 +14,7 @@ researchSources:
   - "ArbMedVV, Anhang Teil 3"
   - "Umweltbundesamt, Gehörschäden"
   - "WHO, Deafness and hearing loss: Safe listening"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 ---
 

@@ -19,6 +19,9 @@ lastReviewed: "2026-07-11"
 The decibel scale is logarithmic because sound spans an enormous physical range and because acoustics often deals with ratios rather than simple absolute differences. A logarithmic scale compresses huge pressure and energy changes into manageable numbers. It also turns multiplication of physical ratios into addition of decibel changes. [NIST][1] [BIPM][2]
 
 [What Is a Decibel? A Simple Guide to Sound Levels](/articles/what-is-a-decibel/)
+
+![Four equal 10 dB steps correspond to relative acoustic intensity ratios of 1, 10, 100 and 1000.](../../../assets/articles/logarithmic-decibel-scale.webp)
+
 ## A linear sound scale would be awkward
 
 Very faint audible sound pressures are tiny compared with the pressures produced by very high sound levels. If sound meters displayed pressure directly, the useful range would stretch across many orders of magnitude.

@@ -15,7 +15,7 @@ researchSources:
 - "Celestina, Kardous, and Trost, Evaluation of directional response"
 - "McLennon et al., Evaluation of smartphone sound level meter applications"
 - "Khan et al., Evaluating the Accuracy of Android Applications"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-12"
 
 ---

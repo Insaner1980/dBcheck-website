@@ -14,7 +14,7 @@ researchSources:
 - "Android Developers, AutomaticGainControl API reference"
 - "Android Developers, MediaRecorder.AudioSource API reference"
 - "Celestina, Kardous und Trost, Evaluation of directional response"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 
 ---

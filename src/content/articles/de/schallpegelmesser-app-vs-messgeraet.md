@@ -17,7 +17,7 @@ researchSources:
 - "Kardous und Shaw, Evaluation using external microphones"
 - "Celestina, Hrovat und Kardous, Evaluation of compliance with international standards"
 - "Lee und Hampton, Smartphone applications for measuring noise"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 
 ---
@@ -27,6 +27,8 @@ Ein professionelles Messgerät ist nicht automatisch für jede Frage nötig. Der
 Für private Vergleiche und eine erste Einschätzung reicht das Handy häufig aus. Sobald ein Messwert normgerecht, rückführbar oder rechtlich belastbar sein muss, braucht es ein geeignetes professionelles Messsystem und ein festgelegtes Verfahren. Die App bleibt eine Schätzung, auch wenn ihre Oberfläche präzise wirkt.
 
 [Wie genau sind Dezibel-Apps?](/de/artikel/sind-dezibel-apps-genau/)
+
+![Smartphone und professionelles Schallpegelmessgerät erfassen dasselbe Schallfeld, während der professionelle Ablauf das Messgerät zusätzlich mit Kalibrierung und Messprotokoll verbindet.](../../../assets/articles/phone-sound-meter-vs-professional-meter.webp)
 
 ## Schallpegelmesser-App vs Messgerät im Überblick
 

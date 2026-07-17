@@ -1,7 +1,3 @@
-# Julkaistut URL-osoitteet
-
-Tämä luettelo on muodostettu tuotantorakennuksen (`dist`) sivureiteistä ennen Cloudflare-julkaisua. Sivureittejä on 64. Lisäksi lopussa ovat haun ja indeksoinnin julkiset URL-osoitteet.
-
 ## Englanti
 
 https://dbcheck.app/

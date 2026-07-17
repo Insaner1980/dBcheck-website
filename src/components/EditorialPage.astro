@@ -39,9 +39,6 @@ const pagePath = routeFor(entry);
 const pageUrl = new URL(pagePath, Astro.site).href;
 const indexPath = routeForContent(locale, kind === 'sound' ? 'sounds' : 'articles', '').replace(/\/\/$/, '/');
 const indexLabel = kind === 'sound' ? (isGerman ? 'Alltagsgeräusche' : 'Common sounds') : (isGerman ? 'Artikel' : 'Articles');
-const reviewed = entry.data.lastReviewed.toLocaleDateString(localeTags[locale], {
-  year: 'numeric', month: 'long', day: 'numeric',
-});
 const published = entry.data.publishedAt.toLocaleDateString(localeTags[locale], {
   year: 'numeric', month: 'long', day: 'numeric',
 });
@@ -140,8 +137,7 @@ const cta = isGerman ? (kind === 'sound'
       <div class="eyebrow-row">
         <span class="kicker">{entry.data.contentCluster}</span>
         <span>
-          {isGerman ? 'Von dBcheck · Veröffentlicht' : 'By dBcheck · Published'} {published}
-          {' · '}{isGerman ? 'Geprüft' : 'Reviewed'} {reviewed}
+          {isGerman ? 'Von dBcheck / Veröffentlicht' : 'By dBcheck / Published'} {published}
         </span>
       </div>
       <h1>{entry.data.title}</h1>
@@ -202,6 +198,7 @@ const cta = isGerman ? (kind === 'sound'
     .prose :global(li + li) { margin-top: 7px; }
     .prose :global(strong) { color: var(--on-surface); }
     .prose :global(a) { color: var(--on-surface); text-underline-offset: 4px; overflow-wrap: anywhere; }
+    .prose :global(img) { display: block; width: 100%; height: auto; margin: 32px 0 12px; border: 1px solid var(--ghost); border-radius: var(--radius-card); background: var(--surface); }
     .prose :global(blockquote) { margin: 28px 0; padding: 4px 0 4px 20px; border-left: 2px solid var(--outline-v); color: var(--on-surface); }
     .prose :global(code) { font-family: var(--font-data); font-size: .9em; background: var(--surface-ch); border-radius: 6px; padding: 2px 6px; }
     .prose :global(hr) { border: 0; border-top: 1px solid var(--ghost); margin: 44px 0; }

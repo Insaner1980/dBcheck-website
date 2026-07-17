@@ -13,7 +13,7 @@ researchSources:
   - "Kardous and Shaw, Evaluation of smartphone sound measurement applications"
   - "Murphy and King, Testing the accuracy of smartphones and sound level meter applications"
   - "Huyan et al., Assessing the Usefulness of Mobile Apps for Noise Management"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 ---
 

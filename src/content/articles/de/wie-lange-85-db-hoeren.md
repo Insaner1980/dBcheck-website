@@ -14,7 +14,7 @@ researchSources:
   - "BAuA, Handbuch Gefährdungsbeurteilung: Lärm"
   - "Umweltbundesamt, Gehörschäden"
   - "DGUV, Die Effektive Lärmdosis"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 ---
 

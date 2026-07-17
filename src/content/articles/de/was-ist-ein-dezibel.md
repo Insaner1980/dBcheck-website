@@ -15,7 +15,7 @@ researchSources:
   - "IEC 61672-1:2013, offizielle Publikationsseite"
   - "BAuA, Lärm und LärmVibrationsArbSchV"
   - "BAuA, TRLV Lärm Teil 2: Messung von Lärm"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 ---
 

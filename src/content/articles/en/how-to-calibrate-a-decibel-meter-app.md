@@ -20,6 +20,9 @@ lastReviewed: "2026-07-12"
 Calibrating a decibel meter app usually means adjusting its reading so that it agrees with a reliable reference under defined conditions. A simple offset can reduce a consistent sensitivity error, but it cannot correct every limitation of the phone microphone, audio processing, frequency response, noise floor, compression, or peak handling. Calibration also does not make an ordinary phone a certified Class 1 or Class 2 sound level meter. [NIOSH guide][1]
 
 [Are Decibel Meter Apps Accurate?](/articles/are-decibel-meter-apps-accurate/)
+
+![A reference reading of 74.0 dBA minus a phone reading of 70.5 dBA gives a positive 3.5 dB calibration offset.](../../../assets/articles/calibrating-a-phone-sound-meter-app.webp)
+
 ## What calibration means in a phone app
 
 A phone app converts microphone samples into an estimated sound pressure level. The conversion needs a reference because digital amplitude alone does not identify the acoustic pressure at the microphone.

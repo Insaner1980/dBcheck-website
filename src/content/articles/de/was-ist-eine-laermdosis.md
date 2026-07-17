@@ -14,7 +14,7 @@ researchSources:
   - "WHO, Deafness and hearing loss: Safe listening"
   - "WHO-ITU, Safe listening devices and systems"
   - "Umweltbundesamt, Gehörschäden"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 ---
 

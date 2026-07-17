@@ -14,7 +14,7 @@ researchSources:
 - "Kardous und Shaw, Evaluation using external microphones"
 - "Celestina, Hrovat und Kardous, Evaluation of compliance with standards"
 - "Serpanos et al., Accuracy in clinical rooms"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-15"
 
 ---
@@ -24,6 +24,8 @@ Das Referenzgerät zeigt 74,0 dB(A), die Smartphone-App 70,5 dB(A). Unter densel
 Ein solcher Offset kann einen konstanten Pegelfehler verkleinern. Er korrigiert aber weder automatische Verstärkung noch Eigenrauschen, einen ungleichmäßigen Frequenzgang oder Übersteuerung. Die Verbesserung gilt deshalb für die getestete Kombination aus Smartphone, App, Audioeingang und Pegelbereich, nicht automatisch für jede spätere Messung.
 
 [Wie genau sind Dezibel-Apps?](/de/artikel/sind-dezibel-apps-genau/)
+
+![Ein Referenzwert von 74,0 dB(A) minus einer Smartphone-Anzeige von 70,5 dB(A) ergibt einen positiven Korrekturwert von 3,5 dB.](../../../assets/articles/calibrating-a-phone-sound-meter-app.webp)
 
 ## Was bedeutet Kalibrieren bei einer Dezibel-App?
 

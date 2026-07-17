@@ -156,7 +156,7 @@ const ga4MeasurementId = 'G-9J90097M6J';
     </div>
     <div class="footer-meta">
       <span class="footer-copyright"><span>© {new Date().getFullYear()} dBcheck</span><a href="https://finnvek.com">Finnvek</a></span>
-      <span>{copy.disclaimer}</span>
+      <span>{copy.disclaimer.split('\n').map((line, index) => <Fragment>{index > 0 && <br />}{line}</Fragment>)}</span>
     </div>
   </footer>
 

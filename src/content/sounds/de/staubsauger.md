@@ -13,7 +13,7 @@ researchSources:
   - "BAuA, Geräuschemission von Maschinen"
   - "BAuA, Lärm-Vorschriften für Maschinen und den Arbeitsplatz"
   - "Evaluation of smartphone sound measurement applications using external microphones"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-12"
 ---
 

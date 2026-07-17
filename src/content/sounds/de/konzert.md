@@ -14,7 +14,7 @@ researchSources:
   - "Umweltbundesamt, Grundlagen der Akustik"
   - "LärmVibrationsArbSchV, § 6"
   - "Comparison between Android applications and Class-I sound level meter"
-publishedAt: "2026-07-15"
+publishedAt: "2026-07-12"
 lastReviewed: "2026-07-12"
 ---
 

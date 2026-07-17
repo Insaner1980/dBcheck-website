@@ -24,6 +24,9 @@ A phone sound meter is suitable for awareness, preliminary screening, and contro
 The difference is not simply that one device is cheap and the other is accurate. Performance depends on the complete measurement system, calibration, settings, procedure, environment, and maintenance.
 
 [Are Decibel Meter Apps Accurate?](/articles/are-decibel-meter-apps-accurate/)
+
+![A smartphone and a professional sound level meter observe the same sound field, while the professional workflow also connects the meter to calibration and measurement records.](../../../assets/articles/phone-sound-meter-vs-professional-meter.webp)
+
 ## The main differences at a glance
 
 | Area | Phone sound meter app | Professional sound level meter |
