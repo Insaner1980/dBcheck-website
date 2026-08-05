@@ -1,0 +1,142 @@
+---
+import type { Locale } from '../i18n/config';
+import type { AlternateLink } from '../i18n/routes';
+
+interface Props {
+  locale: Locale;
+  alternates: AlternateLink[];
+}
+
+const { locale, alternates } = Astro.props;
+const endonyms: Record<string, string> = {
+  en: 'English',
+  de: 'Deutsch',
+  fr: 'Français',
+  es: 'Español',
+  it: 'Italiano',
+  pt: 'Português',
+};
+const availableLocales = alternates.filter((alternate) => endonyms[alternate.locale]);
+const hasTranslation = availableLocales.some((alternate) => alternate.locale !== locale);
+const label = locale === 'de' ? 'Sprache ändern' : 'Change language';
+---
+
+{hasTranslation && (
+  <div class="language-switcher" data-language-switcher>
+    <button
+      class="language-trigger"
+      type="button"
+      aria-label={label}
+      aria-haspopup="menu"
+      aria-expanded="false"
+      aria-controls="language-menu"
+      data-language-trigger
+    >
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18M12 3c2.3 2.5 3.5 5.5 3.5 9S14.3 18.5 12 21c-2.3-2.5-3.5-5.5-3.5-9S9.7 5.5 12 3Z" />
+      </svg>
+      <span>{locale.toUpperCase()}</span>
+    </button>
+    <ul class="language-menu" id="language-menu" role="menu" aria-label={label} hidden data-language-menu>
+      {availableLocales.map((alternate) => (
+        <li role="none">
+          {alternate.locale === locale ? (
+            <span class="language-option active" role="menuitem" aria-current="page" tabindex="0">
+              <span>{endonyms[alternate.locale]}</span><span aria-hidden="true">✓</span>
+            </span>
+          ) : (
+            <a class="language-option" role="menuitem" href={alternate.href} lang={alternate.locale} hreflang={alternate.locale}>
+              <span>{endonyms[alternate.locale]}</span>
+            </a>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
+
+<script>
+  const switcher = document.querySelector<HTMLElement>('[data-language-switcher]');
+  const trigger = switcher?.querySelector<HTMLButtonElement>('[data-language-trigger]');
+  const menu = switcher?.querySelector<HTMLElement>('[data-language-menu]');
+  const items = () => Array.from(menu?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+
+  const setOpen = (open: boolean, focus: 'first' | 'last' | null = null) => {
+    if (!trigger || !menu) return;
+    trigger.setAttribute('aria-expanded', String(open));
+    menu.hidden = !open;
+    if (open && focus) items().at(focus === 'first' ? 0 : -1)?.focus();
+  };
+
+  trigger?.addEventListener('click', () => setOpen(trigger.getAttribute('aria-expanded') !== 'true'));
+  trigger?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && trigger.getAttribute('aria-expanded') === 'true') {
+      event.preventDefault();
+      setOpen(false);
+      return;
+    }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    setOpen(true, event.key === 'ArrowDown' ? 'first' : 'last');
+  });
+  menu?.addEventListener('keydown', (event) => {
+    const menuItems = items();
+    const currentIndex = menuItems.indexOf(document.activeElement as HTMLElement);
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setOpen(false);
+      trigger?.focus();
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      menuItems[(currentIndex + direction + menuItems.length) % menuItems.length]?.focus();
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      menuItems.at(event.key === 'Home' ? 0 : -1)?.focus();
+    }
+  });
+  switcher?.addEventListener('focusout', (event) => {
+    if (!switcher.contains(event.relatedTarget as Node | null)) setOpen(false);
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (!switcher?.contains(event.target as Node)) setOpen(false);
+  });
+</script>
+
+<style>
+  .language-switcher { position: relative; margin-left: -16px; }
+  .language-trigger {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    min-width: 58px; height: 40px; padding: 0 11px;
+    border: 1px solid var(--ghost); border-radius: 999px;
+    background: rgba(16, 16, 16, .72); color: var(--on-surface-v);
+    font: 500 11px/1 var(--font-data); letter-spacing: .1em;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+  .language-trigger:hover,
+  .language-trigger[aria-expanded='true'] { color: var(--on-surface); border-color: var(--outline-v); background: var(--surface-c); }
+  .language-menu {
+    position: absolute; z-index: 60; top: calc(100% + 8px); right: 0;
+    min-width: 150px; margin: 0; padding: 6px; list-style: none;
+    border: 1px solid var(--ghost); border-radius: 10px;
+    background: rgba(16, 16, 16, .98); box-shadow: 0 16px 36px rgba(0, 0, 0, .4);
+  }
+  .language-menu[hidden] { display: none; }
+  .language-option {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    min-height: 36px; padding: 8px 10px; border-radius: 7px;
+    color: var(--on-surface-v); text-decoration: none;
+    font: 500 11px/1 var(--font-data); letter-spacing: .08em; text-transform: uppercase;
+  }
+  a.language-option:hover,
+  .language-option:focus-visible { background: var(--surface-ch); color: var(--on-surface); }
+  .language-option.active { color: var(--on-surface); }
+  @media (max-width: 900px) {
+    .language-switcher { margin-left: 0; }
+  }
+  @media (max-width: 420px) {
+    .language-trigger { min-width: 48px; padding-inline: 8px; }
+  }
+</style>

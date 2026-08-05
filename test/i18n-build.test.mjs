@@ -73,7 +73,7 @@ test('English and German exposure-time pages share the same page and calculator 
   assert.doesNotMatch(de, /100% NIOSH|Safe Exposure Time Calculator/);
 });
 
-test('German HTML uses de, a content-only header navigation, and reciprocal alternates', () => {
+test('German HTML uses de, a content-only header navigation, reciprocal alternates, and registered language switches', () => {
   const htmlFiles = [];
   const walk = (dir) => { for (const name of readdirSync(dir, { withFileTypes: true })) name.isDirectory() ? walk(join(dir, name.name)) : name.name === 'index.html' && htmlFiles.push(join(dir, name.name)); };
   walk(join(dist, 'de'));
@@ -81,7 +81,7 @@ test('German HTML uses de, a content-only header navigation, and reciprocal alte
     const html = readFileSync(path, 'utf8');
     assert.match(html, /<html lang="de">/, path);
     assert.match(html, /<link rel="canonical" href="https:\/\/dbcheck\.app\/de\//, path);
-    assert.doesNotMatch(html, /class="language-switch"/, path);
+    assert.match(html, /class="language-switcher"/, path);
     const header = html.match(/<header class="site-header">[\s\S]*?<\/header>/)?.[0] ?? '';
     const navigation = header.match(/<div class="nav-links"[^>]*>[\s\S]*?<\/div>/)?.[0] ?? '';
     assert.equal((navigation.match(/<a /g) ?? []).length, 2, path);
@@ -96,7 +96,7 @@ test('German HTML uses de, a content-only header navigation, and reciprocal alte
   }
   const articleEn = readFileSync(join(dist, 'articles', 'what-is-a-decibel', 'index.html'), 'utf8');
   const homeEn = readFileSync(join(dist, 'index.html'), 'utf8');
-  assert.doesNotMatch(homeEn, /class="language-switch"/);
+  assert.doesNotMatch(homeEn, /class="language-switcher"/);
   const englishFooter = homeEn.match(/<footer class="site-footer">[\s\S]*?<\/footer>/)?.[0] ?? '';
   assert.doesNotMatch(englishFooter, /Sound Library|href="\/sounds\//);
   assert.match(englishFooter, /<a href="https:\/\/finnvek\.com">Finnvek<\/a>/);
@@ -106,6 +106,29 @@ test('German HTML uses de, a content-only header navigation, and reciprocal alte
   assert.match(articleEn, /hreflang="de-DE" href="https:\/\/dbcheck\.app\/de\/artikel\/was-ist-ein-dezibel\/"/);
   assert.match(articleDe, /hreflang="en-GB" href="https:\/\/dbcheck\.app\/articles\/what-is-a-decibel\/"/);
   assert.match(articleDe, /hreflang="x-default" href="https:\/\/dbcheck\.app\/articles\/what-is-a-decibel\/"/);
+  assert.match(articleEn, /class="language-trigger"[\s\S]*?<span[^>]*>EN<\/span>/);
+  assert.match(articleEn, /href="\/de\/artikel\/was-ist-ein-dezibel\/"/);
+  assert.match(articleDe, /class="language-trigger"[\s\S]*?<span[^>]*>DE<\/span>/);
+  assert.match(articleDe, /href="\/articles\/what-is-a-decibel\/"/);
+});
+
+test('language switch renders only for registered routes and every target exists', () => {
+  const registeredTool = readFileSync(join(dist, 'tools', 'daily-noise-exposure-level-calculator', 'index.html'), 'utf8');
+  const registeredToolDe = readFileSync(join(dist, 'de', 'werkzeuge', 'laermexpositionsrechner', 'index.html'), 'utf8');
+  const unregisteredTool = readFileSync(join(dist, 'tools', 'noise-dose-calculator', 'index.html'), 'utf8');
+  const home = readFileSync(join(dist, 'index.html'), 'utf8');
+  for (const html of [registeredTool, registeredToolDe]) assert.match(html, /class="language-switcher"/);
+  for (const html of [unregisteredTool, home]) assert.doesNotMatch(html, /class="language-switcher"/);
+
+  const htmlFiles = [];
+  const walk = (dir) => { for (const name of readdirSync(dir, { withFileTypes: true })) name.isDirectory() ? walk(join(dir, name.name)) : name.name === 'index.html' && htmlFiles.push(join(dir, name.name)); };
+  walk(dist);
+  for (const path of htmlFiles) {
+    const html = readFileSync(path, 'utf8');
+    const switcher = html.match(/<div class="language-switcher"[\s\S]*?<\/div>/)?.[0];
+    if (!switcher) continue;
+    for (const match of switcher.matchAll(/href="([^"]+)"/g)) assert.ok(routeExists(match[1]), `${path}: ${match[1]}`);
+  }
 });
 
 test('sitemap uses localized pairs and contains no fabricated locale routes', () => {
