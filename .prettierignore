@@ -1,0 +1,15 @@
+# Rakennettu tuotos ja välimuistit
+dist
+.astro
+.wrangler
+node_modules
+
+# Työkalujen väliaikaistiedostot, eivät projektikoodia
+.remember
+.claude
+.agents
+.codex
+.playwright-cli
+output
+
+package-lock.json

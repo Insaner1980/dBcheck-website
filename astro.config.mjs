@@ -8,6 +8,7 @@ import { defaultLocale, locales } from './src/i18n/config.ts';
 import { routePairs } from './src/i18n/routes.ts';
 
 const siteUrl = 'https://dbcheck.app';
+/** @param {string} url */
 const routePairForUrl = (url) => {
   const path = new URL(url).pathname;
   return routePairs.find((pair) => pair.en === path || pair.de === path);

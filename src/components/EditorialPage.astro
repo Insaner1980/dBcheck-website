@@ -32,7 +32,7 @@ const linkedRoutes = Array.from(entry.body?.matchAll(/\]\((\/(?:de\/)?(?:article
   .map((match) => match[1]);
 const related = Array.from(new Set(linkedRoutes))
   .map((route) => ({ route, entry: entriesByRoute.get(route) }))
-  .filter((item): item is { route: string; entry: EditorialEntry } => Boolean(item.entry) && item.entry.id !== entry.id)
+  .filter((item): item is { route: string; entry: EditorialEntry } => item.entry !== undefined && item.entry.id !== entry.id)
   .slice(0, 4);
 
 const pagePath = routeFor(entry);
