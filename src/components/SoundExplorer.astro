@@ -1,7 +1,7 @@
 ---
 import type { CommonSound } from '../data/sounds';
 import type { Locale } from '../i18n/config';
-import { DISPLAY_TICKS, scalePercent } from '../lib/display-scale';
+import { DISPLAY_TICKS, EXPOSURE_LIMIT_DB, scalePercent } from '../lib/display-scale';
 
 interface Props {
   sounds: CommonSound[];
@@ -20,6 +20,7 @@ const bandFor = (sound: CommonSound) => {
   return { start, span: scalePercent(sound.typicalMaxDb) - start };
 };
 const initialBand = bandFor(initial);
+const exposureLimitAt = scalePercent(EXPOSURE_LIMIT_DB);
 
 /** Asteikon numerot sijoitetaan todellisille kohdilleen, ei tasavälein. */
 const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
@@ -30,7 +31,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
 
 <div id={id} class:list={['sound-explorer', { compact }]} data-sound-explorer>
   <div class="sound-scale" aria-label={isGerman ? 'Alltagsgeräusche auf einer Skala von 0 bis 130 Dezibel' : 'Common sound examples on a 0 to 130 decibel display scale'}>
-    <div class="sound-markers" style={`--band-start:${initialBand.start};--band-span:${initialBand.span}`}>
+    <div class="sound-markers" style={`--band-start:${initialBand.start};--band-span:${initialBand.span};--exposure-limit-at:${exposureLimitAt}%`}>
       <div class="scale-track" aria-hidden="true">
         {scaleTicks.map((tick) => <span style={`--at:${tick.at}%`}>{tick.label}</span>)}
       </div>
@@ -39,7 +40,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
         <button
           type="button"
           class:list={['sound-marker', sound.riskLevel, { active: index === 0 }]}
-          style={`--position:${Math.min((sound.typicalMinDb + sound.typicalMaxDb) / 2, 130) / 130 * 100}%;--marker-index:${index}`}
+          style={`--position:${scalePercent((sound.typicalMinDb + sound.typicalMaxDb) / 2)}%;--marker-index:${index}`}
           aria-pressed={index === 0 ? 'true' : 'false'}
           aria-controls={`${id}-detail`}
           data-name={sound.name}
@@ -86,7 +87,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
               <span class="mobile-range-track" aria-hidden="true">
                 <span
                   class:list={['mobile-range-fill', sound.riskLevel]}
-                  style={`--range-start:${sound.typicalMinDb / 130 * 100}%;--range-end:${Math.min(sound.typicalMaxDb, 130) / 130 * 100}%`}
+                  style={`--range-start:${scalePercent(sound.typicalMinDb)}%;--range-end:${scalePercent(sound.typicalMaxDb)}%`}
                 ></span>
               </span>
             </summary>
@@ -208,7 +209,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     background: var(--outline-v); transform-origin: left;
   }
   .scale-track::after {
-    content: ''; position: absolute; left: calc(85 / 130 * 100%); top: -1px; bottom: 17px;
+    content: ''; position: absolute; left: var(--exposure-limit-at); top: -1px; bottom: 17px;
     border-left: 1px solid color-mix(in srgb, var(--warning) 55%, transparent);
   }
   .sound-markers { position: relative; min-width: 720px; height: 174px; margin: 0 8px; }

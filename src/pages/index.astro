@@ -1459,14 +1459,21 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
         if (!audioCtx) setupAudio();
         if (audioCtx!.state === 'suspended') await audioCtx!.resume();
         if (listening) { setListening(false); return; }
+        if (!analyser) throw new Error('Web Audio analyser unavailable');
         await video.play().catch(() => {});
         // reset session stats for a fresh "measurement session"
         minDb = Infinity; maxDb = -Infinity; energySum = 0; sampleCount = 0;
         setListening(true);
       } catch {
         // Web Audio unavailable — degrade gracefully to plain unmute
-        video.muted = !video.muted;
-        setListening(!video.muted);
+        const unmute = video.muted;
+        setListening(false);
+        video.muted = !unmute;
+        listenText.textContent = unmute ? 'Mute the film' : 'Listen to the film';
+        listenIcon.innerHTML = unmute
+          ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
+          : '<path d="M8 5v14l11-7z"/>';
+        if (unmute) await video.play().catch(() => {});
       }
     });
 
