@@ -1,0 +1,122 @@
+---
+import { DISPLAY_TICKS, EXPOSURE_LIMIT_DB, scalePercent } from '../lib/display-scale';
+
+/**
+ * Koristeellinen 0–130 dB -kisko, joka seuraa selauksen edistymistä.
+ * Kisko on aria-hidden: se ei esitä uutta tietoa, vaan toistaa saman
+ * näyttöasteikon jonka Sound Explorer kertoo tekstinä. Vaatii ympäriltään
+ * elementin, jossa on `data-exposure-rail-section`; se määrittää selausalueen.
+ */
+const ticks = DISPLAY_TICKS.map((db) => ({ db, at: scalePercent(db) }));
+const limitAt = scalePercent(EXPOSURE_LIMIT_DB);
+---
+
+<aside class="exposure-rail" data-exposure-rail data-level="quiet" aria-hidden="true">
+  <div class="rail-sticky">
+    <p class="rail-unit">dB</p>
+    <div class="rail-track" style={`--limit-at:${limitAt}%`}>
+      <span class="rail-line"></span>
+      <span class="rail-fill"></span>
+      <span class="rail-limit"></span>
+      <b class="rail-readout" data-rail-value>0</b>
+      <span class="rail-thumb"></span>
+      <ul class="rail-ticks">
+        {ticks.map((tick) => <li style={`--at:${tick.at}%`}>{tick.db}</li>)}
+      </ul>
+    </div>
+    <p class="rail-caption">display<br />scale</p>
+  </div>
+</aside>
+
+<style>
+  .exposure-rail {
+    /* Täysi korkeus vanhemmasta, jotta sticky-sisältö kulkee koko osion matkan. */
+    height: 100%;
+    --rail-accent: var(--success);
+    --rail-progress: 0%;
+    --rail-height: clamp(260px, 40vh, 400px);
+    --rail-axis: 42px;
+  }
+  .exposure-rail[data-level='normal'] { --rail-accent: var(--primary); }
+  .exposure-rail[data-level='elevated'] { --rail-accent: var(--warning); }
+  .exposure-rail[data-level='dangerous'] { --rail-accent: var(--error); }
+
+  .rail-sticky { position: sticky; top: 108px; display: grid; gap: 16px; justify-items: start; }
+
+  .rail-unit,
+  .rail-caption {
+    margin: 0; color: var(--tertiary);
+    font: 10px/1.5 var(--font-data); letter-spacing: .12em; text-transform: uppercase;
+  }
+  .rail-unit { margin-left: var(--rail-axis); }
+
+  .rail-track { position: relative; width: 100%; height: var(--rail-height); }
+  .rail-line { position: absolute; inset-block: 0; left: var(--rail-axis); width: 1px; background: var(--ghost); }
+  .rail-fill {
+    position: absolute; top: 0; left: var(--rail-axis); width: 1px; height: var(--rail-progress);
+    background: linear-gradient(to bottom, transparent, var(--rail-accent) 30%);
+  }
+  .rail-limit {
+    position: absolute; top: var(--limit-at); left: calc(var(--rail-axis) - 4px); width: 13px;
+    border-top: 1px solid color-mix(in srgb, var(--warning) 60%, transparent);
+  }
+  .rail-thumb {
+    position: absolute; top: var(--rail-progress); left: var(--rail-axis);
+    width: 9px; height: 9px; translate: -50% -50%;
+    border-radius: 50%; background: var(--rail-accent);
+    box-shadow: 0 0 0 4px var(--bg);
+    transition: background 400ms ease;
+  }
+  /* Lukema kulkee osoittimen mukana, jottei se katoa näkyvistä osion vieriessä. */
+  .rail-readout {
+    position: absolute; top: var(--rail-progress); left: 0;
+    width: calc(var(--rail-axis) - 12px); translate: 0 -50%;
+    color: var(--rail-accent); text-align: right;
+    font: 700 16px/1 var(--font-data); font-variant-numeric: tabular-nums;
+    transition: color 400ms ease;
+  }
+
+  .rail-ticks { list-style: none; margin: 0; padding: 0; }
+  .rail-ticks li {
+    position: absolute; top: var(--at); left: calc(var(--rail-axis) + 14px); translate: 0 -50%;
+    color: var(--tertiary); font: 10px/1 var(--font-data); letter-spacing: .08em;
+  }
+
+  /* Kisko on puhtaasti koristeellinen: se jää pois kapealta näytöltä ja kun liikettä vähennetään. */
+  @media (max-width: 900px), (prefers-reduced-motion: reduce) {
+    .exposure-rail { display: none; }
+  }
+</style>
+
+<script>
+  import { animate, onScroll } from 'animejs';
+  import { DISPLAY_MAX_DB, levelForDb, scalePercent } from '../lib/display-scale';
+  import { prefersReducedMotion } from '../scripts/motion';
+
+  const rail = document.querySelector<HTMLElement>('[data-exposure-rail]');
+  const section = rail?.closest<HTMLElement>('[data-exposure-rail-section]');
+  const valueElement = rail?.querySelector<HTMLElement>('[data-rail-value]');
+
+  if (rail && section && valueElement && !prefersReducedMotion()) {
+    const reading = { db: 0 };
+    let level = '';
+
+    const render = () => {
+      rail.style.setProperty('--rail-progress', `${scalePercent(reading.db)}%`);
+      valueElement.textContent = String(Math.round(reading.db));
+      const nextLevel = levelForDb(reading.db);
+      if (nextLevel === level) return;
+      rail.dataset.level = nextLevel;
+      level = nextLevel;
+    };
+
+    render();
+
+    animate(reading, {
+      db: DISPLAY_MAX_DB,
+      ease: 'linear',
+      onUpdate: render,
+      autoplay: onScroll({ target: section, enter: 'bottom top', leave: 'top bottom', sync: 0.35 }),
+    });
+  }
+</script>

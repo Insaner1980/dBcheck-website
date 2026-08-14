@@ -13,6 +13,8 @@ interface Props {
   socialImage?: SocialImage;
   locale?: Locale;
   alternates?: AlternateLink[];
+  /** Näyttää lukemisen edistymisviivan headerin alareunassa. Vain pitkille sisältösivuille. */
+  readingProgress?: boolean;
 }
 const {
   title,
@@ -22,6 +24,7 @@ const {
   socialImage = socialImages.app,
   locale: localeProp,
   alternates: alternateProp,
+  readingProgress = false,
 } = Astro.props;
 const locale = localeProp ?? (isLocale(Astro.currentLocale) ? Astro.currentLocale : defaultLocale);
 const copy = getUi(locale);
@@ -103,6 +106,7 @@ const ga4MeasurementId = 'G-9J90097M6J';
         </svg>
       </button>
     </nav>
+    {readingProgress && <div class="reading-progress" aria-hidden="true"></div>}
   </header>
 
   <dialog class="search-overlay" id="search-overlay" aria-labelledby="search-title" data-search-index={searchIndexUrl} closedby="any" hidden>
@@ -173,8 +177,8 @@ const ga4MeasurementId = 'G-9J90097M6J';
     // ---- Shared heading transition ----
     document.addEventListener('click', (event) => {
       const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[href^="/"]');
-      const card = link?.closest('.article-card, .tool-card');
-      const cardHeading = card?.querySelector<HTMLElement>('h2, h3');
+      const card = link?.closest('.article-group li, .tool-card');
+      const cardHeading = card?.querySelector<HTMLElement>('h2, h3, strong');
       if (!cardHeading) return;
       document.querySelector<HTMLElement>('main h1')?.style.setProperty('view-transition-name', 'none');
       cardHeading.style.setProperty('view-transition-name', 'page-heading');
@@ -252,11 +256,15 @@ const ga4MeasurementId = 'G-9J90097M6J';
     });
 
     // ---- Scroll reveal ----
+    // Pidä lista synkassa sivupohjien kanssa: kuollut valitsin ei tee mitään,
+    // mutta puuttuva jättää kokonaisen sivutyypin ilman sisääntuloa.
     const revealSelectors = [
-      '.hero-copy', '.hero-hud', '.section-head', '.why-card', '.feature-row',
-      '.feature-group-head', '.plan', '.article-card', '.strip-inner',
-      '.cta-inner', '.article-list li', '.page-head', '.privacy-note',
-      '.sound-explorer', '.exposure-calculator', '.tool-card', '.sound-list li',
+      '.hero-copy', '.hero-hud', '.section-head', '.why-card', '.plan',
+      '.cta-inner', '.page-head', '.privacy-note', '.sound-explorer',
+      '.exposure-calculator', '.tool-card', '.sound-list li',
+      '.free-feature-item', '.feature-tier-head', '.pro-feature-showcase',
+      '.article-group > header', '.article-group li',
+      '.editorial-head', '.sound-summary', '.related', '.article-cta',
     ];
     const revealEls = Array.from(document.querySelectorAll(revealSelectors.join(',')));
     revealEls.forEach((el) => el.classList.add('reveal'));
@@ -408,11 +416,24 @@ const ga4MeasurementId = 'G-9J90097M6J';
     }
     .reveal.in { opacity: 1; translate: 0 0; }
 
-    /* gentle card lift on hover */
-    .why-card, .article-card, .plan, .stat-tile {
-      transition: translate 250ms ease, background 200ms ease;
+    /* Korttien hover-nosto. Transition on yksi ominaisuus: jos nämä elementit
+       määrittelevät sen uudelleen, revealin siirtymä katoaa kokonaan ja kortti
+       ilmestyy nytkähtäen. Siksi kaikki tarvittavat siirtymät ovat tässä yhdessä
+       määrittelyssä, ja nosto käyttää transformia jottei se kilpaile revealin
+       translaten kanssa. */
+    .why-card, .plan, .tool-card {
+      transition:
+        opacity 700ms cubic-bezier(0.2, 0.6, 0.2, 1),
+        translate 700ms cubic-bezier(0.2, 0.6, 0.2, 1),
+        transform 250ms ease,
+        background 200ms ease,
+        border-color 200ms ease;
     }
-    .why-card:hover, .article-card:hover, .plan:hover { translate: 0 -4px; }
+    .why-card:hover, .plan:hover { transform: translateY(-4px); }
+
+    /* Hintakortti täyttää pienen näytön lähes kokonaan, jolloin koko lohkon siirtymä
+       lukisi nytkähdyksenä. Kortti paljastuu paikallaan ja sisältö tulee porrastettuna. */
+    .plan.reveal { translate: none; }
 
     .calculator-result.result-updated strong { animation: result-value-enter 220ms cubic-bezier(.2,.7,.2,1); }
     @keyframes result-value-enter {
@@ -423,7 +444,7 @@ const ga4MeasurementId = 'G-9J90097M6J';
       ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
       html { scroll-behavior: auto; }
       .reveal { opacity: 1; translate: none; transition: none; }
-      .why-card:hover, .article-card:hover, .plan:hover { translate: none; }
+      .why-card:hover, .plan:hover { transform: none; }
       .calculator-result.result-updated strong { animation: none; }
       .search-panel, .search-results li { animation: none !important; }
       body.search-open .search-btn { scale: 1; opacity: 1; }
@@ -436,6 +457,26 @@ const ga4MeasurementId = 'G-9J90097M6J';
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--ghost);
     }
+    /* Lukemisen edistymisviiva. Ei itsenäistä liikettä — se on suora lukema
+       vierityskohdasta, joten se jää näkyviin myös reduced motion -asetuksella.
+       Ilman scroll-aikajanan tukea viiva jää näkymättömiin. */
+    .reading-progress {
+      position: absolute; right: 0; bottom: -1px; left: 0; height: 2px;
+      background: var(--primary);
+      transform-origin: 0 50%;
+      scale: 0 1;
+    }
+    @supports (animation-timeline: scroll()) {
+      .reading-progress {
+        animation-name: reading-progress;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        /* auto = koko aikajanan mitta; animation-lyhenne asettaisi keston nollaksi. */
+        animation-duration: auto;
+        animation-timeline: scroll(root block);
+      }
+    }
+    @keyframes reading-progress { to { scale: 1 1; } }
     .nav {
       max-width: var(--max-w);
       margin: 0 auto;

@@ -1,13 +1,18 @@
 # dBcheck website memory
 
-Päivitetty: 2026-07-15
+Päivitetty: 2026-08-14
 
 ## Nykyinen rakenne
 
 - Astro 7, staattinen build, julkinen perus-URL `https://dbcheck.app`.
 - Natiivi Astro i18n: englanti oletuslocalena ilman etuliitettä, saksa `/de/`-etuliitteellä. Locale/UI/reittirekisteri ovat `src/i18n/config.ts`, `src/i18n/ui.ts` ja `src/i18n/routes.ts`.
-- Yhteinen shell: `src/layouts/Base.astro`; se omistaa myös natiivin MPA-sivunvaihdon, haun motionin ja laskuritulosten yhteisen päivitysanimaation. Koristeellinen liike poistuu `prefers-reduced-motion`-asetuksella.
-- Etusivu: `src/pages/index.astro`; alkuperäinen hero-video ja Web Audio -mittari on säilytetty.
+- Yhteinen shell: `src/layouts/Base.astro`; se omistaa myös natiivin MPA-sivunvaihdon, haun motionin, scroll-revealin ja laskuritulosten `result-updated`-välähdyksen. Koristeellinen liike poistuu `prefers-reduced-motion`-asetuksella.
+- Selainpuolen ainoa riippuvuus: anime.js 4.5 (MIT). Mittariliikkeen rajapinta on `src/scripts/motion.ts` (scramble-profiilit, `scrambleValue`, `scrambleReading`); anime.js:ää käyttää vain `src/scripts/scramble-engine.ts`, joka ladataan dynaamisesti ensimmäisestä arvonvaihdosta. Artikkeli- ja työkalusivut eivät lataa anime.js:ää lainkaan.
+- Näyttöasteikon (0–130 dB) rajat, merkkiviivat ja tasoluokat: `src/lib/display-scale.ts`.
+- Etusivu: `src/pages/index.astro`; alkuperäinen hero-video ja Web Audio -mittari on säilytetty. Hero-mittarin neulan omistaa yksi anime.js-`createAnimatable`, ja käynnistyssekvenssi on `createTimeline`-aikajana (kalibrointiviiva, täysi asteikkopyyhkäisy, lukeman scramble).
+- Etusivun Why-osion koristeellinen selaukseen sidottu dB-kisko: `src/components/ExposureRail.astro` (anime.js `onScroll`, aria-hidden, piilossa alle 900 px ja reduced motion).
+- Etusivun CTA:ssa aaltomuoto piirtyy kerran ja tasoittuu keskiviivaksi (anime.js `svg.createDrawable` + scaleY, IntersectionObserver, painikkeiden alapuolella).
+- Sound Explorerin asteikko: numerot ovat todellisilla kohdillaan ja `.scale-track` on `.sound-markers`-elementin sisällä, joten numerot, merkkipisteet ja vaihteluvälipalkki jakavat saman koordinaatiston. Valitun äänen typical-min–max näkyy asteikolla liukuvana palkkina (pelkkä CSS-siirtymä, ei anime.js:ää).
 - Common sounds -tietojen ainoa lähde: `src/data/sounds.ts`.
 - Tools-indeksin ja haun työkalumetadatan ainoa lähde: `src/data/tools.ts`; kaikki viisi työkalua ovat julkaistuja linkkejä ilman status-badgeja.
 - Uusien laskurisivujen yhteinen shell ja lomaketyylit: `src/components/CalculatorPage.astro`; numerokenttien yhteinen saavutettava askellussäädin: `src/components/NumberField.astro`; Noise Dose-, Distance- ja Add Decibels -laskentojen asiakaslogiikka: `src/scripts/tool-calculators.ts`.
@@ -49,6 +54,23 @@ Päivitetty: 2026-07-15
 - Decibel Distance Calculator käyttää vapaan kentän pistelähteen `−20 log10(r2/r1)`-mallia ja kertoo näkyvästi sen reaalimaailman rajoista.
 - Add Decibels Calculator käyttää riippumattomille yhteensopiville tasoille kaavaa `10 log10(Σ10^(Li/10))` ja rajaa koherentit signaalit mallin ulkopuolelle.
 - Daily Noise Exposure Level Calculator käyttää kaavaa `10 log10(Σ[(Ti/8 h) × 10^(LAeq,i/10)])`, luokittelee 80/85 dB(A) Auslösewerte -tasot ja kertoo 87 dB(A):n EU-raja-arvon erillisestä kuulonsuojainkäsittelystä.
+
+## Varmistettu 2026-08-14
+
+- anime.js 4.5.0 lisätty ainoana selainpuolen riippuvuutena kolmea liikettä varten: numeroiden scramble, selaukseen sidottu dB-kisko ja hero-mittarin aikajana + jousineula.
+- Scramble kokeiltiin myös laskurien tuloksiin ja **peruttiin käyttäjän palautteesta**: joka näppäinpainalluksella laukeava merkkiarvonta näytti levottomalta ja arpoi myös yksikön ("98.4%" → "6080 96"). Laskurit palasivat suoraan `textContent`-kirjoitukseen ja Basen `result-updated`-välähdykseen. Scramble jäi vain kertaluonteisiin hetkiin: hero-kalibrointi, hintojen lokalisointi, Sound Explorerin valinta.
+- Poistettu tarpeettomana: hero-HUD:n `is-booting`-CSS-keyframet ja `setTimeout`-pohjainen boot, hero-skriptin oma `levelFor` ja käsin viritetty vaimennus sekä kaksi erillistä rAF-silmukkaa (yhdistetty yhdeksi).
+- Bundlekoot gzipattuna: jaettu anime-ydin 13 kt, etusivu yhteensä n. 25 kt, työkalu- ja artikkelisivut 0 kt anime.js:ää. Namespace-tuonti `import('animejs')` nostaisi ytimen 40 kt:een — käytä nimettyjä tuonteja.
+- Selaintarkistus 1440 px ja 820 px: hero-käynnistyssekvenssi, Listen/Mute-mittaus jousineulalla, kiskon 0–130 dB -pyyhkäisy tasoväreineen, laskurin scramble myös nopeassa kirjoituksessa. Ei konsolivirheitä (paitsi odotettu `/cdn-cgi/trace` 404 preview-palvelimella). `npm run check` 0 virhettä, `npm run build` 56 sivua.
+- Prettier alustaa koko tiedoston, eikä repoa ole formatoitu sillä. Älä aja `prettier --write` olemassa oleviin tiedostoihin — diff paisuu tuhansiin riveihin.
+- Toinen kierros samana päivänä: hero-HUD:n synteettinen idle-spektri poistettiin (se näytti mittausdatalta mittaamatta mitään) ja korvattiin aidolla nollatasolla; ruutusilmukka pysähtyy nyt kun neula on levossa. Sound Exploreriin lisättiin valitun äänen vaihteluvälipalkki, ja samalla korjattiin asteikon numeroiden sijainti: ne oli ladottu tasavälein (`justify-content: space-between`) vaikka 0/40/70/85/100/130 eivät ole tasavälisiä, joten numerot eivät osuneet merkkipisteiden kanssa samoille kohdille. CTA:han tuli kerran piirtyvä ja tasoittuva aaltomuoto, Pro-kuviin clip-path-pyyhkäisy.
+- **Sisältösivujen liike korjattu.** `revealSelectors`-listassa oli kuusi valitsinta (`.article-card`, `.article-list li`, `.feature-row`, `.feature-group-head`, `.strip-inner`, `.stat-tile`) joita ei ole missään sivupohjassa, ja artikkelisivut jäivät kokonaan ilman sisääntuloa. Buildista mitattuna `/articles/[slug]/` sai 0 reveal-kohdetta ja `/articles/` vain `.page-head`. Lista päivitettiin todellisiin luokkiin (`.editorial-head`, `.sound-summary`, `.related`, `.article-cta`, `.article-group > header`, `.article-group li`, `.free-feature-item`, `.feature-tier-head`, `.pro-feature-showcase`). Samalla korjattiin sivunvaihdon otsikkomorffaus: se etsi `.article-card`-luokkaa jota ei ole, joten se toimi vain työkalukorteista — nyt `.article-group li, .tool-card` ja otsikkohaku `h2, h3, strong`.
+- Artikkelisivuille lisättiin lukemisen edistymisviiva (`Base.astro`:n `readingProgress`-propsi, CSS scroll-aikajana, 0 kt JS). Huom: `animation`-lyhenne nollaa keston, joten scroll-aikajanalla on käytettävä `animation-duration: auto` erikseen — muuten palkki ei liiku lainkaan.
+- Etusivun `<details>`-avautuminen animoituu `::details-content` + `interpolate-size: allow-keywords` -yhdistelmällä. Ilman selaintukea koko sääntö hylätään ja avautuminen on entinen välitön.
+- **Korjattu CSS-bugi:** `.why-card, .article-card, .plan, .stat-tile` määritteli `transition`-ominaisuuden uudelleen hover-nostoa varten, mikä pyyhki revealin opacity-siirtymän kokonaan. Nuo kortit ilmestyivät siis nytkähtäen (opacity 0→1 ilman siirtymää) ja liukuivat 26 px 250 ms:ssä 700 ms:n sijaan. Nyt kaikki siirtymät ovat yhdessä määrittelyssä ja hover käyttää `transform`ia jottei se kilpaile revealin `translate`n kanssa. **Jos lisäät `transition`-määrittelyn revealoituvalle elementille, sisällytä siihen myös opacity ja translate** — muuten reveal katoaa. Hintakortti paljastuu lisäksi paikallaan (ei 26 px siirtymää, se lukisi 14" näytöllä nytkähdyksenä) ja sen sisältö kokoontuu porrastettuna.
+- `/cdn-cgi/trace` palauttaa 404 paikallisessa previewissä, joten hintojen lokalisointi ja niiden scramble eivät koskaan aja localhostissa — ne näkyvät vasta Cloudflaressa. Älä etsi sitä animaatiota preview-palvelimelta.
+- Pro-välilehtien vaihto uusittiin: paneelit ovat päällekkäin samassa gridi-solussa, joten aiempi 160 ms:n ristihäivytys teki vaihdosta töksähtävän ja peitti clip-path-pyyhkäisyn (pyyhkäisyn paljastamaton alue näytti edellisen paneelin kuvaa). Nyt vaihto on välitön näkyvyyden vaihto, ja liike tulee sekvenssistä: kuva pyyhkäistään 620 ms:ssä mittausviivan kanssa, otsikko ja lista tulevat porrastettuna, kuvateksti viimeisenä 240 ms:n viiveellä. **Älä palauta paneelien ristihäivytystä** — päällekkäisillä paneeleilla se sotkee kaiken muun liikkeen.
+- Varmistettu selaimessa 1440/820/600 px sekä `/de/alltagsgeraeusche/`: `.scale-track` ja `.sound-markers` ovat pikselilleen kohdakkain kaikissa leveyksissä, palkki seuraa valintaa (myös 120–150 dB rajautuu oikein 130:een), CTA-aalto laukeaa kerran painikkeiden alapuolella eikä leikkaa tekstiä.
 
 ## Varmistettu 2026-07-15
 

@@ -28,6 +28,17 @@ const groups = (Object.keys(byCluster) as (keyof typeof byCluster)[]).map((key) 
     </div>
   </section>
   <style>
+    /* Nosto käyttää transformia, koska reveal omistaa translaten. */
+    .article-group a {
+      transition: background 200ms ease, transform 250ms ease, border-color 200ms ease;
+    }
+    .article-group a:hover { transform: translateY(-4px); border-color: var(--outline-v); }
+    .article-group span { transition: color 200ms ease; }
+    .article-group a:hover span { color: var(--secondary); }
+    @media (prefers-reduced-motion: reduce) {
+      .article-group a, .article-group span { transition: none; }
+      .article-group a:hover { transform: none; }
+    }
     .articles-page{max-width:var(--max-w);margin:0 auto;padding:64px 20px 0}.page-head{display:grid;gap:16px;max-width:820px;margin-bottom:72px}h1{margin:0;font:700 var(--font-size-page-title)/1 var(--font-data);letter-spacing:-.035em}.page-head p{max-width:700px;margin:0;color:var(--on-surface-v);font-size:18px}.article-groups{display:grid;gap:80px}.article-group>header{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:end;margin-bottom:24px}.article-group h2{margin:8px 0 0;font-size:32px}.article-group>header p{margin:0;color:var(--on-surface-v)}.article-group ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;list-style:none;margin:0;padding:0}.article-group a{display:grid;gap:12px;height:100%;padding:24px;border:1px solid var(--ghost);border-radius:var(--radius-tile);background:var(--surface);text-decoration:none}.article-group a:hover{background:var(--surface-c)}.article-group strong{font-size:19px}.article-group p{margin:0;color:var(--on-surface-v);font-size:14px}.article-group span{align-self:end;color:var(--tertiary);font:10px/1.4 var(--font-data);letter-spacing:.08em;text-transform:uppercase}@media(max-width:700px){.article-group>header,.article-group ul{grid-template-columns:1fr}.article-group>header{gap:12px}}
   </style>
 </Base>
