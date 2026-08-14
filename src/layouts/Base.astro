@@ -50,7 +50,7 @@ const ga4MeasurementId = 'G-9J90097M6J';
   {alternates.map((alternate) => <link rel="alternate" hreflang={localeTags[alternate.locale]} href={new URL(alternate.href, Astro.site)} />)}
   {alternates.some((alternate) => alternate.locale === 'en') && <link rel="alternate" hreflang="x-default" href={new URL(alternates.find((alternate) => alternate.locale === 'en')!.href, Astro.site)} />}
   <link rel="sitemap" href="/sitemap-index.xml" />
-  <link rel="icon" href="/dbcheck-logo.svg" type="image/svg+xml" />
+  <link rel="icon" href="/dbcheck-logo.svg?v=2" type="image/svg+xml" sizes="any" />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:type" content={ogType} />
@@ -487,11 +487,10 @@ const ga4MeasurementId = 'G-9J90097M6J';
       display: inline-flex; align-items: center; gap: 10px;
       text-decoration: none;
     }
-    .brand-logo { display: block; width: 36px; height: 36px; }
+    .brand-logo { display: block; width: 20px; height: 20px; margin: 8px; }
     .brand-name { font-family: var(--font-body); font-weight: 600; font-size: 18px; letter-spacing: normal; }
     .brand-name em { font-style: normal; color: var(--secondary); }
     .footer-wordmark { display: flex; align-items: center; gap: 8px; }
-    .brand-logo--footer { width: 36px; height: 36px; }
     .brand-name--footer { font-size: 16px; }
     .nav-links { display: flex; gap: 24px; margin-left: auto; }
     .nav-links a {
