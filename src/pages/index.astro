@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import ExposureRail from '../components/ExposureRail.astro';
 import SoundExplorer from '../components/SoundExplorer.astro';
 import { commonSounds } from '../data/sounds';
 import { socialImages } from '../data/social';
@@ -174,6 +175,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       </div>
 
       <div class="hero-hud" id="instrument">
+        <span class="hud-scan" id="hud-scan" aria-hidden="true"></span>
         <div class="hud-gauge">
           <svg class="gauge" viewBox="0 0 200 200" aria-hidden="true">
             <!-- track: 270° arc starting at 135° -->
@@ -209,11 +211,12 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
   </section>
 
   <!-- ============ PROBLEMS / WHY ============ -->
-  <section class="why" id="why">
+  <section class="why" id="why" data-exposure-rail-section>
     <div class="section-head">
       <span class="kicker">Why dBcheck</span>
       <h2>Four questions your ears<br/>can’t answer. Your phone can.</h2>
     </div>
+    <div class="why-rail"><ExposureRail /></div>
     <div class="why-grid">
       <article class="why-card">
         <h3>“How loud is my day, really?”</h3>
@@ -319,7 +322,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
           <p class="plan-sub">The full meter. Forever.</p>
         </div>
         <ul>
-          {freePlan.map((item) => <li>{item}</li>)}
+          {freePlan.map((item, index) => <li style={`--plan-index:${index}`}>{item}</li>)}
         </ul>
         <a class="btn btn-secondary plan-btn" href="#get">Coming soon</a>
       </div>
@@ -335,7 +338,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
           <p class="plan-price-note">Final price is charged in your local currency on Google Play.</p>
         </div>
         <ul>
-          {proPlan.map((item) => <li>{item}</li>)}
+          {proPlan.map((item, index) => <li style={`--plan-index:${index}`}>{item}</li>)}
         </ul>
         <a class="btn btn-primary plan-btn" href="#get">Unlocks in-app at launch</a>
       </div>
@@ -403,7 +406,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
                   <p class="pro-feature-index-heading">{group.title}</p>
                   <ol class="pro-feature-list" aria-label={`${group.title} features`}>
                     {group.features.map((feature, featureIndex) => (
-                      <li>
+                      <li style={`--feature-index:${featureIndex}`}>
                         <button
                           class="pro-feature-button"
                           type="button"
@@ -451,6 +454,18 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
   <!-- ============ CTA ============ -->
   <section class="cta" id="get">
     <div class="cta-inner">
+      <svg class="cta-wave" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true">
+        <g id="cta-wave-group">
+          <path
+            id="cta-wave-path"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+            vector-effect="non-scaling-stroke"
+            d="M0 60 C40 44 110 44 150 60 S260 88 300 60 S410 30 450 60 S560 96 600 60 S710 24 750 60 S860 92 900 60 S1010 40 1050 60 S1160 72 1200 60"
+          />
+        </g>
+      </svg>
       <span class="kicker">Launching soon</span>
       <h2>Hear what your ears<br/>already know.</h2>
       <p>dBcheck for Android is in final tuning before release.<br/>The observatory opens soon on Google Play.</p>
@@ -551,20 +566,11 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
     }
-    .hero-hud::after {
-      content: ''; position: absolute; z-index: 3; right: 0; left: 0; top: 0; height: 1px;
+    /* Kalibrointiviiva: ulkoasu CSS:ssä, liike hero-skriptin aikajanalla. */
+    .hud-scan {
+      position: absolute; z-index: 3; right: 0; left: 0; top: 0; height: 1px;
       background: linear-gradient(90deg, transparent, var(--on-surface), transparent);
-      opacity: 0; pointer-events: none; transform: translateY(-2px);
-    }
-    .hero-hud.is-booting::after { animation: hud-calibration-scan 1.15s cubic-bezier(.2,.7,.2,1) 120ms both; }
-    .hero-hud.is-booting .gauge-sweep { animation: gauge-calibrate 1.15s cubic-bezier(.2,.7,.2,1) both; }
-    @keyframes hud-calibration-scan {
-      12%, 70% { opacity: .55; }
-      to { opacity: 0; transform: translateY(174px); }
-    }
-    @keyframes gauge-calibrate {
-      0%, 100% { stroke-dasharray: 0 999; }
-      58% { stroke-dasharray: 395.84 999; }
+      opacity: 0; pointer-events: none;
     }
     .hud-gauge {
       position: relative; flex: none;
@@ -582,10 +588,11 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     .gauge { position: absolute; inset: 0; width: 100%; height: 100%; rotate: 135deg; }
     .gauge circle { fill: none; stroke-width: 8; stroke-linecap: round; }
     .gauge-track { stroke: rgba(245, 245, 245, 0.16); stroke-dasharray: 395.84 999; } /* 270° of r=84 circle */
+    /* Neulan pituutta ohjaa hero-skriptin animatable-arvo, ei CSS-siirtymä. */
     .gauge-sweep {
       stroke: var(--primary);
-      stroke-dasharray: 0 999;
-      transition: stroke-dasharray 180ms ease-out, stroke 400ms ease;
+      stroke-dasharray: var(--sweep, 0) 999;
+      transition: stroke 400ms ease;
     }
     .gauge-center { position: relative; display: grid; gap: 0; justify-items: center; text-align: center; }
     .gauge-value {
@@ -635,6 +642,10 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
 
     /* ---------- why ---------- */
     .section-sub { margin: 0; color: var(--secondary); font-size: 15px; max-width: 60ch; }
+    /* Altistumiskisko saa oman sarakkeen. Sen solu venyy, jotta sticky-sisältö kulkee osion mukana. */
+    .why { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 24px; }
+    .why > .section-head { grid-column: 1 / -1; }
+    .why-rail { height: 100%; }
     .why-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .why-card {
       display: grid; gap: 12px; align-content: start;
@@ -671,6 +682,19 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       margin: 10px 0 0;
       color: var(--secondary); font-size: 14px;
     }
+    /* Avautuminen animoituu siellä missä ::details-content on tuettu.
+       Muualla koko sääntö hylätään ja sisältö ilmestyy kuten ennenkin. */
+    .why-card details { interpolate-size: allow-keywords; }
+    .why-card details::details-content {
+      block-size: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition:
+        block-size 320ms cubic-bezier(.2, .7, .2, 1),
+        opacity 240ms ease,
+        content-visibility 320ms allow-discrete;
+    }
+    .why-card details[open]::details-content { block-size: auto; opacity: 1; }
     .why-tool-link {
       justify-self: start;
       color: var(--primary); font-family: var(--font-data); font-size: 12px;
@@ -789,15 +813,23 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       visibility: hidden;
       opacity: 0;
       pointer-events: none;
-      transform: translateY(8px);
-      transition: opacity 160ms ease, transform 160ms ease, visibility 0s linear 160ms;
     }
+    /* Ei ristihäivytystä: paneelit ovat päällekkäin, joten vaihto luetaan pyyhkäisystä
+       ja sisällön porrastuksesta. Häivytys peittäisi molemmat. */
     .pro-feature-panel.is-active {
       visibility: visible;
       opacity: 1;
       pointer-events: auto;
-      transform: none;
-      transition-delay: 0s;
+    }
+    .pro-feature-panel.is-active .pro-feature-index-heading {
+      animation: pro-feature-item-enter 360ms cubic-bezier(.2, .7, .2, 1) 60ms both;
+    }
+    .pro-feature-panel.is-active .pro-feature-list li {
+      animation: pro-feature-item-enter 380ms cubic-bezier(.2, .7, .2, 1) both;
+      animation-delay: calc(140ms + var(--feature-index) * 70ms);
+    }
+    @keyframes pro-feature-item-enter {
+      from { opacity: 0; translate: -12px 0; }
     }
     .pro-feature-index {
       min-width: 0;
@@ -871,6 +903,30 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       width: 100%; height: 100%;
       object-fit: cover;
     }
+    /* Kuva paljastuu pyyhkäisemällä, ja pyyhkäisyn reunaa kuljettaa sama
+       mittausviiva kuin hero-HUD:n kalibroinnissa. */
+    .pro-feature-panel.is-active .pro-feature-visual img {
+      animation: pro-feature-image-reveal 620ms cubic-bezier(.2, .7, .2, 1) both;
+    }
+    @keyframes pro-feature-image-reveal {
+      from { clip-path: inset(0 100% 0 0); }
+      to { clip-path: inset(0 0 0 0); }
+    }
+    .pro-feature-visual::before {
+      content: '';
+      position: absolute; z-index: 2; top: 0; bottom: 0; left: 0;
+      width: 1px; background: var(--on-surface);
+      opacity: 0; pointer-events: none;
+    }
+    .pro-feature-panel.is-active .pro-feature-visual::before {
+      animation: pro-feature-scan 620ms cubic-bezier(.2, .7, .2, 1) both;
+    }
+    @keyframes pro-feature-scan {
+      from { left: 0; opacity: 0; }
+      10% { opacity: .6; }
+      88% { opacity: .45; }
+      to { left: 100%; opacity: 0; }
+    }
     .pro-feature-visual::after {
       position: absolute;
       z-index: 0;
@@ -894,7 +950,17 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       margin: 0;
       padding: 40px;
     }
-    .pro-feature-detail.is-changing { animation: pro-feature-detail-enter 160ms ease-out; }
+    .pro-feature-panel.is-active .pro-feature-detail {
+      animation: pro-feature-detail-enter 420ms cubic-bezier(.2, .7, .2, 1) 240ms both;
+    }
+    /* Ominaisuuden vaihto saman paneelin sisällä: lyhyempi ele, ja tarkempi
+       valitsin jottei paneelin oma sisääntulo ohita sitä. */
+    .pro-feature-panel.is-active .pro-feature-detail.is-changing {
+      animation: pro-feature-detail-change 240ms cubic-bezier(.2, .7, .2, 1);
+    }
+    @keyframes pro-feature-detail-change {
+      from { opacity: .3; transform: translateY(7px); }
+    }
     .pro-feature-detail > span {
       font-family: var(--font-data); font-size: 11px;
       letter-spacing: 0.12em; text-transform: uppercase;
@@ -909,7 +975,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       color: var(--on-surface-v); font-size: 16px; line-height: 1.55;
     }
     @keyframes pro-feature-detail-enter {
-      from { opacity: 0.35; transform: translateY(6px); }
+      from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: none; }
     }
     .privacy-note {
@@ -920,12 +986,28 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     /* ---------- pricing ---------- */
     .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
     .plan {
+      --plan-offset: 0ms;
       display: grid; gap: 24px; align-content: start;
       background: var(--surface-ch);
       border-radius: var(--radius-card);
       padding: 32px;
     }
+    /* Kortti paljastuu paikallaan (ks. Base.astro) ja sisältö kokoontuu osissa:
+       hinta ensin, sitten ominaisuudet, viimeisenä painike. */
+    .plan.reveal.in .plan-head { animation: plan-part-enter 480ms cubic-bezier(.2, .7, .2, 1) both; animation-delay: var(--plan-offset); }
+    .plan.reveal.in li {
+      animation: plan-part-enter 400ms cubic-bezier(.2, .7, .2, 1) both;
+      animation-delay: calc(var(--plan-offset) + 150ms + var(--plan-index) * 35ms);
+    }
+    .plan.reveal.in .plan-btn {
+      animation: plan-part-enter 400ms cubic-bezier(.2, .7, .2, 1) both;
+      animation-delay: calc(var(--plan-offset) + 520ms);
+    }
+    @keyframes plan-part-enter {
+      from { opacity: 0; translate: 0 10px; }
+    }
     .plan-pro {
+      --plan-offset: 110ms;
       background: var(--primary);
       color: var(--bg);
     }
@@ -955,6 +1037,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     /* ---------- CTA ---------- */
     .cta { margin-top: 112px; }
     .cta-inner {
+      position: relative; isolation: isolate; overflow: hidden;
       display: grid; gap: 20px; justify-items: center; text-align: center;
       border: 1px solid var(--ghost); border-radius: var(--radius-card);
       padding: 72px 32px;
@@ -962,6 +1045,17 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
         radial-gradient(ellipse 60% 80% at 50% 110%, rgba(143,143,143,0.14), transparent),
         var(--surface);
     }
+    /* Aaltomuoto piirtyy kerran ja tasoittuu keskiviivaksi: ääni hiljenee. */
+    .cta-wave {
+      position: absolute; z-index: -1; left: 0; bottom: 10px;
+      width: 100%; height: 56px;
+      color: var(--outline-v); opacity: 0;
+      pointer-events: none;
+      transition: opacity 500ms ease;
+    }
+    .cta-wave.is-visible { opacity: .3; }
+    #cta-wave-group { transform-box: view-box; transform-origin: 50% 50%; }
+    .cta-wave.is-settled #cta-wave-group { transform: scaleY(0.015); }
     .cta h2 {
       font-family: var(--font-body); font-weight: 700;
       font-size: clamp(32px, 5vw, 52px); letter-spacing: normal; line-height: 1.1;
@@ -972,14 +1066,20 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     @media (prefers-reduced-motion: reduce) {
       .ghost-word { animation: none; }
       :global(body.is-listening) .hud-gauge { animation: none; }
-      .hero-hud.is-booting::after,
-      .hero-hud.is-booting .gauge-sweep { animation: none; }
+      .cta-wave { transition: none; }
+      .plan.reveal.in :is(.plan-head, li, .plan-btn) { animation: none; }
+      .why-card details::details-content { transition: none; }
       .pro-feature-category,
       .pro-feature-category::after,
       .pro-feature-button,
-      .pro-feature-button::after,
-      .pro-feature-panel { transition: none; }
-      .pro-feature-detail.is-changing { animation: none; }
+      .pro-feature-button::after { transition: none; }
+      .pro-feature-panel.is-active :is(
+        .pro-feature-index-heading,
+        .pro-feature-list li,
+        .pro-feature-visual img,
+        .pro-feature-detail
+      ) { animation: none; }
+      .pro-feature-panel.is-active .pro-feature-visual::before { animation: none; }
     }
 
     /* ---------- responsive ---------- */
@@ -1004,6 +1104,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       .hud-side { width: 100%; }
     }
     @media (max-width: 900px) {
+      .why { display: block; }
       .why-grid { grid-template-columns: 1fr; }
       .plans { grid-template-columns: 1fr; }
       .pro-feature-showcase { display: block; }
@@ -1039,6 +1140,15 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
   <script src="../scripts/localized-price.ts"></script>
 
   <script>
+    import { createAnimatable, createTimeline, spring, svg } from 'animejs';
+    import { DISPLAY_MAX_DB, levelForDb } from '../lib/display-scale';
+    import {
+      prefersReducedMotion,
+      scrambleValue,
+      SCRAMBLE_CALIBRATION,
+      SCRAMBLE_LABEL,
+    } from '../scripts/motion';
+
     // ================= Pro-ominaisuuksien esittelyalue =================
     const proFeatureShowcase = document.querySelector<HTMLElement>('[data-pro-feature-showcase]');
     const proFeatureCategories = Array.from(
@@ -1103,7 +1213,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     // ================= The page that listens =================
     // Browser demo: hero-film audio → Web Audio RMS → display dB scale (0–130).
     const video = document.getElementById('hero-video') as HTMLVideoElement;
-    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reducedMotion = prefersReducedMotion();
     const mobileVideo = matchMedia('(max-width: 700px)').matches;
     const saveData = Boolean((navigator as Navigator & {
       connection?: { saveData?: boolean };
@@ -1121,6 +1231,8 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     const statMax = document.getElementById('stat-max')!;
     const canvas = document.getElementById('spectrum') as HTMLCanvasElement;
     const cctx = canvas.getContext('2d')!;
+    const heroHud = document.getElementById('instrument')!;
+    const hudScan = document.getElementById('hud-scan')!;
 
     const ARC = 2 * Math.PI * 84;        // gauge circumference
     const ARC_SWEEP = ARC * 0.75;        // 270°
@@ -1131,7 +1243,11 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     let timeData: Float32Array;
     let freqData: Uint8Array;
     let listening = false;
-    let smoothed = 0;
+    let showDigits = false;    // numerolukema näkyy kalibroinnin ja mittauksen aikana
+    let showLevel = false;     // tasomerkintä päivittyy vain mitattaessa
+    let booting = false;       // käynnistyssekvenssi pitää ruutusilmukan käynnissä
+    let renderedLevel = '';
+    let frameId = 0;
     let minDb = Infinity, maxDb = -Infinity, energySum = 0, sampleCount = 0;
 
     function ensureVideoSource() {
@@ -1154,11 +1270,25 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       bar: css('--primary'),
     };
 
-    function levelFor(db: number) {
-      if (db < 55) return 'quiet';
-      if (db < 70) return 'normal';
-      if (db < 85) return 'elevated';
-      return 'dangerous';
+    // Mittarin neula. Yksi animatable omistaa näytettävän arvon, ja kaikki sen
+    // muutokset — kalibrointipyyhkäisy, mittaus ja pysäytys — kulkevat sen kautta.
+    const meterState = { db: 0 };
+    const meter = createAnimatable(meterState, { db: { duration: 180, ease: 'out(2)' } });
+
+    function renderMeter() {
+      const db = meter.db() as number;
+      sweep.style.setProperty('--sweep', String((db / DISPLAY_MAX_DB) * ARC_SWEEP));
+      if (showDigits) dbValue.textContent = String(Math.round(db));
+
+      const level = levelForDb(db);
+      if (level === renderedLevel) return;
+      renderedLevel = level;
+      // Kaaren väri elää vain kalibroinnin ja mittauksen aikana; valmiustilassa se on neutraali.
+      if (showDigits) sweep.style.stroke = COLORS[level];
+      if (showLevel) {
+        pill.textContent = level.toUpperCase();
+        pill.className = `gauge-pill ${level}`;
+      }
     }
 
     function setupAudio() {
@@ -1173,47 +1303,54 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       freqData = new Uint8Array(analyser.frequencyBinCount);
     }
 
+    /**
+     * Piirtää 24 log-jakoista kaistaa (20 Hz – 20 kHz, kuten sovelluksen SpectralAnalyzer).
+     * Ilman signaalia kaistat jäävät minimikorkeuteen — se on aito nollataso,
+     * ei koristeltu kohinapohja. Mittarissa ei näytetä keksittyä dataa.
+     */
     function drawSpectrum() {
       const w = canvas.width = canvas.clientWidth * devicePixelRatio;
       const h = canvas.height = 36 * devicePixelRatio;
       cctx.clearRect(0, 0, w, h);
-      if (!analyser) return;
-      analyser.getByteFrequencyData(freqData as any);
+
+      const live = Boolean(listening && analyser);
+      if (live) analyser!.getByteFrequencyData(freqData as any);
       const barW = w / BANDS;
-      const nyquist = (audioCtx!.sampleRate) / 2;
+      const nyquist = live ? audioCtx!.sampleRate / 2 : 0;
+
       for (let i = 0; i < BANDS; i++) {
-        // log-spaced bands, 20 Hz – 20 kHz (like the app's SpectralAnalyzer)
-        const f0 = 20 * Math.pow(1000, i / BANDS);
-        const f1 = 20 * Math.pow(1000, (i + 1) / BANDS);
-        const b0 = Math.min(freqData.length - 1, Math.round((f0 / nyquist) * freqData.length));
-        const b1 = Math.min(freqData.length, Math.max(b0 + 1, Math.round((f1 / nyquist) * freqData.length)));
-        let sum = 0;
-        for (let b = b0; b < b1; b++) sum += freqData[b];
-        const v = sum / (b1 - b0) / 255;
+        let v = 0;
+        if (live) {
+          const f0 = 20 * Math.pow(1000, i / BANDS);
+          const f1 = 20 * Math.pow(1000, (i + 1) / BANDS);
+          const b0 = Math.min(freqData.length - 1, Math.round((f0 / nyquist) * freqData.length));
+          const b1 = Math.min(freqData.length, Math.max(b0 + 1, Math.round((f1 / nyquist) * freqData.length)));
+          let sum = 0;
+          for (let b = b0; b < b1; b++) sum += freqData[b];
+          v = sum / (b1 - b0) / 255;
+        }
         const barH = Math.max(2 * devicePixelRatio, v * h * 0.92);
         cctx.fillStyle = COLORS.bar;
-        cctx.globalAlpha = 0.25 + v * 0.65;
-        const r = 2 * devicePixelRatio;
+        cctx.globalAlpha = live ? 0.25 + v * 0.65 : 0.16;
         const x = i * barW + 1.5 * devicePixelRatio;
         const bw = barW - 3 * devicePixelRatio;
         cctx.beginPath();
-        cctx.roundRect(x, h - barH, bw, barH, r);
+        cctx.roundRect(x, h - barH, bw, barH, 2 * devicePixelRatio);
         cctx.fill();
       }
       cctx.globalAlpha = 1;
     }
 
-    function tick() {
-      if (!listening || !analyser) return;
-      analyser.getFloatTimeDomainData(timeData as any);
+    function readAudio() {
+      analyser!.getFloatTimeDomainData(timeData as any);
       let sq = 0;
       for (let i = 0; i < timeData.length; i++) sq += timeData[i] * timeData[i];
       const rms = Math.sqrt(sq / timeData.length);
       const dbfs = 20 * Math.log10(Math.max(rms, 1e-7));
-      const db = Math.min(130, Math.max(0, dbfs + 90)); // the app's +90 offset & clamp
+      const db = Math.min(DISPLAY_MAX_DB, Math.max(0, dbfs + 90)); // the app's +90 offset & clamp
 
-      // fast attack, slow decay — like a meter needle
-      smoothed = db > smoothed ? smoothed * 0.6 + db * 0.4 : smoothed * 0.92 + db * 0.08;
+      // Mittariballistiikka: nopea nousu, hidas lasku — kuin osoitinmittarin neula.
+      meter.db(db, db > (meter.db() as number) ? 110 : 620, 'out(2)');
 
       // session stats (avg = energy average, like the app)
       if (db > 1) {
@@ -1223,69 +1360,72 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
         sampleCount++;
       }
 
-      const shown = Math.round(smoothed);
-      dbValue.textContent = String(shown);
-      const level = levelFor(smoothed);
-      pill.textContent = level.toUpperCase();
-      pill.className = 'gauge-pill ' + level;
-      sweep.style.strokeDasharray = `${(smoothed / 130) * ARC_SWEEP} 999`;
-      sweep.style.stroke = COLORS[level as keyof typeof COLORS] || COLORS.normal;
-
       if (sampleCount > 0) {
         statMin.textContent = String(Math.round(minDb));
         statMax.textContent = String(Math.round(maxDb));
         statAvg.textContent = String(Math.round(10 * Math.log10(energySum / sampleCount)));
       }
-
-      drawSpectrum();
-      requestAnimationFrame(tick);
     }
 
-    // ---- idle spectrum: a faint synthetic "noise floor" while in standby ----
-    const heroHud = document.getElementById('instrument');
-    let bootTimer = 0;
-    if (!reducedMotion) {
-      heroHud?.classList.add('is-booting');
+    /** Neula on levossa, kun kalibrointi on ohi eikä mitään mitata. */
+    function meterAtRest() {
+      return !listening && !booting && Math.abs(meter.db() as number) < 0.05;
+    }
+
+    // Ruutusilmukka pyörii vain kun jokin todella muuttuu: mittauksen,
+    // käynnistyssekvenssin ja neulan pysähtymisen ajan.
+    function frame() {
+      if (listening && analyser) readAudio();
+      drawSpectrum();
+      renderMeter();
+      if (meterAtRest()) {
+        frameId = 0;
+        return;
+      }
+      frameId = requestAnimationFrame(frame);
+    }
+
+    function startFrames() {
+      if (!frameId) frameId = requestAnimationFrame(frame);
+    }
+
+    // ---- Käynnistyssekvenssi: kalibrointiviiva, täysi asteikkopyyhkäisy, lukeman asettuminen ----
+    let bootTimeline: ReturnType<typeof createTimeline> | null = null;
+
+    if (reducedMotion) {
+      renderMeter();
+      drawSpectrum();
+    } else {
       statusEl.textContent = 'Initializing';
       pill.textContent = 'CALIBRATING';
-      bootTimer = window.setTimeout(() => {
-        heroHud?.classList.remove('is-booting');
-        heroHud?.classList.add('has-booted');
-        if (!listening) {
+      showDigits = true;
+      booting = true;
+      startFrames();
+
+      bootTimeline = createTimeline()
+        .add(hudScan, { y: [-2, heroHud.offsetHeight], duration: 1150, ease: 'out(2)' }, 0)
+        .add(hudScan, { opacity: [0, 0.55], duration: 180, ease: 'out(2)' }, 0)
+        .add(hudScan, { opacity: 0, duration: 320, ease: 'in(2)' }, 830)
+        .call(() => meter.db(DISPLAY_MAX_DB, 620, 'out(3)'), 140)
+        .call(() => meter.db(0, 700, spring({ bounce: 0.24, duration: 700 })), 780)
+        .call(() => {
+          showDigits = false;
+          booting = false;
+          sweep.style.removeProperty('stroke');
           statusEl.textContent = 'Standby';
-          pill.textContent = 'STANDBY';
-        }
-      }, 1350);
+          scrambleValue(dbValue, '--', SCRAMBLE_CALIBRATION);
+          scrambleValue(pill, 'STANDBY', SCRAMBLE_LABEL);
+        }, 1320);
     }
-    let idleRaf = 0;
-    function idleSpectrum(t: number) {
-      if (listening) return;
-      const w = canvas.width = canvas.clientWidth * devicePixelRatio;
-      const h = canvas.height = 36 * devicePixelRatio;
-      cctx.clearRect(0, 0, w, h);
-      const barW = w / BANDS;
-      for (let i = 0; i < BANDS; i++) {
-        const v = 0.10
-          + 0.07 * Math.sin(t / 900 + i * 0.7) * Math.sin(t / 1400 + i * 1.3)
-          + 0.04 * Math.sin(t / 520 + i * 2.1);
-        const barH = Math.max(2 * devicePixelRatio, Math.abs(v) * h);
-        const x = i * barW + 1.5 * devicePixelRatio;
-        const bw = barW - 3 * devicePixelRatio;
-        cctx.fillStyle = COLORS.bar;
-        cctx.globalAlpha = 0.12 + Math.abs(v) * 0.2;
-        cctx.beginPath();
-        cctx.roundRect(x, h - barH, bw, barH, 2 * devicePixelRatio);
-        cctx.fill();
-      }
-      cctx.globalAlpha = 1;
-      idleRaf = requestAnimationFrame(idleSpectrum);
-    }
-    if (!reducedMotion) idleRaf = requestAnimationFrame(idleSpectrum);
 
     function setListening(on: boolean) {
-      window.clearTimeout(bootTimer);
-      heroHud?.classList.remove('is-booting');
+      bootTimeline?.revert();
+      bootTimeline = null;
+      booting = false;
       listening = on;
+      showDigits = on;
+      showLevel = on;
+      renderedLevel = '';
       video.muted = !on;
       document.body.classList.toggle('is-listening', on);
       recDot.classList.toggle('live', on);
@@ -1294,15 +1434,22 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       listenIcon.innerHTML = on
         ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
         : '<path d="M8 5v14l11-7z"/>';
+
       if (on) {
-        cancelAnimationFrame(idleRaf);
+        startFrames();
+        return;
+      }
+
+      pill.className = 'gauge-pill';
+      sweep.style.removeProperty('stroke');
+      scrambleValue(dbValue, '--');
+      scrambleValue(pill, 'STANDBY', SCRAMBLE_LABEL);
+      if (reducedMotion) {
+        meter.db(0, 0);
+        renderMeter();
+        drawSpectrum();
       } else {
-        dbValue.textContent = '--';
-        pill.textContent = 'STANDBY';
-        pill.className = 'gauge-pill';
-        sweep.style.strokeDasharray = '0 999';
-        cctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (!reducedMotion) idleRaf = requestAnimationFrame(idleSpectrum);
+        meter.db(0, 900, spring({ bounce: 0.22, duration: 900 }));
       }
     }
 
@@ -1312,16 +1459,44 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
         if (!audioCtx) setupAudio();
         if (audioCtx!.state === 'suspended') await audioCtx!.resume();
         if (listening) { setListening(false); return; }
+        if (!analyser) throw new Error('Web Audio analyser unavailable');
         await video.play().catch(() => {});
         // reset session stats for a fresh "measurement session"
         minDb = Infinity; maxDb = -Infinity; energySum = 0; sampleCount = 0;
         setListening(true);
-        requestAnimationFrame(tick);
       } catch {
         // Web Audio unavailable — degrade gracefully to plain unmute
-        video.muted = !video.muted;
-        setListening(!video.muted);
+        const unmute = video.muted;
+        setListening(false);
+        video.muted = !unmute;
+        listenText.textContent = unmute ? 'Mute the film' : 'Listen to the film';
+        listenIcon.innerHTML = unmute
+          ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
+          : '<path d="M8 5v14l11-7z"/>';
+        if (unmute) await video.play().catch(() => {});
       }
     });
+
+    // ================= CTA: aalto piirtyy ja tasoittuu keskiviivaksi =================
+    const ctaWave = document.querySelector<SVGSVGElement>('.cta-wave');
+    const ctaPath = document.querySelector<SVGPathElement>('#cta-wave-path');
+    const ctaGroup = document.querySelector<SVGGElement>('#cta-wave-group');
+
+    if (ctaWave && ctaPath && ctaGroup) {
+      if (reducedMotion) {
+        ctaWave.classList.add('is-visible', 'is-settled');
+      } else {
+        const [drawable] = svg.createDrawable(ctaPath);
+        const ctaObserver = new IntersectionObserver((entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          ctaObserver.disconnect();
+          ctaWave.classList.add('is-visible');
+          createTimeline()
+            .add(drawable, { draw: ['0 0', '0 1'], duration: 1100, ease: 'inOut(2)' }, 0)
+            .add(ctaGroup, { scaleY: [1, 0.015], duration: 1500, ease: 'out(4)' }, 950);
+        }, { threshold: 0.35 });
+        ctaObserver.observe(ctaWave);
+      }
+    }
   </script>
 </Base>

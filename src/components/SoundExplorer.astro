@@ -1,6 +1,7 @@
 ---
 import type { CommonSound } from '../data/sounds';
 import type { Locale } from '../i18n/config';
+import { DISPLAY_TICKS, EXPOSURE_LIMIT_DB, scalePercent } from '../lib/display-scale';
 
 interface Props {
   sounds: CommonSound[];
@@ -12,19 +13,34 @@ interface Props {
 const { sounds, id = 'sound-explorer', compact = false, locale = 'en' } = Astro.props;
 const initial = sounds[0];
 const isGerman = locale === 'de';
+
+/** Äänen tyypillinen vaihteluväli näyttöasteikon osuutena; sama palkki näyttää sen asteikolla. */
+const bandFor = (sound: CommonSound) => {
+  const start = scalePercent(sound.typicalMinDb);
+  return { start, span: scalePercent(sound.typicalMaxDb) - start };
+};
+const initialBand = bandFor(initial);
+const exposureLimitAt = scalePercent(EXPOSURE_LIMIT_DB);
+
+/** Asteikon numerot sijoitetaan todellisille kohdilleen, ei tasavälein. */
+const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
+  at: scalePercent(db),
+  label: index === DISPLAY_TICKS.length - 1 ? `${db} dB` : String(db),
+}));
 ---
 
 <div id={id} class:list={['sound-explorer', { compact }]} data-sound-explorer>
   <div class="sound-scale" aria-label={isGerman ? 'Alltagsgeräusche auf einer Skala von 0 bis 130 Dezibel' : 'Common sound examples on a 0 to 130 decibel display scale'}>
-    <div class="scale-track" aria-hidden="true">
-      <span>0</span><span>40</span><span>70</span><span>85</span><span>100</span><span>130 dB</span>
-    </div>
-    <div class="sound-markers">
+    <div class="sound-markers" style={`--band-start:${initialBand.start};--band-span:${initialBand.span};--exposure-limit-at:${exposureLimitAt}%`}>
+      <div class="scale-track" aria-hidden="true">
+        {scaleTicks.map((tick) => <span style={`--at:${tick.at}%`}>{tick.label}</span>)}
+      </div>
+      <span class:list={['range-band', initial.riskLevel]} data-range-band aria-hidden="true"></span>
       {sounds.map((sound, index) => (
         <button
           type="button"
           class:list={['sound-marker', sound.riskLevel, { active: index === 0 }]}
-          style={`--position:${Math.min((sound.typicalMinDb + sound.typicalMaxDb) / 2, 130) / 130 * 100}%;--marker-index:${index}`}
+          style={`--position:${scalePercent((sound.typicalMinDb + sound.typicalMaxDb) / 2)}%;--marker-index:${index}`}
           aria-pressed={index === 0 ? 'true' : 'false'}
           aria-controls={`${id}-detail`}
           data-name={sound.name}
@@ -33,6 +49,9 @@ const isGerman = locale === 'de';
           data-note={sound.exposureNote}
           data-route={sound.articleRoute ?? ''}
           data-lane={sound.markerLane}
+          data-risk={sound.riskLevel}
+          data-band-start={bandFor(sound).start}
+          data-band-span={bandFor(sound).span}
         >
           <span class="marker-dot" aria-hidden="true"></span>
           <span>{sound.name}</span>
@@ -68,7 +87,7 @@ const isGerman = locale === 'de';
               <span class="mobile-range-track" aria-hidden="true">
                 <span
                   class:list={['mobile-range-fill', sound.riskLevel]}
-                  style={`--range-start:${sound.typicalMinDb / 130 * 100}%;--range-end:${Math.min(sound.typicalMaxDb, 130) / 130 * 100}%`}
+                  style={`--range-start:${scalePercent(sound.typicalMinDb)}%;--range-end:${scalePercent(sound.typicalMaxDb)}%`}
                 ></span>
               </span>
             </summary>
@@ -87,6 +106,8 @@ const isGerman = locale === 'de';
 </div>
 
 <script>
+  import { scrambleReading } from '../scripts/motion';
+
   document.querySelectorAll<HTMLElement>('[data-sound-explorer]').forEach((explorer) => {
     const markers = Array.from(explorer.querySelectorAll<HTMLButtonElement>('.sound-marker'));
     const name = explorer.querySelector<HTMLElement>('[data-sound-name]');
@@ -95,6 +116,8 @@ const isGerman = locale === 'de';
     const note = explorer.querySelector<HTMLElement>('[data-sound-note]');
     const route = explorer.querySelector<HTMLAnchorElement>('[data-sound-route]');
     const scale = explorer.querySelector<HTMLElement>('.sound-scale');
+    const markerHost = explorer.querySelector<HTMLElement>('.sound-markers');
+    const band = explorer.querySelector<HTMLElement>('[data-range-band]');
 
     const select = (marker: HTMLButtonElement, animate = false) => {
       markers.forEach((item) => {
@@ -103,13 +126,24 @@ const isGerman = locale === 'de';
         item.setAttribute('aria-pressed', String(active));
       });
       if (name) name.textContent = marker.dataset.name ?? '';
-      if (range) range.textContent = marker.dataset.range ?? '';
+      if (range) {
+        // Lukema asettuu scramblella vain valinnasta, ei hiiren ohituksesta.
+        const value = marker.dataset.range ?? '';
+        if (animate) scrambleReading(range, value);
+        else range.textContent = value;
+      }
       if (description) description.textContent = marker.dataset.description ?? '';
       if (note) note.textContent = marker.dataset.note ?? '';
       if (route) {
         const target = marker.dataset.route ?? '';
         route.hidden = !target;
         route.href = target || '/sounds/';
+      }
+      if (markerHost && band) {
+        // Vaihteluvälipalkki liukuu ja venyy asteikolla valitun äänen mukaan.
+        markerHost.style.setProperty('--band-start', marker.dataset.bandStart ?? '0');
+        markerHost.style.setProperty('--band-span', marker.dataset.bandSpan ?? '0');
+        band.className = `range-band ${marker.dataset.risk ?? ''}`;
       }
       if (animate) {
         marker.classList.remove('is-pulsing');
@@ -158,21 +192,44 @@ const isGerman = locale === 'de';
     70% { opacity: .5; transform: scaleY(1); }
     to { opacity: 0; transform: scaleY(1); }
   }
+  /* Asteikko elää markkereiden koordinaatistossa, jotta numerot ja pisteet osuvat samoille kohdille. */
   .scale-track {
-    position: absolute; left: 24px; right: 24px; bottom: 30px;
-    display: flex; justify-content: space-between;
-    padding-top: 9px;
+    position: absolute; left: 0; right: 0; bottom: 3px;
+    height: 19px; padding-top: 9px;
     color: var(--tertiary); font: 10px/1 var(--font-data); letter-spacing: .08em;
   }
+  .scale-track > span {
+    position: absolute; top: 9px; left: var(--at);
+    translate: -50% 0; white-space: nowrap;
+  }
+  .scale-track > span:first-child { translate: 0 0; }
+  .scale-track > span:last-child { translate: -100% 0; }
   .scale-track::before {
     content: ''; position: absolute; right: 0; left: 0; top: 0; height: 1px;
     background: var(--outline-v); transform-origin: left;
   }
   .scale-track::after {
-    content: ''; position: absolute; left: calc(85 / 130 * 100%); top: -1px; bottom: 17px;
+    content: ''; position: absolute; left: var(--exposure-limit-at); top: -1px; bottom: 17px;
     border-left: 1px solid color-mix(in srgb, var(--warning) 55%, transparent);
   }
   .sound-markers { position: relative; min-width: 720px; height: 174px; margin: 0 8px; }
+  /* Valitun äänen tyypillinen vaihteluväli asteikolla: näyttää miten 25–35 dB ja 85–105 dB suhtautuvat toisiinsa. */
+  .range-band {
+    position: absolute; bottom: 21px;
+    left: calc(var(--band-start) * 1%);
+    width: max(6px, calc(var(--band-span) * 1%));
+    height: 3px; border-radius: 999px;
+    background: var(--secondary);
+    transition: left 520ms var(--sound-selection-ease), width 520ms var(--sound-selection-ease), background 300ms ease;
+  }
+  .range-band::before, .range-band::after {
+    content: ''; position: absolute; top: -3px;
+    width: 1px; height: 10px; background: inherit;
+  }
+  .range-band::before { left: 0; }
+  .range-band::after { right: 0; }
+  .range-band.warning { background: var(--warning); }
+  .range-band.danger { background: var(--error); }
   .sound-marker {
     position: absolute; left: var(--position); bottom: 22px; translate: -50% 0;
     display: grid; justify-items: center; gap: 9px; min-width: 46px; padding: 0;
@@ -201,7 +258,11 @@ const isGerman = locale === 'de';
       animation: sound-marker-settle 540ms cubic-bezier(.18,.85,.25,1.15) both;
       animation-delay: calc(470ms + var(--marker-index) * 70ms);
     }
+    .sound-explorer.reveal.in .range-band {
+      animation: range-band-enter 520ms cubic-bezier(.2,.7,.2,1) 1080ms both;
+    }
   }
+  @keyframes range-band-enter { from { opacity: 0; scale: 0 1; } }
   @keyframes scale-line-draw { from { transform: scaleX(0); } }
   @keyframes scale-label-enter { from { opacity: 0; transform: translateY(4px); } }
   @keyframes sound-marker-settle {
@@ -227,7 +288,6 @@ const isGerman = locale === 'de';
   .compact .sound-scale { min-height: 230px; }
   @media (max-width: 700px) {
     .sound-scale { margin-inline: -20px; border-radius: 0; border-inline: 0; padding-inline: 20px; }
-    .scale-track { left: 20px; right: 20px; }
     .sound-detail { grid-template-columns: 1fr; align-items: start; gap: 20px; padding: 22px; }
     .detail-reading { justify-items: start; }
     .sound-explorer:not(.compact) .sound-scale,
@@ -289,5 +349,6 @@ const isGerman = locale === 'de';
     .sound-explorer.reveal.in .scale-track > span,
     .sound-explorer.reveal.in .mobile-range-fill,
     details[open] .mobile-sound-detail { animation: none; }
+    .range-band { animation: none; transition: none; }
   }
 </style>

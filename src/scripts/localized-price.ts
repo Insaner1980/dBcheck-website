@@ -4,6 +4,7 @@ import {
   parseCloudflareTraceCountry,
   splitPriceDisplay,
 } from '../data/prices';
+import { scrambleValue } from './motion';
 
 function renderPrice(element: HTMLElement, displayPrice: string) {
   const { prefix, amount, suffix } = splitPriceDisplay(displayPrice);
@@ -14,8 +15,8 @@ function renderPrice(element: HTMLElement, displayPrice: string) {
   if (!prefixElement || !amountElement || !suffixElement) return;
 
   prefixElement.textContent = prefix;
-  amountElement.textContent = amount;
   suffixElement.textContent = suffix;
+  scrambleValue(amountElement, amount);
 }
 
 async function localizePrices() {
