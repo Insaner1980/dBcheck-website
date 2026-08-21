@@ -17,11 +17,11 @@ const freeFeatures = [
   },
   {
     title: 'Noise alerts & passive monitoring',
-    desc: 'Threshold and peak alerts on your own schedule, plus user-started 5-minute passive samples of your surroundings.',
+    desc: 'Configurable level-threshold alerts (85 dB by default), extended-exposure, dose and projected-dose alerts, and a separate 120 dB peak warning on your schedule. Passive monitoring uses user-started 5-minute samples.',
   },
   {
-    title: 'Weekly exposure analytics',
-    desc: 'An energy-average exposure chart and hearing health status built from your last seven days of sessions.',
+    title: 'Weekly exposure summary',
+    desc: 'A weekly energy-average noise-exposure summary built from your last seven days of sessions.',
   },
   {
     title: 'Sharing & Health Connect',
@@ -38,7 +38,7 @@ const proFeatureGroups = [
     features: [
       {
         title: 'Live sound detection',
-        desc: 'On-device YAMNet classification names what the meter hears (speech, music, traffic) without recording audio.',
+        desc: 'On-device YAMNet analyzes live microphone audio. Classifier input is not saved; optional aggregate detection events are stored only when their separate persistence opt-in is enabled.',
       },
       {
         title: 'Spectral analysis & octave RTA',
@@ -57,8 +57,8 @@ const proFeatureGroups = [
     image: protectionMonitoring,
     features: [
       {
-        title: 'Noise dosimeter',
-        desc: 'NIOSH REL and OSHA PEL models. Live dose, projected dose and an estimated remaining exposure time while you measure.',
+        title: 'Dosimeter estimates',
+        desc: 'Phone-based NIOSH REL and OSHA PEL calculations show actual accumulated dose, projected dose and estimated remaining exposure time while you measure.',
       },
       {
         title: 'Sleep monitor',
@@ -103,7 +103,7 @@ const proFeatureGroups = [
 const freePlan = [
   'Live dB meter, waveform & session stats',
   'Noise alerts with custom threshold & schedule',
-  'Weekly exposure chart & hearing health status',
+  'Weekly noise-exposure summary',
   '7-day session history',
   'Passive monitoring samples',
   'Optional Health Connect session sync',
@@ -114,7 +114,7 @@ const freePlan = [
 const proPlan = [
   'Unlimited history, session names & tags',
   'Hearing test + recovery check',
-  'Dosimeter with NIOSH REL / OSHA PEL',
+  'Dosimeter calculations with NIOSH REL / OSHA PEL',
   'Frequency weighting A/B/C/Z/ITU-R 468',
   'Microphone calibration & octave-band offsets',
   'Live spectrum, octave RTA & sound detection',
@@ -245,9 +245,11 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
         <details>
           <summary>The tech behind it</summary>
           <p>
-            A real dosimeter with NIOSH REL and OSHA PEL standards: TWA, live
-            dose, projected dose and estimated remaining exposure time, plus
-            threshold and 85 dB peak alerts on your own schedule.
+            Phone-based dosimeter estimates under NIOSH REL and OSHA PEL: TWA,
+            actual accumulated dose, projected dose and estimated remaining
+            exposure time. A configurable level threshold defaults to 85 dB;
+            extended-exposure, dose and projected-dose alerts remain distinct
+            from the separate 120 dB peak warning.
           </p>
         </details>
         <a class="why-tool-link" href="/tools/safe-listening-time-calculator/">
@@ -447,7 +449,9 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     <p class="privacy-note">
       Audio analysis and app data are on-device and no account is required.
       Optional Health Connect features can share supported session data when
-      the user explicitly enables them. Raw audio is not uploaded for analysis.
+      the user explicitly enables them. Optional Pro WAV recording is a
+      separate opt-in feature and is off by default. Raw classifier audio is
+      not uploaded for cloud analysis.
     </p>
   </section>
 
