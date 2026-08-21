@@ -35,7 +35,6 @@ const localizedRoute = (defaultPath: string) => findRoutePair(defaultPath)?.[loc
 const searchIndexUrl = isLocalized ? `/${locale}/search.json` : '/search.json';
 const socialImageUrl = new URL(socialImage.src, Astro.site);
 const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value).replace(/</g, '\\u003c');
-const ga4MeasurementId = 'G-9J90097M6J';
 ---
 <!doctype html>
 <html lang={locale}>
@@ -71,13 +70,6 @@ const ga4MeasurementId = 'G-9J90097M6J';
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet" />
-  <script async src={`https://www.googletagmanager.com/gtag/js?id=${ga4MeasurementId}`}></script>
-  <script define:vars={{ ga4MeasurementId }}>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { window.dataLayer.push(arguments); }
-    gtag('js', new Date());
-    gtag('config', ga4MeasurementId);
-  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">{copy.skip}</a>
