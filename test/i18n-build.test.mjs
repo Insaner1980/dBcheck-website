@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { getCommonSounds } from '../src/data/sounds.ts';
 
-const root = new URL('..', import.meta.url).pathname.replace(/^\/(.:)/, '$1').replaceAll('/', '\\');
+const root = fileURLToPath(new URL('..', import.meta.url));
 const contentRoot = join(root, 'src', 'content');
 const dist = join(root, 'dist');
 const markdownFiles = (collection, locale) => readdirSync(join(contentRoot, collection, locale)).filter((name) => name.endsWith('.md')).map((name) => join(contentRoot, collection, locale, name));

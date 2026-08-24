@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-const root = new URL('..', import.meta.url).pathname.replace(/^\/(.:)/, '$1').replaceAll('/', '\\');
+const root = fileURLToPath(new URL('..', import.meta.url));
 const dist = join(root, 'dist');
 const assetDirectory = join(dist, '_astro');
 const headersPath = join(root, 'public', '_headers');

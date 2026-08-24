@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-const root = new URL('..', import.meta.url).pathname.replace(/^\/(.:)/, '$1').replaceAll('/', '\\');
+const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (...segments) => readFileSync(join(root, ...segments), 'utf8');
 
 test('production source contains no Google Analytics loader or measurement ID', () => {
