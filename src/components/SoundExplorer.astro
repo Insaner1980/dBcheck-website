@@ -21,6 +21,7 @@ const bandFor = (sound: CommonSound) => {
 };
 const initialBand = bandFor(initial);
 const exposureLimitAt = scalePercent(EXPOSURE_LIMIT_DB);
+const sourcedSounds = sounds.flatMap((sound) => sound.rangeReference ? [{ sound, reference: sound.rangeReference }] : []);
 
 /** Asteikon numerot sijoitetaan todellisille kohdilleen, ei tasavälein. */
 const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
@@ -103,6 +104,27 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
   </div>
 
   <p class="sound-disclaimer">{isGerman ? 'Typische Bereiche variieren mit Abstand, Umgebung, Quelle und Messmethode.' : 'Typical ranges vary with distance, environment, source and measurement method.'}</p>
+
+  {sourcedSounds.length > 0 && (
+    <details class="sound-sources">
+      <summary>{isGerman ? 'Quellen zu den Referenzbereichen' : 'Sources for reference ranges'}</summary>
+      <div class="sound-sources-content">
+        <p>{isGerman ? 'Diese Näherungsbereiche hängen von Abstand, Messgröße und Messbedingungen ab.' : 'These approximate ranges depend on distance, metric and measurement conditions.'}</p>
+        <ul>
+          {sourcedSounds.map(({ sound, reference }) => (
+            <li>
+              <p><strong>{sound.name}: {sound.typicalMinDb}–{sound.typicalMaxDb} {reference.source.metric}.</strong> {reference.context}</p>
+              <p class="source-citation">
+                <span>{isGerman ? 'Quelle:' : 'Source:'}</span>{' '}
+                <a href={reference.source.url}><cite>{reference.source.title}</cite></a>
+                <span> — {reference.source.credit}, {reference.source.publisher}, {reference.source.publicationDate}{reference.source.revisionDate ? `; ${isGerman ? 'überarbeitet' : 'revised'} ${reference.source.revisionDate}` : ''}.</span>
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </details>
+  )}
 </div>
 
 <script>
@@ -213,7 +235,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     border-left: 1px solid color-mix(in srgb, var(--warning) 55%, transparent);
   }
   .sound-markers { position: relative; min-width: 720px; height: 174px; margin: 0 8px; }
-  /* Valitun äänen tyypillinen vaihteluväli asteikolla: näyttää miten 25–35 dB ja 85–105 dB suhtautuvat toisiinsa. */
+  /* Valitun äänen tyypillinen vaihteluväli näyttää asteikolla alueen alun ja lopun. */
   .range-band {
     position: absolute; bottom: 21px;
     left: calc(var(--band-start) * 1%);
@@ -284,6 +306,19 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
   .detail-reading strong { font: 600 24px/1 var(--font-data); white-space: nowrap; }
   .detail-reading a { color: var(--on-surface-v); font-size: 14px; text-underline-offset: 4px; }
   .sound-disclaimer { margin: 0; color: var(--muted-text); font-size: 12px; }
+  .sound-sources { color: var(--on-surface-v); font-size: 13px; }
+  .sound-sources summary {
+    width: fit-content; color: var(--on-surface); font-weight: 600; cursor: pointer; text-underline-offset: 4px;
+  }
+  .sound-sources summary:focus-visible,
+  .sound-sources a:focus-visible { outline: 2px solid var(--on-surface); outline-offset: 4px; border-radius: 2px; }
+  .sound-sources-content { display: grid; gap: 14px; padding-top: 12px; }
+  .sound-sources-content > p { margin: 0; color: var(--muted-text); }
+  .sound-sources ul { display: grid; gap: 14px; margin: 0; padding-left: 20px; }
+  .sound-sources li p { margin: 0; }
+  .sound-sources li strong { color: var(--on-surface); }
+  .source-citation { margin-top: 4px !important; color: var(--muted-text); font-size: 12px; }
+  .source-citation a { color: var(--on-surface-v); text-underline-offset: 3px; }
   .mobile-sound-view { display: none; }
   .compact .sound-scale { min-height: 230px; }
   @media (max-width: 700px) {
