@@ -13,7 +13,7 @@ researchSources:
   - "WHO, Deafness and hearing loss: Safe listening"
   - "Umweltbundesamt, Grundlagen der Akustik"
   - "LärmVibrationsArbSchV, § 6"
-  - "Comparison between Android applications and Class-I sound level meter"
+  - "Comparison between android applications and Class-I sound level meters in SPL measurement performance"
 publishedAt: "2026-07-12"
 lastReviewed: "2026-07-12"
 ---
@@ -139,7 +139,7 @@ dBcheck kann den geschätzten LAeq an der Publikumsposition über einen repräse
 2. Umweltbundesamt, *Grundlagen der Akustik*. [https://www.umweltbundesamt.de/themen/laerm/verbraucherservice-laerm/grundlagen-der-akustik](https://www.umweltbundesamt.de/themen/laerm/verbraucherservice-laerm/grundlagen-der-akustik)
 3. Lärm- und Vibrations-Arbeitsschutzverordnung, § 6 Auslösewerte bei Lärm. [https://www.gesetze-im-internet.de/l_rmvibrationsarbschv/__6.html](https://www.gesetze-im-internet.de/l_rmvibrationsarbschv/__6.html)
 4. World Health Organization, *WHO global standard for safe listening venues and events*. [https://www.who.int/publications/i/item/9789240043114](https://www.who.int/publications/i/item/9789240043114)
-5. Sasindran et al., *Comparison between Android applications and Class-I sound level meter under free-field conditions*. [https://acta-acustica.edpsciences.org/articles/aacus/full_html/2026/01/aacus250096/aacus250096.html](https://acta-acustica.edpsciences.org/articles/aacus/full_html/2026/01/aacus250096/aacus250096.html)
+5. Sasindran et al., *Comparison between android applications and Class-I sound level meters in SPL measurement performance*. [https://acta-acustica.edpsciences.org/articles/aacus/full_html/2026/01/aacus250096/aacus250096.html](https://acta-acustica.edpsciences.org/articles/aacus/full_html/2026/01/aacus250096/aacus250096.html)
 
 [1]: https://pmc.ncbi.nlm.nih.gov/articles/PMC6438925/
 [2]: https://www.umweltbundesamt.de/themen/laerm/verbraucherservice-laerm/grundlagen-der-akustik

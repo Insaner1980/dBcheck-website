@@ -82,7 +82,7 @@ const initializeNoiseDoseCalculator = (calculator: HTMLElement) => {
       return { level, hours: unit === 'minutes' ? duration / 60 : duration };
     });
 
-    if (periods.some(({ level, hours }) => !Number.isFinite(level) || !Number.isFinite(hours) || hours <= 0 || hours > 24)) {
+    if (!form.checkValidity() || periods.some(({ level, hours }) => !Number.isFinite(level) || !Number.isFinite(hours) || hours <= 0 || hours > 24)) {
       doseOutput.textContent = '—';
       doseDetail.textContent = 'Enter a valid level and duration for every period.';
       return;
@@ -144,7 +144,7 @@ const initializeDistanceCalculator = (calculator: HTMLElement) => {
     const level = levelInput.valueAsNumber;
     const referenceDistance = referenceInput.valueAsNumber;
     const targetDistance = targetInput.valueAsNumber;
-    if (![level, referenceDistance, targetDistance].every(Number.isFinite) || referenceDistance <= 0 || targetDistance <= 0) {
+    if (!form.checkValidity() || ![level, referenceDistance, targetDistance].every(Number.isFinite) || referenceDistance <= 0 || targetDistance <= 0) {
       levelOutput.textContent = '—';
       changeOutput.textContent = calculator.dataset.invalidMessage ?? '';
       return;
@@ -185,7 +185,7 @@ const initializeAddDecibelsCalculator = (calculator: HTMLElement) => {
 
   const update = () => {
     const levels = rows().map((row) => row.querySelector<HTMLInputElement>('[data-sound-level]')?.valueAsNumber ?? Number.NaN);
-    if (levels.some((level) => !Number.isFinite(level))) {
+    if (!form.checkValidity() || levels.some((level) => !Number.isFinite(level))) {
       combinedOutput.textContent = '—';
       combinedDetail.textContent = calculator.dataset.invalidMessage ?? '';
       return;
@@ -252,6 +252,12 @@ const initializeDailyExposureCalculator = (calculator: HTMLElement) => {
       const unit = row.querySelector<HTMLSelectElement>('[data-daily-unit]')?.value;
       return { level, hours: unit === 'minutes' ? duration / 60 : duration };
     });
+    if (!form.checkValidity()) {
+      output.textContent = '—';
+      category.textContent = calculator.dataset.invalidMessage ?? '';
+      hoursOutput.textContent = '';
+      return;
+    }
     try {
       const result = calculateDailyNoiseExposure(periods);
       output.textContent = `${formatDecimal(result.lex8h, 1, locale)} dB(A)`;
