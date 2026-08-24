@@ -79,9 +79,9 @@ Bei einem Acht-Stunden-Modell mit 85 dB(A) als Bezug ergeben beispielsweise zwei
 
 Die allgemeine Formel lautet:
 
-\[
+$$
 D=100\left(\frac{C_1}{T_1}+\frac{C_2}{T_2}+\cdots+\frac{C_n}{T_n}\right)
-\]
+$$
 
 C ist die tatsächliche Zeit, T die Referenzdauer des jeweiligen Pegels. Das Ergebnis hängt vom gewählten Tages- oder Wochenmodell ab.
 

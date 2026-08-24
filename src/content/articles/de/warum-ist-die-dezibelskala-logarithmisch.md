@@ -47,15 +47,15 @@ Jeder Schritt um 20 dB entspricht dabei dem zehnfachen Schalldruck. Die Zahlen b
 
 Für leistungsähnliche Größen wie Schallintensität oder Schallenergie wird eine Pegeldifferenz so berechnet:
 
-\[
+$$
 \Delta L = 10\log_{10}\left(\frac{X_2}{X_1}\right)
-\]
+$$
 
 Für eine amplitudenähnliche Größe wie den Schalldruck gilt:
 
-\[
+$$
 \Delta L = 20\log_{10}\left(\frac{p_2}{p_1}\right)
-\]
+$$
 
 Der Faktor 20 folgt aus dem quadratischen Zusammenhang zwischen Schalldruck und Schallleistung unter vergleichbaren Bedingungen. Setzt man das Quadrat des Druckverhältnisses in die 10-log-Regel ein, entsteht die 20-log-Form. Es handelt sich nicht um zwei verschiedene Dezibelskalen. [BIPM][1]
 
@@ -82,9 +82,9 @@ Logarithmen machen aus einer Multiplikation eine Addition. Ein Beispiel:
 
 Eine Stufe eines akustischen Systems erhöht die Leistung um den Faktor 10. Das sind 10 dB. Eine zweite Stufe verdoppelt sie, also ungefähr 3 dB. Zusammen ergibt sich ein Leistungsverhältnis von 20 zu 1 und eine Pegeländerung von ungefähr 13 dB.
 
-\[
+$$
 10\ \mathrm{dB} + 3\ \mathrm{dB} \approx 13\ \mathrm{dB}
-\]
+$$
 
 Auf der linearen Ebene wurde multipliziert, auf der logarithmischen Ebene addiert. Das ist bei Verstärkung, Dämpfung, Übertragungsverlusten und mehreren Schallquellen praktisch.
 
@@ -96,9 +96,9 @@ Eine Verringerung um 10 dB teilt die Intensität durch 10. Eine Verringerung um 
 
 Für zwei unabhängige gleich laute Quellen gilt:
 
-\[
+$$
 L_{\mathrm{gesamt}} = L + 10\log_{10}(2) \approx L + 3{,}01\ \mathrm{dB}
-\]
+$$
 
 Zwei unabhängige Quellen mit jeweils 60 dB ergeben daher etwa 63 dB. Das Umweltbundesamt erklärt dasselbe Prinzip mit zwei Quellen von jeweils 50 dB, die gemeinsam 53 dB erreichen. [UBA Pegelsummation][3]
 

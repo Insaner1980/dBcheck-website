@@ -52,6 +52,7 @@ const de = locale === 'de';
       padding: 40px; border: 1px solid var(--ghost); border-radius: var(--radius-card);
       background: linear-gradient(135deg, var(--surface-c), var(--surface));
     }
+    :global(.tool-calculator > *), :global(.entry-row) { min-width: 0; }
     :global(.calculator-form) { display: grid; gap: 24px; margin: 0; }
     :global(.calculator-form h2), :global(.result-panel h2) { margin: 0; font-size: 24px; }
     :global(.form-intro), :global(.result-note), :global(.model-note) { margin: 0; color: var(--on-surface-v); }

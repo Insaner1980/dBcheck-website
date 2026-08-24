@@ -9,12 +9,34 @@ const contentRoot = join(root, 'src', 'content');
 const dist = join(root, 'dist');
 const markdownFiles = (collection, locale) => readdirSync(join(contentRoot, collection, locale)).filter((name) => name.endsWith('.md')).map((name) => join(contentRoot, collection, locale, name));
 const field = (source, name) => source.match(new RegExp(`^${name}:\\s*["']?([^"'\\r\\n]+)`, 'm'))?.[1]?.trim();
+const germanMathArticles = [
+  'db-und-dba-unterschied.md',
+  'laermexpositionsgrenzen-deutschland-eu.md',
+  'sind-3-db-doppelt-so-laut.md',
+  'warum-ist-die-dezibelskala-logarithmisch.md',
+  'warum-sind-85-db-wichtig.md',
+  'was-ist-ein-dezibel.md',
+  'was-ist-eine-laermdosis.md',
+  'was-ist-schalldruckpegel.md',
+  'wie-lange-85-db-hoeren.md',
+];
 const routeExists = (href) => {
   const pathname = href.split(/[?#]/)[0];
   if (pathname === '/') return existsSync(join(dist, 'index.html'));
   const target = join(dist, ...pathname.split('/').filter(Boolean));
   return existsSync(join(target, 'index.html')) || (/\.[^/]+$/.test(pathname) && existsSync(target));
 };
+
+test('published German math articles use supported delimiters', () => {
+  for (const name of germanMathArticles) {
+    const path = join(contentRoot, 'articles', 'de', name);
+    assert.ok(existsSync(path), path);
+    const source = readFileSync(path, 'utf8')
+      .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, '')
+      .replace(/`[^`\r\n]*`/g, '');
+    assert.doesNotMatch(source, /\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]/, path);
+  }
+});
 
 test('contains 15+15 articles and 5+5 sound guides with complete translation pairs', () => {
   assert.equal(markdownFiles('articles', 'en').length, 15);
