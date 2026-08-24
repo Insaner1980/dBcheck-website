@@ -222,7 +222,7 @@ The percentage should remain tied to the selected standard and measurement perio
 
 ## Combine sessions with dBcheck
 
-Use dBcheck's dosimeter, history, and exposure analytics to track estimated dose across measured sessions under a named standard. The planned Noise Dose Calculator can combine several level and duration pairs. Treat the result as a comparison with the selected guideline, and keep actual dose separate from any projected value.
+Use dBcheck's dosimeter, history, and exposure analytics to track estimated dose across measured sessions under a named standard. The [Noise Dose Calculator](/tools/noise-dose-calculator/) can combine several level and duration pairs. Treat the result as a comparison with the selected guideline, and keep actual dose separate from any projected value.
 
 ## Sources
 

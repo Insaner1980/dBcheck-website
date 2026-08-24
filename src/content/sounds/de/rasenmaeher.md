@@ -13,7 +13,7 @@ researchSources:
   - "BAuA, Lärm-Vorschriften für Maschinen und den Arbeitsplatz"
   - "BAuA, Geräuschemission von Maschinen"
   - "DGUV Test, Outdoor-Richtlinie 2000/14/EG"
-  - "Comparison between Android applications and Class-I sound level meter"
+  - "Comparison between android applications and Class-I sound level meters in SPL measurement performance"
 publishedAt: "2026-07-12"
 lastReviewed: "2026-07-12"
 ---
@@ -129,7 +129,7 @@ dBcheck kann einen geschätzten A-bewerteten LAeq über die tatsächliche Mähze
 5. Umweltbundesamt, *Grundlagen der Akustik*. [https://www.umweltbundesamt.de/themen/laerm/verbraucherservice-laerm/grundlagen-der-akustik](https://www.umweltbundesamt.de/themen/laerm/verbraucherservice-laerm/grundlagen-der-akustik)
 6. Bundesanstalt für Arbeitsschutz und Arbeitsmedizin, *Lärm-Vorschriften für Maschinen und den Arbeitsplatz*. [https://www.baua.de/DE/Themen/Arbeitsgestaltung/Physikalische-Faktoren/Laerm/Vorschriften](https://www.baua.de/DE/Themen/Arbeitsgestaltung/Physikalische-Faktoren/Laerm/Vorschriften)
 7. Deutsche Gesetzliche Unfallversicherung, *Lärmprävention? Hört sich gut an!*. [https://aug.dguv.de/arbeitssicherheit/tag-gegen-laerm/](https://aug.dguv.de/arbeitssicherheit/tag-gegen-laerm/)
-8. Sasindran et al., *Comparison between Android applications and Class-I sound level meter under free-field conditions*. [https://acta-acustica.edpsciences.org/articles/aacus/full_html/2026/01/aacus250096/aacus250096.html](https://acta-acustica.edpsciences.org/articles/aacus/full_html/2026/01/aacus250096/aacus250096.html)
+8. Sasindran et al., *Comparison between android applications and Class-I sound level meters in SPL measurement performance*. [https://acta-acustica.edpsciences.org/articles/aacus/full_html/2026/01/aacus250096/aacus250096.html](https://acta-acustica.edpsciences.org/articles/aacus/full_html/2026/01/aacus250096/aacus250096.html)
 
 [1]: https://pmc.ncbi.nlm.nih.gov/articles/PMC4909058/
 [2]: https://aug.dguv.de/arbeitssicherheit/tag-gegen-laerm/

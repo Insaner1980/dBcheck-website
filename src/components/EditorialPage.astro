@@ -81,7 +81,7 @@ const cta = isGerman ? (kind === 'sound'
   : entry.data.clusterKey === 'exposure'
     ? { kicker: 'Berechnen', title: 'Vergleichen Sie Pegel und Dauer mit einem benannten Modell.', copy: 'Der L_EX,8h-Rechner liefert eine arbeitsbezogene Orientierung, keine persönliche Sicherheitsgarantie.', label: 'Lärmexpositionspegel berechnen', href: '/de/werkzeuge/laermexpositionsrechner/' }
     : entry.data.clusterKey === 'smartphone'
-      ? { kicker: 'Messen', title: 'Gestalten Sie Smartphone-Messungen wiederholbar.', copy: 'Beachten Sie Hardware, Verarbeitung, Position, Dauer und Kalibrierung.', label: 'Messanleitung lesen', href: '/de/artikel/dezibel-messen-mit-android-handy/' }
+      ? { kicker: 'Messen', title: 'Gestalten Sie Smartphone-Messungen wiederholbar.', copy: 'Beachten Sie Hardware, Verarbeitung, Position, Dauer und Kalibrierung.', label: entry.data.slug === 'dezibel-messen-mit-android-handy' ? 'Kalibrierungsanleitung lesen' : 'Messanleitung lesen', href: entry.data.slug === 'dezibel-messen-mit-android-handy' ? '/de/artikel/dezibel-app-kalibrieren/' : '/de/artikel/dezibel-messen-mit-android-handy/' }
       : { kicker: 'Anwenden', title: 'Setzen Sie das Konzept in einen Alltagskontext.', copy: 'Vergleichen Sie typische Bereiche und beachten Sie Abstand, Umgebung und Messmethode.', label: 'Alltagsgeräusche entdecken', href: '/de/alltagsgeraeusche/' })
   : kind === 'sound'
   ? {
