@@ -70,6 +70,6 @@ test('generated German sound guides display the corrected Acta title', () => {
     const html = read('dist', 'de', 'alltagsgeraeusche', name, 'index.html');
     assert.equal(html.split(actaTitle).length - 1, 1, name);
     assert.doesNotMatch(html, new RegExp(oldActaTitle), name);
-    assert.match(html, new RegExp(`href="${actaUrl}"`), name);
+    assert.ok(html.includes(`href="${actaUrl}"`), name);
   }
 });
