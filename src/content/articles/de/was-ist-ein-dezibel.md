@@ -31,15 +31,15 @@ Ein Dezibel gibt ein Verhältnis an. Der gemessene Wert wird mit einer definiert
 
 Für leistungsähnliche Größen, etwa Schallintensität oder Schallenergie, gilt:
 
-\[
+$$
 L = 10\log_{10}\left(\frac{X}{X_0}\right)\ \mathrm{dB}
-\]
+$$
 
 Bei amplitudenähnlichen Größen wie dem Schalldruck lautet die Beziehung:
 
-\[
+$$
 L_p = 20\log_{10}\left(\frac{p}{p_0}\right)\ \mathrm{dB}
-\]
+$$
 
 Der Faktor 20 ist keine zweite Definition des Dezibels. Er entsteht, weil die Schallleistung unter vergleichbaren Bedingungen mit dem Quadrat des Schalldrucks zusammenhängt. [BIPM][1]
 
@@ -65,9 +65,9 @@ Der Schalldruck wechselt dabei ständig zwischen positiven und negativen Werten.
 
 Für Luftschall gilt:
 
-\[
+$$
 L_p = 20\log_{10}\left(\frac{p_{\mathrm{rms}}}{20\ \mu\mathrm{Pa}}\right)\ \mathrm{dB}
-\]
+$$
 
 0 dB SPL bedeutet, dass der Effektivwert des Schalldrucks dem Bezugswert von 20 Mikropascal entspricht. Das ist keine universelle biologische Hörgrenze. Die Hörschwelle hängt unter anderem von der Frequenz, den Messbedingungen und dem individuellen Gehör ab. [NIST SI Guide][4]
 
@@ -91,9 +91,9 @@ Eine Zunahme um ungefähr 3 dB entspricht unter vergleichbaren Bedingungen fast 
 
 Der Schalldruck selbst verdoppelt sich dabei nicht. Seine Amplitude steigt um den Faktor
 
-\[
+$$
 10^{3/20} \approx 1{,}41
-\]
+$$
 
 also um etwa 41 Prozent.
 
@@ -115,7 +115,7 @@ Ein tieffrequentes Brummen, ein kurzer Ton, Musik und breitbandiger Maschinenlä
 
 Ein Schallpegel allein beschreibt nicht die gesamte Lärmexposition. Die Dauer gehört dazu, weil sich Schallenergie über die Zeit summiert.
 
-Für Arbeitsplätze in Deutschland verwendet die LärmVibrationsArbSchV den auf acht Stunden bezogenen Tages-Lärmexpositionspegel \(L_{EX,8h}\). Die unteren und oberen Auslösewerte liegen bei 80 beziehungsweise 85 dB(A). Das sind rechtlich definierte Auslösewerte für Schutzmaßnahmen, keine allgemeingültige Trennlinie zwischen harmlos und gefährlich. [BAuA Lärm][5]
+Für Arbeitsplätze in Deutschland verwendet die LärmVibrationsArbSchV den auf acht Stunden bezogenen Tages-Lärmexpositionspegel $L_{EX,8h}$. Die unteren und oberen Auslösewerte liegen bei 80 beziehungsweise 85 dB(A). Das sind rechtlich definierte Auslösewerte für Schutzmaßnahmen, keine allgemeingültige Trennlinie zwischen harmlos und gefährlich. [BAuA Lärm][5]
 
 Die energetische Beziehung bleibt dabei entscheidend: Steigt ein gleichartiger Pegel um 3 dB, wird dieselbe Schallenergie in ungefähr der halben Zeit erreicht. Rechnerisch entsprechen 85 dB(A) über acht Stunden derselben Energie, die bei 88 dB(A) in vier Stunden und bei 91 dB(A) in zwei Stunden erreicht wird. Diese Beispiele zeigen gleiche Energie, keine pauschal zulässigen Aufenthaltszeiten. Die konkrete Gefährdungsbeurteilung folgt der LärmVibrationsArbSchV und den TRLV Lärm. [TRLV Lärm Teil 2][8]
 

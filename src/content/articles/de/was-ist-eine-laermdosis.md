@@ -30,9 +30,9 @@ Schallenergie sammelt sich über die Zeit. Ein mäßig hoher Pegel kann bei lang
 
 Eine verbreitete Dosisformel lautet:
 
-\[
+$$
 D=100\left(\frac{C_1}{T_1}+\frac{C_2}{T_2}+\cdots+\frac{C_n}{T_n}\right)
-\]
+$$
 
 Dabei ist D die Dosis in Prozent. C steht für die tatsächlich verbrachte Zeit bei einem Pegel, T für die vollständige Referenzdauer, die das gewählte Modell diesem Pegel zuordnet.
 
@@ -55,9 +55,9 @@ Für ein energieäquivalentes Modell kann ein Referenzpunkt von 85 dB(A) über a
 
 Ein Tag enthält zum Beispiel vier Stunden bei 85 dB(A) und anschließend 30 Minuten bei 94 dB(A). Der erste Abschnitt nutzt die Hälfte der achtstündigen Referenz. Der zweite nutzt die Hälfte der einstündigen Referenz:
 
-\[
+$$
 100\left(\frac{4}{8}+\frac{0{,}5}{1}\right)=100\%
-\]
+$$
 
 Beide Abschnitte waren akustisch nicht gleich. Sie tragen in diesem Modell lediglich denselben Anteil zur Gesamtdosis bei.
 
@@ -126,9 +126,9 @@ Die LärmVibrationsArbSchV definiert den Tages-Lärmexpositionspegel als zeitlic
 
 Die BAuA gibt dafür folgende Umrechnung an: [BAuA][2]
 
-\[
+$$
 L_{EX,8h}=L_{Aeq,T}+10\log_{10}\left(\frac{T}{8\,h}\right)
-\]
+$$
 
 Der Vorteil dieser logarithmischen Kenngröße liegt darin, dass sie den gesamten Arbeitstag als einen äquivalenten A-bewerteten Pegel ausdrückt. Die unteren und oberen Auslösewerte können direkt mit diesem Wert verglichen werden.
 

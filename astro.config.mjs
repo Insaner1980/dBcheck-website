@@ -47,6 +47,17 @@ export default defineConfig({
       rehypePlugins: [rehypeKatex],
     }),
   },
+  vite: {
+    build: {
+      assetsInlineLimit(filePath) {
+        const normalizedPath = filePath.replaceAll('\\', '/');
+        if (/\/node_modules\/katex\/dist\/fonts\/[^/]+\.(?:woff2?|ttf|otf)$/i.test(normalizedPath)) {
+          return false;
+        }
+        return undefined;
+      },
+    },
+  },
   redirects: {
     '/sounds/normal-conversation-decibels': '/sounds/normal-conversation/',
     '/sounds/vacuum-cleaner-decibels': '/sounds/vacuum-cleaner/',

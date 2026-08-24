@@ -36,15 +36,15 @@ Der zeitliche Mittelwert der rohen Druckkurve wäre dafür ungeeignet. Positive 
 
 Für Luftschall wird der Schalldruckpegel so berechnet:
 
-\[
+$$
 L_p = 20\log_{10}\left(\frac{p_{\mathrm{rms}}}{p_0}\right)\ \mathrm{dB}
-\]
+$$
 
 Dabei gilt:
 
-- \(L_p\) ist der Schalldruckpegel
-- \(p_{\mathrm{rms}}\) ist der Effektivwert des Schalldrucks innerhalb des festgelegten Zeitraums und Frequenzbereichs
-- \(p_0\) ist der Bezugsdruck von 20 Mikropascal in Luft
+- $L_p$ ist der Schalldruckpegel
+- $p_{\mathrm{rms}}$ ist der Effektivwert des Schalldrucks innerhalb des festgelegten Zeitraums und Frequenzbereichs
+- $p_0$ ist der Bezugsdruck von 20 Mikropascal in Luft
 
 Eine gleichwertige Schreibweise verwendet zehnmal den Logarithmus des Verhältnisses der mittleren Schalldruckquadrate. Beide Formen beschreiben denselben physikalischen Zusammenhang. [BIPM][2]
 
@@ -100,11 +100,11 @@ Die A-Bewertung schwächt tiefe Frequenzen und Teile des sehr hohen Frequenzbere
 
 Das physikalische Schallereignis bleibt gleich. Der Zahlenwert ändert sich, weil die Frequenzen unterschiedlich gewichtet werden.
 
-Bezeichnungen wie \(L_{Aeq}\), \(L_{AFmax}\) und \(L_{Cpeak}\) liefern mehr Information als dB allein:
+Bezeichnungen wie $L_{Aeq}$, $L_{AFmax}$ und $L_{Cpeak}$ liefern mehr Information als dB allein:
 
-- \(L_{Aeq}\) ist ein A-bewerteter energieäquivalenter Mittelungspegel
-- \(L_{AFmax}\) ist der höchste A-bewertete Pegel mit Fast-Zeitbewertung
-- \(L_{Cpeak}\) ist ein C-bewerteter Spitzenpegel
+- $L_{Aeq}$ ist ein A-bewerteter energieäquivalenter Mittelungspegel
+- $L_{AFmax}$ ist der höchste A-bewertete Pegel mit Fast-Zeitbewertung
+- $L_{Cpeak}$ ist ein C-bewerteter Spitzenpegel
 
 Sie beantworten verschiedene Fragen.
 

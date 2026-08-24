@@ -41,7 +41,7 @@ Ohne diesen Kontext lässt sich die Zahl nur grob einordnen.
 
 Die A-Bewertung ist ein festgelegter Frequenzfilter. Tiefe Frequenzen werden stark abgeschwächt, sehr hohe Frequenzen ebenfalls. Anschließend wird aus dem gefilterten Signal ein Gesamtpegel berechnet. [IEC 61672][2]
 
-Das Ergebnis wird häufig als dBA geschrieben. In technischen Texten ist dB(A) gebräuchlich. Noch genauer sind Formelzeichen wie \(L_{Aeq}\) oder \(L_{AFmax}\), weil sie neben der A-Bewertung auch die Art der Zeitverarbeitung benennen.
+Das Ergebnis wird häufig als dBA geschrieben. In technischen Texten ist dB(A) gebräuchlich. Noch genauer sind Formelzeichen wie $L_{Aeq}$ oder $L_{AFmax}$, weil sie neben der A-Bewertung auch die Art der Zeitverarbeitung benennen.
 
 A-Bewertung wird oft mit der Empfindlichkeit des menschlichen Gehörs erklärt. Das ist als Einstieg brauchbar, aber unvollständig. Sie ist nur eine feste Kurve. Das Gehör reagiert je nach Pegel, Frequenzspektrum, Dauer und individueller Hörfähigkeit unterschiedlich. Tonhaltigkeit, Impulsivität, Maskierung und räumliches Hören bildet ein einzelner A-bewerteter Gesamtwert nicht vollständig ab.
 
@@ -49,14 +49,14 @@ Die sachlichere Einordnung lautet daher: Dieses Bewertungsverfahren ist standard
 
 ## Warum dB(A) häufig verwendet wird
 
-In Deutschland beziehen sich zahlreiche Mess- und Bewertungsverfahren auf A-bewertete Größen. Bei Lärm am Arbeitsplatz verwendet die LärmVibrationsArbSchV den Tages-Lärmexpositionspegel \(L_{EX,8h}\), der A-bewertet ist. Die unteren und oberen Auslösewerte liegen bei 80 und 85 dB(A). Für impulsförmige Ereignisse kommen C-bewertete Spitzenschalldruckpegel hinzu. [BAuA Lärm][3]
+In Deutschland beziehen sich zahlreiche Mess- und Bewertungsverfahren auf A-bewertete Größen. Bei Lärm am Arbeitsplatz verwendet die LärmVibrationsArbSchV den Tages-Lärmexpositionspegel $L_{EX,8h}$, der A-bewertet ist. Die unteren und oberen Auslösewerte liegen bei 80 und 85 dB(A). Für impulsförmige Ereignisse kommen C-bewertete Spitzenschalldruckpegel hinzu. [BAuA Lärm][3]
 
 Diese Werte sind an einen bestimmten Rechts- und Messkontext gebunden. Ein beliebiger Live-Wert aus einer Smartphone-App lässt sich nicht direkt damit gleichsetzen.
 
 Auch zwei A-bewertete Angaben können etwas Verschiedenes meinen:
 
-- \(L_{Aeq,15min}\) ist der energieäquivalente A-bewertete Pegel über 15 Minuten.
-- \(L_{AFmax}\) ist der höchste A-bewertete Pegel mit Fast-Zeitbewertung innerhalb des Beobachtungszeitraums.
+- $L_{Aeq,15min}$ ist der energieäquivalente A-bewertete Pegel über 15 Minuten.
+- $L_{AFmax}$ ist der höchste A-bewertete Pegel mit Fast-Zeitbewertung innerhalb des Beobachtungszeitraums.
 
 Beide werden in dB angegeben, beantworten aber nicht dieselbe Frage.
 
@@ -64,7 +64,7 @@ Beide werden in dB angegeben, beantworten aber nicht dieselbe Frage.
 
 Die C-Bewertung verläuft über einen großen Teil des hörbaren Frequenzbereichs flacher als die A-Bewertung. Tiefe Frequenzen tragen deshalb stärker zum Gesamtwert bei.
 
-Das ist besonders relevant bei hohen Schallpegeln, impulshaltigen Ereignissen und Geräuschen mit viel tieffrequenter Energie. Ein typisches Formelzeichen ist \(L_{Cpeak}\), der C-bewertete Spitzenpegel.
+Das ist besonders relevant bei hohen Schallpegeln, impulshaltigen Ereignissen und Geräuschen mit viel tieffrequenter Energie. Ein typisches Formelzeichen ist $L_{Cpeak}$, der C-bewertete Spitzenpegel.
 
 Ein Beispiel: Bei bassbetonter Musik, einer Lüftungsanlage oder tieffrequentem Maschinenbrummen kann der dB(C)-Wert erheblich über dem dB(A)-Wert liegen. Bei breitbandigem Schall mit wenig Tiefton fällt der Abstand oft kleiner aus. Der Abstand folgt aus der spektralen Verteilung des Schalls; der Gesamtpegel allein erklärt ihn nicht.
 
@@ -106,7 +106,7 @@ Für wiederholte Vergleiche kann dB(A) ebenfalls nützlich sein. Wenn Gerät, Ap
 
 Ein dB(A)-Wert kann wichtige Eigenschaften eines Geräuschs verdecken.
 
-Tieffrequente Anteile erscheinen schwächer. Kurze impulsförmige Ereignisse benötigen gegebenenfalls einen Spitzenpegel wie \(L_{Cpeak}\). Bei tonal auffälligem oder stark schwankendem Schall können Oktav- oder Terzbandanalysen sinnvoll sein. Für bestimmte behördliche oder arbeitsrechtliche Messungen gelten verbindliche Verfahren, die eine Smartphone-Anzeige nicht ersetzt. [TRLV Lärm Teil 2][5]
+Tieffrequente Anteile erscheinen schwächer. Kurze impulsförmige Ereignisse benötigen gegebenenfalls einen Spitzenpegel wie $L_{Cpeak}$. Bei tonal auffälligem oder stark schwankendem Schall können Oktav- oder Terzbandanalysen sinnvoll sein. Für bestimmte behördliche oder arbeitsrechtliche Messungen gelten verbindliche Verfahren, die eine Smartphone-Anzeige nicht ersetzt. [TRLV Lärm Teil 2][5]
 
 Auch Lautheit lässt sich nicht direkt aus dB(A) ablesen. Zwei Geräusche mit demselben A-bewerteten Pegel können sich in Frequenzspektrum, Dauer und Charakter stark unterscheiden.
 

@@ -42,9 +42,9 @@ Ein Arbeitsplatz bleibt selten über die gesamte Schicht gleich laut. Eine Perso
 
 Die BAuA beschreibt dafür die Beziehung:
 
-\[
+$$
 L_{EX,8h}=L_{Aeq,T}+10\log_{10}\left(\frac{T}{8\,h}\right)
-\]
+$$
 
 LAeq,T ist der A-bewertete energieäquivalente Dauerschallpegel während der tatsächlichen Einwirkungsdauer T. Wird nur vier Stunden lang ein gleichmäßiger Pegel von 85 dB(A) gemessen, liegt der auf acht Stunden bezogene Expositionspegel rechnerisch 3 dB niedriger. Vier Stunden bei 88 dB(A) ergeben dagegen denselben Energiebezug wie acht Stunden bei 85 dB(A). [BAuA][2]
 

@@ -29,23 +29,23 @@ Die kurze Antwort lautet also: Nein. Ein 3-dB-Anstieg beschreibt eine physikalis
 
 Für Intensität, Leistung oder Schallenergie gilt:
 
-\[
+$$
 \frac{E_2}{E_1} = 10^{\Delta L/10}
-\]
+$$
 
 Bei 3 dB ergibt sich:
 
-\[
+$$
 10^{3/10} \approx 1{,}995
-\]
+$$
 
 Die exakte Pegelerhöhung für die doppelte Energie beträgt ungefähr 3,01 dB. Die übliche Aussage "3 dB mehr sind doppelte Energie" ist daher eine sinnvolle Rundung.
 
 Beim Schalldruck gilt eine andere Beziehung:
 
-\[
+$$
 \frac{p_2}{p_1} = 10^{\Delta L/20}
-\]
+$$
 
 Bei 3 dB steigt die Schalldruckamplitude auf ungefähr das 1,41-Fache. Das sind rund 41 Prozent mehr, nicht 100 Prozent.
 
@@ -71,15 +71,15 @@ Normen zur Lautheitsberechnung verwenden deshalb komplexere Modelle als eine ein
 
 Eine Pegelzunahme von 10 dB bedeutet die zehnfache Intensität, Leistung oder Energie:
 
-\[
+$$
 10^{10/10} = 10
-\]
+$$
 
 Die Schalldruckamplitude steigt auf ungefähr das 3,16-Fache:
 
-\[
+$$
 10^{10/20} \approx 3{,}162
-\]
+$$
 
 Bei 10 dB Pegelzunahme wird dies als Faustregel häufig als annähernde Verdopplung des Lautheitseindrucks empfunden. Die BAuA verwendet diese Einordnung ebenfalls, weist aber auf den Unterschied zwischen wahrgenommener Lautheit und physikalischer Schallenergie hin. [BAuA Gehörerhaltung][4]
 
@@ -102,9 +102,9 @@ Ein fester dB-Unterschied erzeugt daher kein universelles Lautheitsverhältnis.
 
 Bei zwei unabhängigen Schallquellen mit gleichem Pegel addieren sich die mittleren Schallenergien. Der Gesamtpegel steigt um:
 
-\[
+$$
 10\log_{10}(2) \approx 3{,}01\ \mathrm{dB}
-\]
+$$
 
 Zwei unabhängige Geräte mit jeweils 80 dB ergeben gemeinsam ungefähr 83 dB. Vier gleichartige Quellen ergeben gegenüber einer einzelnen Quelle ungefähr 6 dB mehr, weil die Energie viermal so groß ist.
 

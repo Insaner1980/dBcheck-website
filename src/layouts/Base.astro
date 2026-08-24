@@ -13,6 +13,8 @@ interface Props {
   socialImage?: SocialImage;
   locale?: Locale;
   alternates?: AlternateLink[];
+  /** Omits route-specific sharing and indexing metadata from a true error document. */
+  errorDocument?: boolean;
   /** Näyttää lukemisen edistymisviivan headerin alareunassa. Vain pitkille sisältösivuille. */
   readingProgress?: boolean;
 }
@@ -24,12 +26,13 @@ const {
   socialImage = socialImages.app,
   locale: localeProp,
   alternates: alternateProp,
+  errorDocument = false,
   readingProgress = false,
 } = Astro.props;
 const locale = localeProp ?? (isLocale(Astro.currentLocale) ? Astro.currentLocale : defaultLocale);
 const copy = getUi(locale);
 const canonical = new URL(Astro.url.pathname, Astro.site);
-const alternates = alternateProp ?? alternatesForPath(Astro.url.pathname);
+const alternates = errorDocument ? [] : (alternateProp ?? alternatesForPath(Astro.url.pathname));
 const isLocalized = locale !== defaultLocale;
 const localizedRoute = (defaultPath: string) => findRoutePair(defaultPath)?.[locale] ?? defaultPath;
 const searchIndexUrl = isLocalized ? `/${locale}/search.json` : '/search.json';
@@ -45,28 +48,31 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
   <meta name="description" content={description} />
   <meta name="generator" content={Astro.generator} />
   <meta name="theme-color" content="#080808" />
-  <link rel="canonical" href={canonical} />
+  {errorDocument && <meta name="robots" content="noindex" />}
+  {!errorDocument && <link rel="canonical" href={canonical} />}
   {alternates.map((alternate) => <link rel="alternate" hreflang={localeTags[alternate.locale]} href={new URL(alternate.href, Astro.site)} />)}
   {alternates.some((alternate) => alternate.locale === 'en') && <link rel="alternate" hreflang="x-default" href={new URL(alternates.find((alternate) => alternate.locale === 'en')!.href, Astro.site)} />}
   <link rel="sitemap" href="/sitemap-index.xml" />
   <link rel="icon" href="/dbcheck-logo.svg?v=2" type="image/svg+xml" sizes="any" />
-  <meta property="og:title" content={title} />
-  <meta property="og:description" content={description} />
-  <meta property="og:type" content={ogType} />
-  <meta property="og:url" content={canonical} />
-  <meta property="og:image" content={socialImageUrl} />
-  <meta property="og:image:secure_url" content={socialImageUrl} />
-  <meta property="og:image:type" content="image/webp" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content={socialImage.alt} />
-  <meta property="og:locale" content={openGraphLocales[locale]} />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content={title} />
-  <meta name="twitter:description" content={description} />
-  <meta name="twitter:image" content={socialImageUrl} />
-  <meta name="twitter:image:alt" content={socialImage.alt} />
-  {jsonLd.map((item) => <script type="application/ld+json" set:html={serializeJsonLd(item)} />)}
+  {!errorDocument && <>
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:secure_url" content={socialImageUrl} />
+    <meta property="og:image:type" content="image/webp" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={socialImage.alt} />
+    <meta property="og:locale" content={openGraphLocales[locale]} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    <meta name="twitter:image:alt" content={socialImage.alt} />
+    {jsonLd.map((item) => <script type="application/ld+json" set:html={serializeJsonLd(item)} />)}
+  </>}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet" />
@@ -346,6 +352,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       --primary-dim: #CFCFCF;
       --secondary: #8F8F8F;
       --tertiary: #5E5E5E;
+      --muted-text: #888888;
       --outline-v: #8C8C8C;
       --ghost: rgba(140, 140, 140, 0.15);
       --result-border-color: var(--on-surface);
@@ -373,6 +380,13 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     ::selection { background: var(--on-surface); color: var(--bg); }
     a { color: inherit; }
     :where(a, button, input, summary):focus-visible { outline: 2px solid var(--on-surface); outline-offset: 4px; }
+    .page-head,
+    .editorial-head,
+    .tool-card,
+    .page-head > *,
+    .editorial-head > *,
+    .tool-card > * { min-width: 0; }
+    :is(.page-head, .editorial-head, .tool-card) :is(.kicker, h1, h2, p, .tool-link) { overflow-wrap: break-word; }
     .skip-link {
       position: absolute; left: -999px; top: 0;
       background: var(--on-surface); color: var(--bg);
@@ -550,7 +564,6 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       color: var(--on-surface);
       font-family: var(--font-body); font-size: 18px;
       padding: 14px 16px;
-      outline: none;
     }
     #search-input:focus { border-color: rgba(247, 247, 247, 0.3); }
     #search-input::-webkit-search-cancel-button {
@@ -571,7 +584,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       display: flex; justify-content: space-between;
       margin: 10px 4px 6px;
       font-family: var(--font-data); font-size: 10px; letter-spacing: 0.08em;
-      color: var(--tertiary);
+      color: var(--muted-text);
     }
     .search-results {
       list-style: none; margin: 8px 0 0; padding: 0; max-height: 44vh; overflow-y: auto;
@@ -594,7 +607,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     .search-results a:hover { background: var(--surface-ch); }
     .search-results li { animation: search-hit-enter 220ms cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--hit-index) * 35ms); }
     @keyframes search-hit-enter { from { opacity: 0; transform: translateY(6px); } }
-    .hit-kind { font-family: var(--font-data); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tertiary); }
+    .hit-kind { font-family: var(--font-data); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-text); }
     .hit-title { font-weight: 600; }
     .hit-desc { font-size: 13px; color: var(--on-surface-v); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .search-empty { color: var(--secondary); font-size: 14px; padding: 16px 4px 4px; margin: 0; }
@@ -609,14 +622,14 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     .footer-inner--localized { grid-template-columns: 2fr 1fr; }
     .footer-brand p { color: var(--secondary); font-size: 14px; margin: 12px 0 0; max-width: 320px; }
     .footer-col { display: grid; gap: 10px; align-content: start; }
-    .footer-label { font-family: var(--font-data); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tertiary); }
+    .footer-label { font-family: var(--font-data); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-text); }
     .footer-col a { color: var(--on-surface-v); text-decoration: none; font-size: 14px; }
     .footer-col a:hover { color: var(--on-surface); }
     .footer-meta {
       max-width: var(--max-w); margin: 0 auto;
       display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between;
       padding: 0 20px 32px;
-      color: var(--tertiary); font-size: 12px;
+      color: var(--muted-text); font-size: 12px;
     }
     .footer-meta a { color: inherit; text-underline-offset: 3px; }
     .footer-meta a:hover { color: var(--secondary); }

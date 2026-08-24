@@ -32,9 +32,9 @@ Die genaue Größe lautet LEX,8h = 85 dB(A). Sie bezieht sich auf eine Achtstund
 
 Eine Person kann während einer Schicht mehrere Tätigkeiten ausführen. Lautere und leisere Abschnitte werden auf einen gemeinsamen Acht-Stunden-Bezug umgerechnet. Die BAuA verwendet dafür:
 
-\[
+$$
 L_{EX,8h}=L_{Aeq,T}+10\log_{10}\left(\frac{T}{8\,h}\right)
-\]
+$$
 
 Wer vier Stunden lang 85 dB(A) ausgesetzt ist und anschließend vier Stunden in einer ruhigen Umgebung arbeitet, erreicht nicht denselben LEX,8h wie bei acht durchgehenden Stunden mit 85 dB(A). Der Acht-Stunden-Wert liegt für den lauten Abschnitt allein 3 dB niedriger. [BAuA][2]
 
