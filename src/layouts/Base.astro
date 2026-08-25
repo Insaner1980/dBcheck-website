@@ -74,7 +74,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImageUrl} />
     <meta name="twitter:image:alt" content={socialImage.alt} />
-    {jsonLd.map((item) => <script type="application/ld+json" set:html={serializeJsonLd(item)} />)}
+    {jsonLd.map((item) => <script is:inline type="application/ld+json" set:html={serializeJsonLd(item)} />)}
   </>}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
