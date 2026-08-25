@@ -8,9 +8,10 @@ interface Props {
   id?: string;
   compact?: boolean;
   locale?: Locale;
+  detailHeadingLevel?: 2 | 3;
 }
 
-const { sounds, id = 'sound-explorer', compact = false, locale = 'en' } = Astro.props;
+const { sounds, id = 'sound-explorer', compact = false, locale = 'en', detailHeadingLevel = 3 } = Astro.props;
 const initial = sounds[0];
 const isGerman = locale === 'de';
 
@@ -64,7 +65,9 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
   <article class="sound-detail" id={`${id}-detail`} aria-live="polite">
     <div>
       <span class="detail-category">{isGerman ? 'Typisches Beispiel' : 'Typical example'}</span>
-      <h3 data-sound-name>{initial.name}</h3>
+      {detailHeadingLevel === 2
+        ? <h2 data-sound-name>{initial.name}</h2>
+        : <h3 data-sound-name>{initial.name}</h3>}
       <p data-sound-description>{initial.shortDescription}</p>
       <p class="exposure-note" data-sound-note>{initial.exposureNote}</p>
     </div>
@@ -299,7 +302,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     padding: 28px; border: 1px solid var(--ghost); border-radius: var(--radius-card); background: var(--surface-c);
   }
   .detail-category { color: var(--muted-text); font: 10px/1 var(--font-data); letter-spacing: .12em; text-transform: uppercase; }
-  .sound-detail h3 { margin: 8px 0; font-size: 24px; }
+  .sound-detail :is(h2, h3) { margin: 8px 0; font-size: 24px; }
   .sound-detail p { max-width: 680px; margin: 0; color: var(--on-surface-v); }
   .sound-detail .exposure-note { margin-top: 8px; color: var(--secondary); font-size: 14px; }
   .detail-reading { display: grid; gap: 12px; justify-items: end; }

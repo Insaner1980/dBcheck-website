@@ -35,6 +35,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 const alternates = errorDocument ? [] : (alternateProp ?? alternatesForPath(Astro.url.pathname));
 const isLocalized = locale !== defaultLocale;
 const localizedRoute = (defaultPath: string) => findRoutePair(defaultPath)?.[locale] ?? defaultPath;
+const toolsRoute = localizedRoute('/tools/');
+const articlesRoute = localizedRoute('/articles/');
+const isCurrentSection = (route: string) => Astro.url.pathname.startsWith(route);
 const searchIndexUrl = isLocalized ? `/${locale}/search.json` : '/search.json';
 const socialImageUrl = new URL(socialImage.src, Astro.site);
 const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value).replace(/</g, '\\u003c');
@@ -82,7 +85,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
 
   <header class="site-header">
     <nav class="nav" aria-label={copy.mainNav}>
-      <a class="wordmark" href="/" aria-label="dBcheck">
+      <a class="wordmark" href="/" aria-label="dBcheck" aria-current={Astro.url.pathname === '/' ? 'page' : undefined}>
         <img class="brand-logo" src="/dbcheck-logo.svg" alt="" />
         <span class="brand-name">dB<em>check</em></span>
       </a>
@@ -92,9 +95,9 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       </button>
       <div class="nav-links" id="primary-links">
         {isLocalized ? <>
-          <a href={localizedRoute('/tools/')}>{copy.tools}</a><a href={localizedRoute('/articles/')}>{copy.articles}</a>
+          <a href={toolsRoute} aria-current={isCurrentSection(toolsRoute) ? 'page' : undefined}>{copy.tools}</a><a href={articlesRoute} aria-current={isCurrentSection(articlesRoute) ? 'page' : undefined}>{copy.articles}</a>
         </> : <>
-          <a href="/tools/">Tools</a><a href="/#features">Features</a><a href="/#pricing">Pricing</a><a href="/articles/">Articles</a>
+          <a href={toolsRoute} aria-current={isCurrentSection(toolsRoute) ? 'page' : undefined}>Tools</a><a href="/#features">Features</a><a href="/#pricing">Pricing</a><a href={articlesRoute} aria-current={isCurrentSection(articlesRoute) ? 'page' : undefined}>Articles</a>
         </>}
       </div>
       <LanguageSwitcher locale={locale} alternates={alternates} />
@@ -506,6 +509,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       transition: color 160ms ease;
     }
     .nav-links a:hover { color: var(--on-surface); }
+    .nav-links a[aria-current='page'] { color: var(--on-surface); }
     .menu-btn { display: none !important; }
     .search-btn {
       display: grid; place-items: center;
