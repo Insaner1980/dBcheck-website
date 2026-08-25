@@ -68,7 +68,7 @@ test('primary navigation marks only the represented current route', () => {
 });
 
 test('forced colors keeps the current primary navigation link visually distinct', () => {
-  const baseLayout = readLayout('Base.astro');
+  const baseLayout = readLayout('Base.astro').replaceAll('\r\n', '\n');
   const currentNavRule = [
     '    @media (forced-colors: active) {',
     "      .nav a[aria-current='page'] {",
