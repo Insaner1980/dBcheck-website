@@ -7,11 +7,15 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const readPage = (...parts) => readFileSync(join(root, 'dist', ...parts), 'utf8');
 
-const elementText = (html, tag, prefix) => {
-  const blocks = [...html.matchAll(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, 'g'))];
+const elementTextAroundBreak = (html, tag, prefix) => {
+  const blocks = [...html.matchAll(new RegExp(`<${tag}(?=[\\s/>])[^>]*>([\\s\\S]*?)</${tag}>`, 'g'))];
   const block = blocks.find(([, content]) => content.includes(prefix));
   assert.ok(block, `${tag} starting with ${prefix}`);
-  return block[1].replace(/<[^>]+>/g, '');
+  const text = block[1].match(
+    /^([^<]+)<br(?=[\s/>])[^>]*>(\s+)(?:<span(?=[\s/>])[^>]*>)?([^<]+)(?:<\/span>)?$/,
+  );
+  assert.ok(text, `${tag} starting with ${prefix} has the expected line-break structure`);
+  return `${text[1]}${text[2]}${text[3]}`;
 };
 
 const currentNavHrefs = (html) => {
@@ -24,11 +28,11 @@ const currentNavHrefs = (html) => {
 test('homepage line breaks preserve spaces in rendered text', () => {
   const homepage = readPage('index.html');
 
-  assert.equal(elementText(homepage, 'h1', 'Understand the sound'), 'Understand the sound around you.');
-  assert.equal(elementText(homepage, 'h2', 'Four questions your ears'), 'Four questions your ears can’t answer. Your phone can.');
-  assert.equal(elementText(homepage, 'h2', 'Hear what your ears'), 'Hear what your ears already know.');
+  assert.equal(elementTextAroundBreak(homepage, 'h1', 'Understand the sound'), 'Understand the sound around you.');
+  assert.equal(elementTextAroundBreak(homepage, 'h2', 'Four questions your ears'), 'Four questions your ears can’t answer. Your phone can.');
+  assert.equal(elementTextAroundBreak(homepage, 'h2', 'Hear what your ears'), 'Hear what your ears already know.');
   assert.equal(
-    elementText(homepage, 'p', 'dBcheck for Android is in final tuning'),
+    elementTextAroundBreak(homepage, 'p', 'dBcheck for Android is in final tuning'),
     'dBcheck for Android is in final tuning before release. The observatory opens soon on Google Play.',
   );
 });
