@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const readPage = (...parts) => readFileSync(join(root, 'dist', ...parts), 'utf8');
+const readLayout = (...parts) => readFileSync(join(root, 'src', 'layouts', ...parts), 'utf8');
 
 const elementTextAroundBreak = (html, tag, prefix) => {
   const blocks = [...html.matchAll(new RegExp(`<${tag}(?=[\\s/>])[^>]*>([\\s\\S]*?)</${tag}>`, 'g'))];
@@ -64,4 +65,22 @@ test('primary navigation marks only the represented current route', () => {
   for (const { page, current } of cases) {
     assert.deepEqual(currentNavHrefs(readPage(...page)), current, page.join('/'));
   }
+});
+
+test('forced colors keeps the current primary navigation link visually distinct', () => {
+  const baseLayout = readLayout('Base.astro');
+  const currentNavRule = [
+    '    @media (forced-colors: active) {',
+    "      .nav a[aria-current='page'] {",
+    '        text-decoration-line: underline;',
+    '        text-decoration-style: solid;',
+    '        text-decoration-thickness: 2px;',
+    '        text-underline-offset: 0.3em;',
+    '        text-decoration-color: currentColor;',
+    '      }',
+    '    }',
+  ].join('\n');
+
+  assert.ok(baseLayout.includes(currentNavRule), 'current links in the primary navigation have a forced-colors underline');
+  assert.equal(baseLayout.includes('forced-color-adjust: none'), false, 'system color substitution remains enabled');
 });

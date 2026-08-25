@@ -510,6 +510,15 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     }
     .nav-links a:hover { color: var(--on-surface); }
     .nav-links a[aria-current='page'] { color: var(--on-surface); }
+    @media (forced-colors: active) {
+      .nav a[aria-current='page'] {
+        text-decoration-line: underline;
+        text-decoration-style: solid;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 0.3em;
+        text-decoration-color: currentColor;
+      }
+    }
     .menu-btn { display: none !important; }
     .search-btn {
       display: grid; place-items: center;
