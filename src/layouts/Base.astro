@@ -17,6 +17,8 @@ interface Props {
   errorDocument?: boolean;
   /** Näyttää lukemisen edistymisviivan headerin alareunassa. Vain pitkille sisältösivuille. */
   readingProgress?: boolean;
+  /** Optional same-origin stylesheet required by this page's generated content. */
+  stylesheet?: string;
 }
 const {
   title,
@@ -28,6 +30,7 @@ const {
   alternates: alternateProp,
   errorDocument = false,
   readingProgress = false,
+  stylesheet,
 } = Astro.props;
 const locale = localeProp ?? (isLocale(Astro.currentLocale) ? Astro.currentLocale : defaultLocale);
 const copy = getUi(locale);
@@ -79,6 +82,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet" />
+  {stylesheet && <link rel="stylesheet" href={stylesheet} />}
 </head>
 <body>
   <a class="skip-link" href="#main">{copy.skip}</a>

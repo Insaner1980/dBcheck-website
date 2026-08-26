@@ -14,6 +14,25 @@ const routePairForUrl = (url) => {
   return routePairs.find((pair) => pair.en === path || pair.de === path);
 };
 
+/** @type {import('@astrojs/markdown-remark').RemarkPlugin} */
+const remarkMathPresence = () => (tree, file) => {
+  /** @type {import('@astrojs/markdown-remark').Node[]} */
+  const nodes = [tree];
+  let hasMath = false;
+  while (nodes.length > 0) {
+    const node = nodes.pop();
+    if (!node) continue;
+    if (node.type === 'inlineMath' || node.type === 'math') {
+      hasMath = true;
+      break;
+    }
+    if ('children' in node && Array.isArray(node.children)) nodes.push(...node.children);
+  }
+  file.data.astro ??= {};
+  file.data.astro.frontmatter ??= {};
+  file.data.astro.frontmatter.hasMath = hasMath;
+};
+
 // https://astro.build/config
 export default defineConfig({
   site: siteUrl,
@@ -43,7 +62,7 @@ export default defineConfig({
   },
   markdown: {
     processor: unified({
-      remarkPlugins: [remarkMath],
+      remarkPlugins: [remarkMath, remarkMathPresence],
       rehypePlugins: [rehypeKatex],
     }),
   },
