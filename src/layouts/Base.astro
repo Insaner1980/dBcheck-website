@@ -105,7 +105,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
           <a href={toolsRoute} aria-current={isCurrentSection(toolsRoute) ? 'page' : undefined}>Tools</a><a href="/#features">Features</a><a href="/#pricing">Pricing</a><a href={articlesRoute} aria-current={isCurrentSection(articlesRoute) ? 'page' : undefined}>Articles</a>
         </>}
       </div>
-      <LanguageSwitcher locale={locale} alternates={alternates} />
+      {Astro.url.pathname !== '/' && <LanguageSwitcher locale={locale} alternates={alternates} />}
       {showSearch && (
         <button class="search-btn" id="search-open" aria-label={copy.search} title={`${copy.search} ( / )`}>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
