@@ -41,6 +41,7 @@ const localizedRoute = (defaultPath: string) => findRoutePair(defaultPath)?.[loc
 const toolsRoute = localizedRoute('/tools/');
 const articlesRoute = localizedRoute('/articles/');
 const isCurrentSection = (route: string) => Astro.url.pathname.startsWith(route);
+const showSearch = isCurrentSection(toolsRoute) || isCurrentSection(articlesRoute);
 const searchIndexUrl = isLocalized ? `/${locale}/search.json` : '/search.json';
 const socialImageUrl = new URL(socialImage.src, Astro.site);
 const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value).replace(/</g, '\\u003c');
@@ -105,30 +106,34 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
         </>}
       </div>
       <LanguageSwitcher locale={locale} alternates={alternates} />
-      <button class="search-btn" id="search-open" aria-label={copy.search} title={`${copy.search} ( / )`}>
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
-        </svg>
-      </button>
+      {showSearch && (
+        <button class="search-btn" id="search-open" aria-label={copy.search} title={`${copy.search} ( / )`}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+          </svg>
+        </button>
+      )}
     </nav>
     {readingProgress && <div class="reading-progress" aria-hidden="true"></div>}
   </header>
 
-  <dialog class="search-overlay" id="search-overlay" aria-labelledby="search-title" data-search-index={searchIndexUrl} closedby="any" hidden>
-    <div class="search-panel">
-      <div class="search-head">
-        <span class="search-kicker" id="search-title">{copy.searchTitle}</span>
-        <button class="search-close" id="search-close" aria-label={copy.closeSearch}>ESC</button>
+  {showSearch && (
+    <dialog class="search-overlay" id="search-overlay" aria-labelledby="search-title" data-search-index={searchIndexUrl} closedby="any" hidden>
+      <div class="search-panel">
+        <div class="search-head">
+          <span class="search-kicker" id="search-title">{copy.searchTitle}</span>
+          <button class="search-close" id="search-close" aria-label={copy.closeSearch}>ESC</button>
+        </div>
+        <label class="search-label" for="search-input">{copy.searchLabel}</label>
+        <input id="search-input" type="search" placeholder={copy.searchPlaceholder} autocomplete="off" spellcheck="false" autofocus />
+        <div class="search-scale" aria-hidden="true">
+          <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span><span>130 dB</span>
+        </div>
+        <ul id="search-results" class="search-results"></ul>
+        <p id="search-empty" class="search-empty" hidden>{copy.searchEmpty}</p>
       </div>
-      <label class="search-label" for="search-input">{copy.searchLabel}</label>
-      <input id="search-input" type="search" placeholder={copy.searchPlaceholder} autocomplete="off" spellcheck="false" autofocus />
-      <div class="search-scale" aria-hidden="true">
-        <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span><span>130 dB</span>
-      </div>
-      <ul id="search-results" class="search-results"></ul>
-      <p id="search-empty" class="search-empty" hidden>{copy.searchEmpty}</p>
-    </div>
-  </dialog>
+    </dialog>
+  )}
 
   <main id="main">
     <slot />
@@ -254,7 +259,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       searchTrigger?.focus();
     });
     document.addEventListener('keydown', (e) => {
-      if (e.key === '/' && !overlay?.open && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+      if (overlay && e.key === '/' && !overlay.open && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
         e.preventDefault();
         openSearch();
       }

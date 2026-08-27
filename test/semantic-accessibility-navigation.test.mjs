@@ -46,7 +46,7 @@ test('Sound Explorer detail headings follow their page context', () => {
   assert.deepEqual(detailHeadingLevels(readPage('de', 'alltagsgeraeusche', 'index.html')), [2]);
 });
 
-test('primary navigation marks only the represented current route', () => {
+test('primary navigation marks current sections and limits search to tools and articles', () => {
   const cases = [
     { page: ['index.html'], current: ['/'] },
     { page: ['tools', 'index.html'], current: ['/tools/'] },
@@ -63,7 +63,15 @@ test('primary navigation marks only the represented current route', () => {
   ];
 
   for (const { page, current } of cases) {
-    assert.deepEqual(currentNavHrefs(readPage(...page)), current, page.join('/'));
+    const html = readPage(...page);
+    const searchEnabled = current.length > 0 && current[0] !== '/';
+    assert.deepEqual(currentNavHrefs(html), current, page.join('/'));
+    assert.equal(html.includes('id="search-open"'), searchEnabled, `${page.join('/')}: search button`);
+    assert.equal(html.includes('id="search-overlay"'), searchEnabled, `${page.join('/')}: search dialog`);
+    if (searchEnabled) {
+      const searchIndex = page[0] === 'de' ? '/de/search.json' : '/search.json';
+      assert.ok(html.includes(`data-search-index="${searchIndex}"`), `${page.join('/')}: localized search index`);
+    }
   }
 });
 

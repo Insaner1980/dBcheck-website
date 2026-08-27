@@ -1,6 +1,6 @@
 ---
 import type { Locale } from '../i18n/config';
-import type { AlternateLink } from '../i18n/routes';
+import { alternatesForPath, type AlternateLink } from '../i18n/routes';
 
 interface Props {
   locale: Locale;
@@ -16,7 +16,8 @@ const endonyms: Record<string, string> = {
   it: 'Italiano',
   pt: 'Português',
 };
-const availableLocales = alternates.filter((alternate) => endonyms[alternate.locale]);
+const availableLocales = (alternates.length ? alternates : alternatesForPath('/tools/'))
+  .filter((alternate) => endonyms[alternate.locale]);
 const hasTranslation = availableLocales.some((alternate) => alternate.locale !== locale);
 const label = locale === 'de' ? 'Sprache ändern' : 'Change language';
 ---

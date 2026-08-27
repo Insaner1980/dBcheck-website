@@ -41,7 +41,7 @@ test('generated 404 HTML has safe metadata, landmarks and recovery links', () =>
     assert.match(html, new RegExp(`<a[^>]+href="${href.replaceAll('/', '\\/')}"`), href);
   }
   assert.doesNotMatch(html, /<link rel="canonical"/);
-  assert.doesNotMatch(html, /hreflang=/);
+  assert.doesNotMatch(html, /<link\b[^>]*\shreflang=/);
   assert.doesNotMatch(html, /<script type="application\/ld\+json"/);
   assert.doesNotMatch(html, /"@type":"(?:Article|BreadcrumbList|WebSite)"/);
   assert.doesNotMatch(html, /googletagmanager|google-analytics|gtag\s*\(/i);

@@ -119,7 +119,7 @@ test('German HTML uses de, a content-only header navigation, reciprocal alternat
   }
   const articleEn = readFileSync(join(dist, 'articles', 'what-is-a-decibel', 'index.html'), 'utf8');
   const homeEn = readFileSync(join(dist, 'index.html'), 'utf8');
-  assert.doesNotMatch(homeEn, /class="language-switcher"/);
+  assert.match(homeEn, /class="language-switcher"/);
   const englishFooter = homeEn.match(/<footer class="site-footer">[\s\S]*?<\/footer>/)?.[0] ?? '';
   assert.doesNotMatch(englishFooter, /Sound Library|href="\/sounds\//);
   assert.match(englishFooter, /<a href="https:\/\/finnvek\.com">Finnvek<\/a>/);
@@ -135,21 +135,27 @@ test('German HTML uses de, a content-only header navigation, reciprocal alternat
   assert.match(articleDe, /href="\/articles\/what-is-a-decibel\/"/);
 });
 
-test('language switch renders only for registered routes and every target exists', () => {
+test('language switch appears on every page with real targets and no fabricated translation metadata', () => {
   const registeredTool = readFileSync(join(dist, 'tools', 'daily-noise-exposure-level-calculator', 'index.html'), 'utf8');
   const registeredToolDe = readFileSync(join(dist, 'de', 'werkzeuge', 'laermexpositionsrechner', 'index.html'), 'utf8');
   const unregisteredTool = readFileSync(join(dist, 'tools', 'noise-dose-calculator', 'index.html'), 'utf8');
   const home = readFileSync(join(dist, 'index.html'), 'utf8');
   for (const html of [registeredTool, registeredToolDe]) assert.match(html, /class="language-switcher"/);
-  for (const html of [unregisteredTool, home]) assert.doesNotMatch(html, /class="language-switcher"/);
+  for (const html of [unregisteredTool, home]) {
+    const switcher = html.match(/<div class="language-switcher"[\s\S]*?<\/div>/)?.[0] ?? '';
+    assert.match(switcher, /href="\/de\/werkzeuge\/"/);
+    const head = html.match(/<head>[\s\S]*?<\/head>/)?.[0] ?? '';
+    assert.doesNotMatch(head, /<link rel="alternate"/);
+  }
 
   const htmlFiles = [];
-  const walk = (dir) => { for (const name of readdirSync(dir, { withFileTypes: true })) name.isDirectory() ? walk(join(dir, name.name)) : name.name === 'index.html' && htmlFiles.push(join(dir, name.name)); };
+  const walk = (dir) => { for (const name of readdirSync(dir, { withFileTypes: true })) name.isDirectory() ? walk(join(dir, name.name)) : name.name.endsWith('.html') && htmlFiles.push(join(dir, name.name)); };
   walk(dist);
   for (const path of htmlFiles) {
     const html = readFileSync(path, 'utf8');
+    if (/<meta http-equiv="refresh"/.test(html)) continue;
     const switcher = html.match(/<div class="language-switcher"[\s\S]*?<\/div>/)?.[0];
-    if (!switcher) continue;
+    assert.ok(switcher, `${path}: language switcher`);
     for (const match of switcher.matchAll(/href="([^"]+)"/g)) assert.ok(routeExists(match[1]), `${path}: ${match[1]}`);
   }
 });
