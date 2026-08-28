@@ -4,6 +4,7 @@ import sitemap from '@astrojs/sitemap';
 import { unified } from '@astrojs/markdown-remark';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeRawUrls from './src/lib/rehype-raw-urls.mjs';
 import { defaultLocale, locales } from './src/i18n/config.ts';
 import { routePairs } from './src/i18n/routes.ts';
 
@@ -63,7 +64,7 @@ export default defineConfig({
   markdown: {
     processor: unified({
       remarkPlugins: [remarkMath, remarkMathPresence],
-      rehypePlugins: [rehypeKatex],
+      rehypePlugins: [rehypeKatex, rehypeRawUrls],
     }),
   },
   vite: {

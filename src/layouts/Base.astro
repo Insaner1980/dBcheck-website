@@ -398,7 +398,12 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     .page-head > *,
     .editorial-head > *,
     .tool-card > * { min-width: 0; }
-    :is(.page-head, .editorial-head, .tool-card) :is(.kicker, h1, h2, p, .tool-link) { overflow-wrap: break-word; }
+    :where(h1, h2, h3, h4, h5, h6) {
+      word-break: normal;
+      overflow-wrap: normal;
+      hyphens: auto;
+    }
+    :where(code, kbd, samp, var, .katex) { hyphens: none; }
     .skip-link {
       position: absolute; left: -999px; top: 0;
       background: var(--on-surface); color: var(--bg);
