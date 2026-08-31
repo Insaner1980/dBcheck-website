@@ -13,6 +13,15 @@ export interface LocalizedToolDefinition {
   searchTags: string[];
 }
 
+const toolRouteOrigin = 'https://dbcheck.app';
+
+export const validateToolHref = (href: string) => {
+  if (!href.startsWith('/') || href.startsWith('//')) throw new Error(`Invalid internal tool href: ${href}`);
+  const url = new URL(href, toolRouteOrigin);
+  if (url.protocol !== 'https:' || url.origin !== toolRouteOrigin) throw new Error(`Invalid internal tool href: ${href}`);
+  return href;
+};
+
 const toolData: Record<Locale, LocalizedToolDefinition[]> = {
   en: [
     { id: 'safe-exposure-time', locale: 'en', title: 'Safe Exposure Time Calculator', description: 'Estimate the time to a 100% NIOSH daily occupational dose using the 85 dBA / 8 hour / 3 dB model.', href: '/tools/safe-listening-time-calculator/', actionLabel: 'Open calculator', category: 'calculator', order: 1, searchTags: ['calculator', 'niosh', 'exposure', 'time', '85 dba'] },
@@ -31,5 +40,6 @@ const toolData: Record<Locale, LocalizedToolDefinition[]> = {
   ],
 };
 
+for (const definition of Object.values(toolData).flat()) validateToolHref(definition.href);
+
 export const getTools = (locale: Locale) => toolData[locale];
-export const tools = toolData.en;

@@ -3,9 +3,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { getCommonSounds, soundRangeSources } from '../src/data/sounds.ts';
+import { assertFreshBuild } from '../scripts/build-freshness.mjs';
+import { getCommonSounds, soundRangeSources, validateSoundRangeReferences } from '../src/data/sounds.ts';
+import { soundExplorerFallbackUrl, soundExplorerId } from '../src/i18n/routes.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+await assertFreshBuild({ root });
 const read = (...parts) => readFileSync(join(root, ...parts), 'utf8');
 const targets = {
   'whisper-decibels': { min: 25, max: 30, sourceId: 'whisperUsGs', en: 'Whisper', de: 'Flüstern' },
@@ -22,6 +25,27 @@ const unaffectedRanges = {
 };
 const sourceBlock = (html) => (html.match(/<details class="sound-sources"[^>]*>[\s\S]*?<\/details>/)?.[0] ?? '')
   .replace(/ data-astro-cid-[a-z0-9]+/g, '');
+
+test('range-reference validation rejects inconsistent relationships and source metadata', () => {
+  const validSource = { ...soundRangeSources.whisperUsGs };
+  const sound = (source = validSource, overrides = {}) => ({
+    translationKey: 'whisper-decibels',
+    typicalMinDb: 25,
+    typicalMaxDb: 30,
+    rangeReference: { sourceId: 'fixture', source },
+    ...overrides,
+  });
+  const validate = (source = validSource, entry = sound(source)) =>
+    validateSoundRangeReferences('en', [entry], { fixture: source });
+
+  assert.doesNotThrow(() => validate());
+  assert.throws(() => validate({ ...validSource, supports: ['other'] }, sound({ ...validSource, supports: ['other'] })), /Unsupported en sound range source relationship/);
+  assert.throws(() => validate(validSource, sound(validSource, { typicalMaxDb: 31 })), /Mismatched en sound display bounds/);
+  assert.throws(() => validate({ ...validSource, reportedMinDb: 24 }), /Inconsistent reported and display bounds/);
+  assert.throws(() => validate({ ...validSource, publicationDate: '2024-13' }), /Invalid sound range source dates/);
+  assert.throws(() => validate({ ...validSource, revisionDate: '2020-01-01' }), /Invalid sound range source dates/);
+  assert.throws(() => validate({ ...validSource, url: 'http://example.com/source' }), /Invalid sound range source URL/);
+});
 
 test('the four Explorer references are complete, central and shared by both locales', () => {
   const en = getCommonSounds('en');
@@ -108,6 +132,10 @@ test('source-only sounds stay in the Explorer and search without becoming guide 
     en: JSON.parse(read('dist', 'search.json')),
     de: JSON.parse(read('dist', 'de', 'search.json')),
   };
+  const libraryPages = {
+    en: read('dist', 'sounds', 'index.html'),
+    de: read('dist', 'de', 'alltagsgeraeusche', 'index.html'),
+  };
 
   for (const [translationKey, expected] of Object.entries(targets)) {
     const source = soundRangeSources[expected.sourceId];
@@ -117,7 +145,8 @@ test('source-only sounds stay in the Explorer and search without becoming guide 
       assert.ok(entry, `${locale}:${translationKey}`);
       assert.equal(entry.kind, locale === 'de' ? 'Geräusch' : 'sound explorer');
       assert.match(entry.description, new RegExp(`${expected.min}–${expected.max} dB`));
-      assert.equal(entry.url, locale === 'de' ? '/de/alltagsgeraeusche/#library-explorer' : '/sounds/#library-explorer');
+      assert.equal(entry.url, soundExplorerFallbackUrl(locale));
+      assert.ok(libraryPages[locale].includes(`id="${soundExplorerId}"`), `${locale}: fallback fragment target`);
     }
   }
 });

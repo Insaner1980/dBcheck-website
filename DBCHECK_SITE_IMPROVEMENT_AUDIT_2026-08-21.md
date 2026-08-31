@@ -25,9 +25,9 @@ The prior indexing loss cannot be attributed from this repository and was not in
 
 ### Evidence inspected
 
-- The complete website checkout at `C:\Dev\dBcheck-website`, including framework configuration, lockfile, content collections, routes, templates, data modules, metadata, sitemap, robots, redirects, tests, deployment configuration, built assets, and current dirty-tree state.
+- The complete website checkout, including framework configuration, lockfile, content collections, routes, templates, data modules, metadata, sitemap, robots, redirects, tests, deployment configuration, built assets, and current dirty-tree state.
 - The live site at `https://dbcheck.app/`, its 56 sitemap URLs, eight legacy redirects, `robots.txt`, sitemaps, HTTP behavior, browser requests, cookies, and unknown-route response.
-- The current app checkout at `C:\Dev\dBcheck` and its current `PROJECT.md`, with production-code spot checks for claims where wording mattered.
+- The current Android app checkout and its current `PROJECT.md`, with production-code spot checks for claims where wording mattered.
 - All 40 editorial Markdown files mechanically; all 20 English editorial pages semantically; German metadata, introductions, headings, citations, and a stratified browser sample; and the complete German high-risk exposure/legal material relevant to disputed claims.
 - All five English calculator implementations and all four German localized calculator routes.
 
@@ -397,7 +397,7 @@ Every route in the 56-row ledger below returned 200 locally and live, is indexab
 
 - **Severity:** P2
 - **Confidence:** high
-- **Exact evidence:** Website root `PROJECT.md` says it was updated from a 2026-06-30 checkout and has SHA-256 `60ABE...02FE`; current app `C:\Dev\dBcheck\PROJECT.md` was updated 2026-08-07 and has SHA-256 `52DA...3AD5`. The newer document includes release-scope changes such as the v1.5 tinnitus gate and expanded release-readiness evidence. The website copy did not prevent the stale launch claim.
+- **Exact evidence:** Website root `PROJECT.md` says it was updated from a 2026-06-30 checkout and has SHA-256 `60ABE...02FE`; the current Android app `PROJECT.md` was updated 2026-08-07 and has SHA-256 `52DA...3AD5`. The newer document includes release-scope changes such as the v1.5 tinnitus gate and expanded release-readiness evidence. The website copy did not prevent the stale launch claim.
 - **Why it matters:** Two large documents both present themselves as current app truth, making future product-copy review prone to drift.
 - **Minimal recommended change:** After product-copy fixes, replace the duplicated website snapshot with a concise, dated pointer/process for consulting the current app checkout, or establish an explicit sync check. Do not copy historical plans into product truth.
 - **Files likely affected:** website `PROJECT.md` and, if chosen, a small existing validation/documentation mechanism
@@ -714,7 +714,7 @@ No stale-build or missing-deployment issue was proven.
 - **Expected user benefit:** accurate expectations about microphone capture, measurement limits, release scope, and non-clinical tracking.
 - **Expected search or trust benefit:** improved factual credibility; no keyword expansion.
 - **Regression risk:** low to medium because terminology must preserve LAeq/LCpeak/dose distinctions.
-- **Required tests:** app-claim matrix recheck against current `C:\Dev\dBcheck\PROJECT.md` and named code constants; build; homepage browser/snapshot; metadata/social copy review.
+- **Required tests:** app-claim matrix recheck against the current Android app `PROJECT.md` and named code constants; build; homepage browser/snapshot; metadata/social copy review.
 - **Rollback considerations:** copy-only rollback is simple, but do not restore a disproven claim.
 - **Whether owner review is required before implementation:** **Yes** for launch timing/tinnitus allocation; factual corrections themselves are source-backed.
 

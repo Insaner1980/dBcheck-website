@@ -1,10 +1,12 @@
-// Run after npm run build with npm run test:text-wrapping. Requires an installed
+// Run after npm run build with npm run test:browser. Requires an installed
 // Chrome/Chromium browser (CHROME_BIN overrides discovery) and network access for
 // Google Fonts and the browser's signed hyphenation dictionaries.
 // Starts its own Astro preview and temporary headless browser profile; no driver dependency.
 // Also inspect screenshots of splitWords when changing the typography:
 // DOM ranges and computed hyphens cannot prove that a hyphen glyph was painted.
 import assert from 'node:assert/strict';
+import { assertFreshBuild } from './build-freshness.mjs';
+import { runInteractionChecks } from './interaction-checks.mjs';
 import { spawn, execFile } from 'node:child_process';
 import { once } from 'node:events';
 import { existsSync } from 'node:fs';
@@ -84,7 +86,7 @@ export async function inspectTextWrapping(targets = []) {
   for (const heading of headings.filter(visible)) {
     const style = getComputedStyle(heading);
     const label = heading.textContent.trim();
-    if (style.wordBreak !== 'normal' || style.overflowWrap !== 'normal' || style.hyphens !== 'auto') errors.push(`${label}: incorrect wrapping semantics`);
+    if (style.wordBreak !== 'normal' || style.overflowWrap !== 'break-word' || style.hyphens !== 'auto') errors.push(`${label}: incorrect wrapping semantics`);
     if (['hidden', 'clip'].includes(style.overflowX) || style.textOverflow === 'ellipsis') errors.push(`${label}: clipped heading`);
     within(heading.getBoundingClientRect(), box(heading.parentElement), label);
     const nodes = textNodes(heading);
@@ -130,7 +132,7 @@ export async function inspectTextWrapping(targets = []) {
     const raw = link.textContent === link.getAttribute('href') && /^https?:\/\//i.test(link.textContent);
     const style = getComputedStyle(link);
     if (link.hasAttribute('data-raw-url') !== raw) errors.push(`incorrect URL annotation: ${link.textContent}`);
-    if (style.overflowWrap !== (raw ? 'anywhere' : 'normal')) errors.push(`incorrect link wrapping: ${link.textContent}`);
+    if (style.overflowWrap !== (raw ? 'anywhere' : 'break-word')) errors.push(`incorrect link wrapping: ${link.textContent}`);
     if (raw && style.hyphens !== 'none') errors.push(`URL uses language hyphenation: ${link.textContent}`);
     if (raw) {
       const parent = link.closest('p, li');
@@ -144,7 +146,7 @@ export async function inspectTextWrapping(targets = []) {
   for (const element of document.querySelectorAll('code, kbd, samp, var, .katex')) {
     if (getComputedStyle(element).hyphens !== 'none') errors.push('technical text inherits language hyphenation');
   }
-  for (const element of document.querySelectorAll('.hit-desc, .mobile-sound-name')) {
+  for (const element of document.querySelectorAll('.hit-desc')) {
     if (!visible(element)) continue;
     const style = getComputedStyle(element);
     if (style.textOverflow !== 'ellipsis' || style.whiteSpace !== 'nowrap' || style.overflowX !== 'hidden') errors.push('intentional ellipsis changed');
@@ -154,6 +156,7 @@ export async function inspectTextWrapping(targets = []) {
 
 async function run() {
   const root = fileURLToPath(new URL('..', import.meta.url));
+  await assertFreshBuild({ root });
   const windowsBrowsers = ['Google/Chrome/Application/chrome.exe', 'Microsoft/Edge/Application/msedge.exe', 'BraveSoftware/Brave-Browser/Application/brave.exe'];
   const candidates = process.env.CHROME_BIN ? [resolve(process.env.CHROME_BIN)] : [
     ...[process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean).flatMap((dir) => windowsBrowsers.map((path) => join(dir, path))),
@@ -161,7 +164,7 @@ async function run() {
   ];
   const executable = candidates.find(existsSync);
   assert.ok(executable, 'No Chrome/Chromium executable found. Set CHROME_BIN to an installed browser executable. No browser is downloaded.');
-  assert.ok(existsSync(join(root, 'dist/index.html')), 'Run npm run build before npm run test:text-wrapping.');
+  assert.ok(existsSync(join(root, 'dist/index.html')), 'Run npm run build before npm run test:browser.');
   const { parse } = await import('parse5');
   const routes = [];
   for (const path of (await readdir(join(root, 'dist'), { recursive: true })).filter((path) => path.endsWith('.html')).sort()) {
@@ -174,7 +177,7 @@ async function run() {
     }
     if (!redirect) routes.push(`/${path.split(sep).join('/').replace(/index\.html$/, '')}`);
   }
-  assert.equal(routes.length, 57, 'Expected all 57 built pages, excluding redirect documents. Check the build before updating this baseline.');
+  assert.equal(routes.length, 58, 'Expected all 58 built pages, excluding redirect documents. Check the build before updating this baseline.');
   const temporaryRoot = await realpath(tmpdir());
   const profile = await mkdtemp(join(temporaryRoot, 'dbcheck-text-wrapping-'));
   const abort = new AbortController();
@@ -185,14 +188,14 @@ async function run() {
   let browserError;
   let browserLog = '';
   const pending = new Map();
-  const until = async (check, label, timeout = 30000) => {
+  const until = async (check, label, timeout = 30000, interval = 50) => {
     const deadline = Date.now() + timeout;
     do {
       abort.signal.throwIfAborted();
       if (browserError) throw browserError;
       const value = await check();
       if (value) return value;
-      await delay(50, undefined, { signal: abort.signal });
+      await delay(interval, undefined, { signal: abort.signal });
     } while (Date.now() < deadline);
     throw new Error(`Timed out waiting for ${label}. ${browserLog.slice(-1000)}`);
   };
@@ -278,11 +281,35 @@ async function run() {
     const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
     const page = (method, params) => send(method, params, sessionId);
     await page('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-    const evaluate = async (fn, args) => {
+    const evaluate = async (fn, args, options = {}) => {
       abort.signal.throwIfAborted();
-      const result = await page('Runtime.evaluate', { expression: `(${fn.toString()})(${JSON.stringify(args) ?? ''})`, awaitPromise: true, returnByValue: true });
+      const result = await page('Runtime.evaluate', {
+        expression: `(${fn.toString()})(${JSON.stringify(args) ?? ''})`,
+        awaitPromise: true,
+        returnByValue: true,
+        userGesture: options.userGesture === true,
+      });
       if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
       return result.result.value;
+    };
+    const setReducedMotion = async (reduce) => {
+      await page('Emulation.setEmulatedMedia', {
+        features: [{ name: 'prefers-reduced-motion', value: reduce ? 'reduce' : 'no-preference' }],
+      });
+      await evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+    };
+    const addInitScript = async (fn, args) => {
+      await page('Page.enable');
+      const { identifier } = await page('Page.addScriptToEvaluateOnNewDocument', {
+        source: `(${fn.toString()})(${JSON.stringify(args) ?? ''})`,
+      });
+      assert.ok(identifier, 'Browser did not register the interaction init script.');
+      let registered = true;
+      return async () => {
+        if (!registered) return;
+        registered = false;
+        await page('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+      };
     };
     let currentRoute, currentWidth;
     const adapter = {
@@ -298,9 +325,9 @@ async function run() {
           }
         }, route);
       },
-      async resize(width) {
+      async resize(width, height = 900) {
         currentWidth = width;
-        await page('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width <= 412 });
+        await page('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width <= 412 });
         await evaluate(async () => { await document.fonts.ready; await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))); });
       },
       async evaluate(fn, args) {
@@ -317,6 +344,7 @@ async function run() {
     assert.equal(focused.length, 22, 'Focused cases were skipped.');
     console.log(`Focused: ${focused.length}/22 passed.`);
     const widths = [320, 360, 375, 393, 412, 768, 1440];
+    const expectedCombinations = routes.length * widths.length;
     let combinations = 0, headings = 0, rawUrls = 0, ordinaryLinks = 0;
     for (const route of routes) {
       await adapter.navigate(route);
@@ -329,9 +357,9 @@ async function run() {
         ordinaryLinks += result.ordinaryLinks;
       }
     }
-    assert.equal(combinations, 399, 'Full sweep was incomplete.');
+    assert.equal(combinations, expectedCombinations, 'Full sweep was incomplete.');
     assert.ok(rawUrls > 0 && ordinaryLinks > 0, 'Both link policies must be exercised.');
-    console.log(`Sweep: ${routes.length} pages × ${widths.length} widths = ${combinations}/399 passed (en, de).`);
+    console.log(`Sweep: ${routes.length} pages × ${widths.length} widths = ${combinations}/${expectedCombinations} passed (en, de).`);
     console.log(`Measured ${headings} headings, ${rawUrls} raw URLs and ${ordinaryLinks} ordinary links. No wrapping or containment errors.`);
     let searchCases = 0;
     for (const route of ['/tools/', '/de/werkzeuge/']) {
@@ -359,6 +387,23 @@ async function run() {
       }
     }
     console.log(`Navigation/search: ${searchCases}/6 states passed, including visible result ellipsis.`);
+    // Interaction checks include the hero's real Listen/Mute media path; run
+    // those with the normal motion preference after the wrapping-only sweep.
+    await setReducedMotion(false);
+    const interactions = await runInteractionChecks({
+      navigate: adapter.navigate,
+      resize: adapter.resize,
+      evaluate,
+      setReducedMotion,
+      addInitScript,
+      until: (predicate, options = {}) => until(
+        () => evaluate(predicate),
+        options.message ?? 'interaction state',
+        options.timeoutMs ?? 5000,
+        options.intervalMs ?? 25,
+      ),
+    });
+    console.log(`Interactions: ${Object.keys(interactions).length}/6 groups passed (language, search, Pro, sounds, calculators, hero).`);
   } finally {
     // Only this invocation's isolated browser, preview and profile are owned here.
     try {
@@ -386,7 +431,7 @@ async function run() {
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   await run().catch((error) => {
-    console.error(`Text wrapping checks failed: ${error.message}`);
+    console.error(`Browser checks failed: ${error.message}`);
     process.exitCode = 1;
   });
 }

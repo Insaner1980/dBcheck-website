@@ -112,9 +112,9 @@ Kalibrierte externe Mikrofone verbessern die Vergleichbarkeit, ersetzen aber kei
 
 ## Abstand und Messdauer zusammen speichern
 
-dBcheck kann LAeq, Maximum und Dauer einer Betreuungssituation erfassen. Speichern Sie den Mund-Mikrofon-Abstand mit dem Ergebnis. Im Common Sounds Explorer bleibt dadurch sichtbar, warum Babygeschrei stärker schwankt als viele Haushaltsgeräusche.
+dBcheck kann LAeq, Maximum und Dauer einer Betreuungssituation erfassen. Speichern Sie den Mund-Mikrofon-Abstand mit dem Ergebnis. Im Alltagsgeräusche-Explorer bleibt dadurch sichtbar, warum Babygeschrei stärker schwankt als viele Haushaltsgeräusche.
 
-[Common Sounds Explorer](/de/alltagsgeraeusche/)
+[Alltagsgeräusche-Explorer](/de/alltagsgeraeusche/)
 
 ## Quellen
 

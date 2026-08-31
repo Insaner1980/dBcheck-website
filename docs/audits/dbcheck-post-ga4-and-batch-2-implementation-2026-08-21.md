@@ -1,8 +1,8 @@
 # dBcheck post-GA4 and Batch 2 implementation audit
 
 Päiväys: 2026-08-21  
-Tarkastettu checkout: `C:\Dev\dBcheck-website`  
-Android-lähde: `C:\Dev\dBcheck`  
+Tarkastettu: website checkout
+Android-lähde: Android checkout
 Tila: paikallinen lähde, tuotantobuild ja tuotantoesikatselu ovat GA4-vapaat; julkinen `https://dbcheck.app/` palveli tarkastushetkellä vielä vanhaa GA4-versiota. Tässä työssä ei julkaistu mitään.
 
 Omistajan myöhempi päätös 2026-08-21: P0-5- ja P2-2-muutoksia ei oteta käyttöön. Tinnitus pitch profile säilyy suunniteltuna julkaisuominaisuutena, koska omistaja ei julkaise tuotetta ennen suunnitellun kokonaisuuden valmistumista. Julkaisuvaiheen teksti `in final tuning before release` säilyy, koska sisäisen valmistumisasteen yksityiskohtia ei haluta avata julkisesti. Nämä kaksi omistajan päätöstä korvaavat tämän raportin alkuperäisen auditointirajauksen.
@@ -228,7 +228,7 @@ Mitään näistä ei arvattu.
 
 ## 17. Korjauksissa käytetty nykyisen app-checkoutin evidenssi
 
-Website-repositorion stale `PROJECT.md` ei ohjannut claim-korjauksia. Evidenssihierarkia alkoi nykyisestä `C:\Dev\dBcheck`-checkoutista:
+Website-repositorion stale `PROJECT.md` ei ohjannut claim-korjauksia. Evidenssihierarkia alkoi nykyisestä Android-checkoutista:
 
 | Kohta | Android-evidenssi |
 | --- | --- |

@@ -1,9 +1,34 @@
-import { calculateDailyNoiseExposure } from '../lib/daily-noise-exposure.mjs';
+import { calculateDailyNoiseExposure, MAX_PERIODS } from '../lib/daily-noise-exposure.mjs';
+import { calculateNoiseDose } from '../lib/noise-dose.ts';
 
-const MAX_ROWS = 12;
+const MAX_ROWS = MAX_PERIODS;
 
-const formatDecimal = (value: number, digits = 1, locale = 'en') => new Intl.NumberFormat(locale === 'de' ? 'de-DE' : 'en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(Object.is(value, -0) ? 0 : value);
-const formatSigned = (value: number, locale = 'en') => `${value < 0 ? '−' : value > 0 ? '+' : ''}${formatDecimal(Math.abs(value), 1, locale)}`;
+const normalizeRoundedZero = (value: number, digits: number) =>
+  Math.abs(value) * 10 ** digits < 0.5 ? 0 : value;
+
+export const formatDecimal = (value: number, digits = 1, locale = 'en') =>
+  new Intl.NumberFormat(locale === 'de' ? 'de-DE' : 'en-GB', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(normalizeRoundedZero(value, digits));
+
+export const formatSigned = (value: number, locale = 'en') => {
+  const displayValue = normalizeRoundedZero(value, 1);
+  return `${displayValue < 0 ? '−' : displayValue > 0 ? '+' : ''}${formatDecimal(Math.abs(displayValue), 1, locale)}`;
+};
+
+const normalizeGermanNumberText = (text: string) => {
+  const compact = text.replace(/[\s\u00a0\u202f']/g, '');
+  if (!compact.includes(',')) return compact;
+  if ((compact.match(/,/g) ?? []).length !== 1) return compact;
+  return compact.replace(/\./g, '').replace(',', '.');
+};
+
+const insertTextAtCaret = (text: string) => {
+  // Number inputs expose no standard selection API; the browser command preserves the current caret.
+  const command = Reflect.get(document, 'execCommand');
+  return typeof command === 'function' && command.call(document, 'insertText', false, text);
+};
 
 let numberInputId = 0;
 
@@ -33,6 +58,25 @@ const initializeNumberSteppers = (root: ParentNode) => {
     label.htmlFor = input.id;
     stepper.dataset.numberStepperReady = 'true';
 
+    const locale = stepper.closest<HTMLElement>('[data-locale]')?.dataset.locale ?? document.documentElement.lang;
+    if (locale.startsWith('de')) {
+      const insertNormalized = (event: Event, text: string) => {
+        const normalized = normalizeGermanNumberText(text);
+        if (normalized === text) return;
+        if (insertTextAtCaret(normalized)) event.preventDefault();
+      };
+      input.addEventListener('keydown', (event) => {
+        if (event.key === ',' && !event.ctrlKey && !event.metaKey && !event.altKey) insertNormalized(event, event.key);
+      });
+      input.addEventListener('beforeinput', (event) => {
+        if (event.data?.includes(',')) insertNormalized(event, event.data);
+      });
+      input.addEventListener('paste', (event) => {
+        const text = event.clipboardData?.getData('text');
+        if (text) insertNormalized(event, text);
+      });
+    }
+
     const changeByStep = (direction: 'up' | 'down') => {
       if (direction === 'up') input.stepUp();
       else input.stepDown();
@@ -45,6 +89,13 @@ const initializeNumberSteppers = (root: ParentNode) => {
     input.addEventListener('input', () => updateNumberStepperState(input));
     updateNumberStepperState(input);
   });
+};
+
+const focusAfterRowRemoval = (remainingRows: HTMLElement[], removedIndex: number, removeSelector: string, addButton: HTMLButtonElement) => {
+  const targetRow = remainingRows[Math.min(removedIndex, remainingRows.length - 1)];
+  const targetButton = targetRow?.querySelector<HTMLButtonElement>(removeSelector);
+  if (targetButton && !targetButton.disabled) targetButton.focus();
+  else addButton.focus();
 };
 
 const initializeNoiseDoseCalculator = (calculator: HTMLElement) => {
@@ -65,7 +116,10 @@ const initializeNoiseDoseCalculator = (calculator: HTMLElement) => {
       const durationInput = row.querySelector<HTMLInputElement>('[data-exposure-duration]');
       const durationUnit = row.querySelector<HTMLSelectElement>('[data-exposure-unit]');
       if (legend) legend.textContent = `Exposure period ${index + 1}`;
-      if (removeButton) removeButton.disabled = currentRows.length === 1;
+      if (removeButton) {
+        removeButton.disabled = currentRows.length === 1;
+        removeButton.setAttribute('aria-label', `Remove exposure period ${index + 1}`);
+      }
       if (durationInput) {
         durationInput.max = durationUnit?.value === 'minutes' ? '1440' : '24';
         updateNumberStepperState(durationInput);
@@ -82,21 +136,21 @@ const initializeNoiseDoseCalculator = (calculator: HTMLElement) => {
       return { level, hours: unit === 'minutes' ? duration / 60 : duration };
     });
 
-    if (!form.checkValidity() || periods.some(({ level, hours }) => !Number.isFinite(level) || !Number.isFinite(hours) || hours <= 0 || hours > 24)) {
+    if (!form.checkValidity()) {
       doseOutput.textContent = '—';
       doseDetail.textContent = 'Enter a valid level and duration for every period.';
       return;
     }
-    if (periods.reduce((total, { hours }) => total + hours, 0) > 24) {
+    let dose: number;
+    try {
+      dose = calculateNoiseDose(periods);
+    } catch (error) {
       doseOutput.textContent = '—';
-      doseDetail.textContent = 'The combined daily duration cannot exceed 24 hours.';
+      doseDetail.textContent = error instanceof RangeError && error.message === 'duration-over-24h'
+        ? 'The combined daily duration cannot exceed 24 hours.'
+        : 'Enter a valid level and duration for every period.';
       return;
     }
-
-    const dose = periods.reduce((total, { level, hours }) => {
-      const referenceHours = 8 * Math.pow(2, (85 - level) / 3);
-      return total + (hours / referenceHours) * 100;
-    }, 0);
     const digits = dose < 10 ? 2 : 1;
     doseOutput.textContent = `${formatDecimal(dose, digits)}%`;
     if (Math.abs(dose - 100) < 0.05) doseDetail.textContent = 'At 100% of the daily reference dose.';
@@ -121,9 +175,14 @@ const initializeNoiseDoseCalculator = (calculator: HTMLElement) => {
   list.addEventListener('click', (event) => {
     const button = (event.target as Element).closest<HTMLButtonElement>('[data-remove-exposure]');
     if (!button || rows().length === 1) return;
-    button.closest('[data-exposure-row]')?.remove();
+    const row = button.closest<HTMLElement>('[data-exposure-row]');
+    if (!row) return;
+    const removedIndex = rows().indexOf(row);
+    if (removedIndex < 0) return;
+    row.remove();
     updateRowControls();
     update();
+    focusAfterRowRemoval(rows(), removedIndex, '[data-remove-exposure]', addButton);
   });
 
   updateRowControls();
@@ -178,14 +237,17 @@ const initializeAddDecibelsCalculator = (calculator: HTMLElement) => {
       const legend = row.querySelector('legend');
       const removeButton = row.querySelector<HTMLButtonElement>('[data-remove-level]');
       if (legend) legend.textContent = `${calculator.dataset.rowLabel} ${index + 1}`;
-      if (removeButton) removeButton.disabled = currentRows.length <= 2;
+      if (removeButton) {
+        removeButton.disabled = currentRows.length <= 2;
+        removeButton.setAttribute('aria-label', locale === 'de' ? `Schallpegel ${index + 1} entfernen` : `Remove sound level ${index + 1}`);
+      }
     });
     addButton.disabled = currentRows.length >= MAX_ROWS;
   };
 
   const update = () => {
     const levels = rows().map((row) => row.querySelector<HTMLInputElement>('[data-sound-level]')?.valueAsNumber ?? Number.NaN);
-    if (!form.checkValidity() || levels.some((level) => !Number.isFinite(level))) {
+    if (levels.length < 2 || levels.length > MAX_ROWS || !form.checkValidity() || levels.some((level) => !Number.isFinite(level))) {
       combinedOutput.textContent = '—';
       combinedDetail.textContent = calculator.dataset.invalidMessage ?? '';
       return;
@@ -212,9 +274,14 @@ const initializeAddDecibelsCalculator = (calculator: HTMLElement) => {
   list.addEventListener('click', (event) => {
     const button = (event.target as Element).closest<HTMLButtonElement>('[data-remove-level]');
     if (!button || rows().length <= 2) return;
-    button.closest('[data-level-row]')?.remove();
+    const row = button.closest<HTMLElement>('[data-level-row]');
+    if (!row) return;
+    const removedIndex = rows().indexOf(row);
+    if (removedIndex < 0) return;
+    row.remove();
     updateRowControls();
     update();
+    focusAfterRowRemoval(rows(), removedIndex, '[data-remove-level]', addButton);
   });
 
   updateRowControls();
@@ -240,7 +307,10 @@ const initializeDailyExposureCalculator = (calculator: HTMLElement) => {
       const duration = row.querySelector<HTMLInputElement>('[data-daily-duration]');
       const unit = row.querySelector<HTMLSelectElement>('[data-daily-unit]');
       if (legend) legend.textContent = `${calculator.dataset.rowLabel} ${index + 1}`;
-      if (remove) remove.disabled = current.length === 1;
+      if (remove) {
+        remove.disabled = current.length === 1;
+        remove.setAttribute('aria-label', locale === 'de' ? `Arbeitsabschnitt ${index + 1} entfernen` : `Remove work period ${index + 1}`);
+      }
       if (duration) { duration.max = unit?.value === 'minutes' ? '1440' : '24'; updateNumberStepperState(duration); }
     });
     addButton.disabled = current.length >= MAX_ROWS;
@@ -273,7 +343,18 @@ const initializeDailyExposureCalculator = (calculator: HTMLElement) => {
   form.addEventListener('input', update);
   form.addEventListener('change', () => { updateControls(); update(); });
   addButton.addEventListener('click', () => { if (rows().length >= MAX_ROWS) return; list.append(template.content.cloneNode(true)); initializeNumberSteppers(rows().at(-1) ?? list); updateControls(); update(); rows().at(-1)?.querySelector<HTMLInputElement>('input')?.focus(); });
-  list.addEventListener('click', (event) => { const button = (event.target as Element).closest<HTMLButtonElement>('[data-remove-daily]'); if (!button || rows().length === 1) return; button.closest('[data-daily-period]')?.remove(); updateControls(); update(); });
+  list.addEventListener('click', (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>('[data-remove-daily]');
+    if (!button || rows().length === 1) return;
+    const row = button.closest<HTMLElement>('[data-daily-period]');
+    if (!row) return;
+    const removedIndex = rows().indexOf(row);
+    if (removedIndex < 0) return;
+    row.remove();
+    updateControls();
+    update();
+    focusAfterRowRemoval(rows(), removedIndex, '[data-remove-daily]', addButton);
+  });
   updateControls(); update();
 };
 

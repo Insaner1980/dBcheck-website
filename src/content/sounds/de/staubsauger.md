@@ -108,7 +108,7 @@ Bei rechtlichen, technischen oder arbeitsschutzbezogenen Entscheidungen ist ein 
 
 Mit dBcheck lassen sich LAeq, Maximum, Messdauer und Position gemeinsam speichern. Ergänzen Sie Bodenart, Saugstufe und Abstand. So bleibt später nachvollziehbar, ob zwei Messungen tatsächlich vergleichbar waren.
 
-[Common Sounds Explorer](/de/alltagsgeraeusche/)
+[Alltagsgeräusche-Explorer](/de/alltagsgeraeusche/)
 
 ## Quellen
 

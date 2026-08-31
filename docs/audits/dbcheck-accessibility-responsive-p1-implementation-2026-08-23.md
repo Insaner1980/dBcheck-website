@@ -1,7 +1,7 @@
 # dBcheck accessibility and responsive P1 implementation report
 
 **Date:** 2026-08-23  
-**Checkout:** `C:\Dev\dBcheck-website`  
+**Checkout:** website checkout
 **Branch:** `feat/mittariliike`  
 **Production preview:** `http://127.0.0.1:4322` because an unrelated process already owned port 4321
 

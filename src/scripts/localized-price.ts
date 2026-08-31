@@ -19,6 +19,9 @@ function renderPrice(element: HTMLElement, displayPrice: string) {
   scrambleValue(amountElement, amount);
 }
 
+const hasPriceTargets = (element: HTMLElement) =>
+  ['prefix', 'amount', 'suffix'].every((part) => element.querySelector(`[data-price-${part}]`));
+
 async function localizePrices() {
   const freePriceElement = document.querySelector<HTMLElement>('[data-localized-free-price]');
   const proPriceElement = document.querySelector<HTMLElement>('[data-localized-pro-price]');
@@ -29,6 +32,7 @@ async function localizePrices() {
     if (!response.ok) return;
 
     const countryCode = parseCloudflareTraceCountry(await response.text());
+    if (!hasPriceTargets(freePriceElement) || !hasPriceTargets(proPriceElement)) return;
     renderPrice(freePriceElement, getFreePriceForCountry(countryCode));
     renderPrice(proPriceElement, getProPriceForCountry(countryCode));
   } catch {

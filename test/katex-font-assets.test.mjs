@@ -3,8 +3,10 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { assertFreshBuild } from '../scripts/build-freshness.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+await assertFreshBuild({ root });
 const dist = join(root, 'dist');
 const assetDirectory = join(dist, '_astro');
 const headersPath = join(root, 'public', '_headers');
@@ -21,7 +23,7 @@ const germanMathRoutes = [
   'wie-lange-85-db-hoeren',
 ];
 
-test('KaTeX fonts are emitted as same-origin assets allowed by the production CSP', () => {
+test('fresh dist emits same-origin KaTeX fonts allowed by the checked-in CSP', () => {
   const cssFiles = readdirSync(assetDirectory)
     .filter((name) => name.endsWith('.css'))
     .map((name) => join(assetDirectory, name));

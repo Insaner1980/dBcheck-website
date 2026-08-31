@@ -5,8 +5,11 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { parseFrontmatter } from '@astrojs/markdown-remark';
 import { parse } from 'parse5';
+import config from '../astro.config.mjs';
+import { assertFreshBuild } from '../scripts/build-freshness.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+await assertFreshBuild({ root });
 const contentRoot = join(root, 'src', 'content');
 const dist = join(root, 'dist');
 const assetDirectory = join(dist, '_astro');
@@ -134,6 +137,67 @@ const routeForHtmlPath = (path) => {
 
 const localAssetName = (href) => basename(new URL(href, site).pathname);
 
+test('fenced math sets hasMath and renders KaTeX through the configured Markdown chain', async () => {
+  const renderer = await config.markdown.processor.createRenderer({});
+  const result = await renderer.render('```math\nx^2\n```');
+
+  assert.equal(result.metadata.frontmatter.hasMath, true);
+  assert.match(result.code, /class="katex"/);
+});
+
+test('ordinary dollar pairs fail instead of becoming accidental math', async () => {
+  const renderer = await config.markdown.processor.createRenderer({});
+  for (const source of [
+    'It costs $5 and another costs $10 today.',
+    'Currencies are $USD and $EUR today.',
+    'Use $HOME and $PATH in the shell.',
+    'A $ sign here and another $ sign there.',
+  ]) {
+    await assert.rejects(
+      renderer.render(source, { fileURL: new URL('./fixtures/currency.md', import.meta.url) }),
+      (error) => {
+        assert.match(error.message, /currency\.md/);
+        assert.match(error.message, /Prose-like dollar-delimited text/);
+        return true;
+      },
+    );
+  }
+
+  const escaped = await renderer.render('It costs \\$5 and another costs \\$10 today.');
+  assert.equal(escaped.metadata.frontmatter.hasMath, false);
+  assert.doesNotMatch(escaped.code, /class="katex"/);
+
+  const valid = await renderer.render('Use $5x$ 10 times and compare $x + y$.');
+  assert.equal(valid.metadata.frontmatter.hasMath, true);
+  assert.equal((valid.code.match(/class="katex"/g) ?? []).length, 2);
+});
+
+test('an unclosed display-math delimiter fails with source context', async () => {
+  const renderer = await config.markdown.processor.createRenderer({});
+  await assert.rejects(
+    renderer.render('Before\n\n$$\nx+1\nafter', { fileURL: new URL('./fixtures/unclosed-math.md', import.meta.url) }),
+    (error) => {
+      assert.match(error.message, /unclosed-math\.md/);
+      assert.match(error.message, /Unclosed \$\$ math block/);
+      return true;
+    },
+  );
+});
+
+test('invalid math fails with its source path and KaTeX parse reason', async () => {
+  const renderer = await config.markdown.processor.createRenderer({});
+  const fileURL = new URL('./fixtures/invalid-katex-math.md', import.meta.url);
+
+  await assert.rejects(
+    renderer.render('$\\notacommand{$', { fileURL }),
+    (error) => {
+      assert.match(error.message, /invalid-katex-math\.md/);
+      assert.match(error.message, /KaTeX parse error/i);
+      return true;
+    },
+  );
+});
+
 test('editorial routes load KaTeX CSS exactly when generated math is present', () => {
   const entries = editorialEntries();
   assert.equal(entries.length, 40);
@@ -203,7 +267,7 @@ test('editorial routes load KaTeX CSS exactly when generated math is present', (
   const csp = headers.match(/^\s*Content-Security-Policy:\s*(.+)$/m)?.[1]?.trim();
   assert.equal(
     csp,
-    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self'; worker-src 'self'; upgrade-insecure-requests",
+    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self'; media-src 'self'; connect-src 'self'; worker-src 'self'; upgrade-insecure-requests",
   );
 });
 
@@ -251,8 +315,8 @@ test('conditional stylesheet loading preserves current route and editorial metad
   });
 
   const htmlOutputs = walkFiles(dist, (path) => /(?:index|404)\.html$/.test(path));
-  assert.equal(htmlOutputs.length, 65);
-  assert.equal(htmlOutputs.length - sitemapUrls.length - 1, 8);
+  assert.equal(htmlOutputs.length, 66);
+  assert.equal(htmlOutputs.length - sitemapUrls.length - 2, 8);
 
   const notFound = inspectHtml(join(dist, '404.html'));
   assert.deepEqual(notFound.robots, ['noindex']);

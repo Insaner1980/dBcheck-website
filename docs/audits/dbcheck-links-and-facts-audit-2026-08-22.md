@@ -27,7 +27,7 @@ Verkko tarkistettiin 2026-08-22 GET-pyynnöillä ja tarvittaessa normaalilla Chr
 - Tracked modifications before audit: none (`git diff --stat` and `git diff` empty).
 - Pre-existing untracked owner work: `.codex-remote-attachments/`, `DBCHECK_SITE_IMPROVEMENT_AUDIT_2026-08-21.md`, existing `docs/audits/*2026-08-21.md`, `docs/owner-input/` and `output/`. These were preserved.
 - Audit created permanently only this Markdown report and the two required CSV ledgers.
-- Android source-of-truth checkout `C:\Dev\dBcheck`: branch `codex/paivita-riippuvuudet-20260803`, HEAD `1e85e35b3b918092addb1efe3e1fa16a59042aa7`, remote behind by 3; pre-existing modifications in four workflow files and `PROJECT.md`. No Android file was changed.
+- Android source-of-truth checkout: branch `codex/paivita-riippuvuudet-20260803`, HEAD `1e85e35b3b918092addb1efe3e1fa16a59042aa7`, remote behind by 3; pre-existing modifications in four workflow files and `PROJECT.md`. No Android file was changed.
 
 ## 4. Current route and locale inventory
 

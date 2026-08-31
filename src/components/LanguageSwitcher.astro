@@ -16,14 +16,40 @@ const endonyms: Record<string, string> = {
   it: 'Italiano',
   pt: 'Português',
 };
-const availableLocales = (alternates.length ? alternates : alternatesForPath('/tools/'))
+const usesSectionFallback = alternates.length === 0;
+const availableLocales = (usesSectionFallback ? alternatesForPath('/tools/') : alternates)
   .filter((alternate) => endonyms[alternate.locale]);
 const hasTranslation = availableLocales.some((alternate) => alternate.locale !== locale);
-const label = locale === 'de' ? 'Sprache ändern' : 'Change language';
+const label = usesSectionFallback
+  ? locale === 'de'
+    ? 'Sprachoptionen: Englisch öffnet die Werkzeugübersicht'
+    : 'Language options: German opens the tools index'
+  : locale === 'de' ? 'Sprache ändern' : 'Change language';
+const triggerText = locale.toUpperCase();
+const fallbackSuffix = locale === 'de' ? 'Werkzeugübersicht' : 'Tools index';
+const alternateLocale = availableLocales.find((alternate) => alternate.locale !== locale);
+const staticLinkLabel = usesSectionFallback
+  ? locale === 'de' ? 'Englische Werkzeugübersicht öffnen' : 'Open German tools index'
+  : locale === 'de' ? 'Englische Version öffnen' : 'Open German version';
 ---
 
 {hasTranslation && (
   <div class="language-switcher" data-language-switcher>
+    {alternateLocale && (
+      <a
+        class="language-static-link"
+        href={alternateLocale.href}
+        hreflang={alternateLocale.locale}
+        aria-label={staticLinkLabel}
+        title={staticLinkLabel}
+      >
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M3 12h18M12 3c2.3 2.5 3.5 5.5 3.5 9S14.3 18.5 12 21c-2.3-2.5-3.5-5.5-3.5-9S9.7 5.5 12 3Z" />
+        </svg>
+        <span>{alternateLocale.locale.toUpperCase()}</span>
+      </a>
+    )}
     <button
       class="language-trigger"
       type="button"
@@ -37,18 +63,20 @@ const label = locale === 'de' ? 'Sprache ändern' : 'Change language';
         <circle cx="12" cy="12" r="9" />
         <path d="M3 12h18M12 3c2.3 2.5 3.5 5.5 3.5 9S14.3 18.5 12 21c-2.3-2.5-3.5-5.5-3.5-9S9.7 5.5 12 3Z" />
       </svg>
-      <span>{locale.toUpperCase()}</span>
+      <span>{triggerText}</span>
     </button>
     <ul class="language-menu" id="language-menu" role="menu" aria-label={label} hidden data-language-menu>
       {availableLocales.map((alternate) => (
         <li role="none">
           {alternate.locale === locale ? (
-            <span class="language-option active" role="menuitem" aria-current="page" tabindex="0">
+            <span class="language-option active" role="menuitem" aria-current="page" aria-disabled="true" tabindex="-1">
               <span>{endonyms[alternate.locale]}</span><span aria-hidden="true">✓</span>
             </span>
           ) : (
-            <a class="language-option" role="menuitem" href={alternate.href} lang={alternate.locale} hreflang={alternate.locale}>
-              <span>{endonyms[alternate.locale]}</span>
+            <a class="language-option" role="menuitem" tabindex="-1" href={alternate.href} lang={alternate.locale} hreflang={alternate.locale}>
+              <span>
+                {endonyms[alternate.locale]}{usesSectionFallback && <>: <span lang={locale}>{fallbackSuffix}</span></>}
+              </span>
             </a>
           )}
         </li>
@@ -62,6 +90,7 @@ const label = locale === 'de' ? 'Sprache ändern' : 'Change language';
   const trigger = switcher?.querySelector<HTMLButtonElement>('[data-language-trigger]');
   const menu = switcher?.querySelector<HTMLElement>('[data-language-menu]');
   const items = () => Array.from(menu?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+  let focusFirstOnNextOpen = false;
 
   const setOpen = (open: boolean, focus: 'first' | 'last' | null = null) => {
     if (!trigger || !menu) return;
@@ -70,11 +99,19 @@ const label = locale === 'de' ? 'Sprache ändern' : 'Change language';
     if (open && focus) items().at(focus === 'first' ? 0 : -1)?.focus();
   };
 
-  trigger?.addEventListener('click', () => setOpen(trigger.getAttribute('aria-expanded') !== 'true'));
+  trigger?.addEventListener('click', () => {
+    const open = trigger.getAttribute('aria-expanded') !== 'true';
+    setOpen(open, open && focusFirstOnNextOpen ? 'first' : null);
+    focusFirstOnNextOpen = false;
+  });
   trigger?.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && trigger.getAttribute('aria-expanded') === 'true') {
       event.preventDefault();
       setOpen(false);
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      focusFirstOnNextOpen = trigger.getAttribute('aria-expanded') !== 'true';
       return;
     }
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
@@ -95,6 +132,11 @@ const label = locale === 'de' ? 'Sprache ändern' : 'Change language';
     } else if (event.key === 'Home' || event.key === 'End') {
       event.preventDefault();
       menuItems.at(event.key === 'Home' ? 0 : -1)?.focus();
+    } else if (event.key === ' ' && document.activeElement instanceof HTMLAnchorElement) {
+      event.preventDefault();
+      document.activeElement.click();
+    } else if ((event.key === 'Enter' || event.key === ' ') && document.activeElement?.getAttribute('aria-disabled') === 'true') {
+      event.preventDefault();
     }
   });
   switcher?.addEventListener('focusout', (event) => {
@@ -103,12 +145,15 @@ const label = locale === 'de' ? 'Sprache ändern' : 'Change language';
   document.addEventListener('pointerdown', (event) => {
     if (!switcher?.contains(event.target as Node)) setOpen(false);
   });
+  if (switcher && trigger && menu) switcher.classList.add('is-enhanced');
 </script>
 
 <style>
   .language-switcher { position: relative; margin-left: -16px; }
-  .language-trigger {
+  .language-trigger,
+  .language-static-link {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    box-sizing: border-box;
     min-width: 58px; height: 40px; padding: 0 11px;
     border: 1px solid var(--ghost); border-radius: 999px;
     background: rgba(16, 16, 16, .72); color: var(--on-surface-v);
@@ -116,8 +161,14 @@ const label = locale === 'de' ? 'Sprache ändern' : 'Change language';
     cursor: pointer;
     transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
   }
+  .language-static-link { text-decoration: none; }
+  .language-trigger { display: none; }
+  .language-switcher.is-enhanced .language-static-link { display: none; }
+  .language-switcher.is-enhanced .language-trigger { display: inline-flex; }
   .language-trigger:hover,
-  .language-trigger[aria-expanded='true'] { color: var(--on-surface); border-color: var(--outline-v); background: var(--surface-c); }
+  .language-trigger[aria-expanded='true'],
+  .language-static-link:hover,
+  .language-static-link:focus-visible { color: var(--on-surface); border-color: var(--outline-v); background: var(--surface-c); }
   .language-menu {
     position: absolute; z-index: 60; top: calc(100% + 8px); right: 0;
     min-width: 150px; margin: 0; padding: 6px; list-style: none;
@@ -138,6 +189,7 @@ const label = locale === 'de' ? 'Sprache ändern' : 'Change language';
     .language-switcher { margin-left: 0; }
   }
   @media (max-width: 420px) {
-    .language-trigger { min-width: 48px; padding-inline: 8px; }
+    .language-trigger,
+    .language-static-link { min-width: 48px; padding-inline: 8px; }
   }
 </style>

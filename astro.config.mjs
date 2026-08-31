@@ -1,14 +1,41 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import { existsSync, renameSync, rmdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import sitemap from '@astrojs/sitemap';
 import { unified } from '@astrojs/markdown-remark';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRawUrls from './src/lib/rehype-raw-urls.mjs';
+import { remarkEditorialSafety } from './src/lib/remark-editorial-safety.mjs';
+import { remarkValidateLocalImages, validatePublicAssets } from './src/lib/validate-build-assets.mjs';
+import { readEditorialEntries, validateEditorialPublicationIntegrity, validateEditorialRouteCollisions, validateEditorialTranslationKeyCollisions } from './src/lib/validate-content-route-collisions.mjs';
 import { defaultLocale, locales } from './src/i18n/config.ts';
-import { routePairs } from './src/i18n/routes.ts';
+import { contentTranslations, routePairs } from './src/i18n/routes.ts';
+import { getCommonSounds } from './src/data/sounds.ts';
+
+const editorialEntries = readEditorialEntries();
+validateEditorialRouteCollisions({ entries: editorialEntries });
+validateEditorialTranslationKeyCollisions({ entries: editorialEntries });
+await validateEditorialPublicationIntegrity({
+  entries: editorialEntries,
+  contentTranslations,
+  soundEntries: locales.flatMap((locale) => getCommonSounds(locale)),
+});
 
 const siteUrl = 'https://dbcheck.app';
+/** @returns {import('astro').AstroIntegration} */
+const emitLocalizedErrorDocuments = () => ({
+  name: 'emit-localized-error-documents',
+  hooks: {
+    'astro:build:done': ({ dir }) => {
+      const source = fileURLToPath(new URL('de/404/index.html', dir));
+      if (!existsSync(source)) throw new Error(`Missing generated localized error document: ${source}`);
+      renameSync(source, fileURLToPath(new URL('de/404.html', dir)));
+      rmdirSync(fileURLToPath(new URL('de/404/', dir)));
+    },
+  },
+});
 /** @param {string} url */
 const routePairForUrl = (url) => {
   const path = new URL(url).pathname;
@@ -19,13 +46,30 @@ const routePairForUrl = (url) => {
 const remarkMathPresence = () => (tree, file) => {
   /** @type {import('@astrojs/markdown-remark').Node[]} */
   const nodes = [tree];
+  const source = String(file.value);
   let hasMath = false;
   while (nodes.length > 0) {
     const node = nodes.pop();
     if (!node) continue;
-    if (node.type === 'inlineMath' || node.type === 'math') {
+    const position = /** @type {{ position?: { start?: { offset?: number }, end?: { offset?: number } } }} */ (node).position;
+    const startOffset = position?.start?.offset;
+    const endOffset = position?.end?.offset;
+    const positionedSource = typeof startOffset === 'number' && typeof endOffset === 'number'
+      ? source.slice(startOffset, endOffset)
+      : '';
+    if (node.type === 'math' && positionedSource && !positionedSource.trimEnd().endsWith('$$')) {
+      file.fail('Unclosed $$ math block; add a closing $$ delimiter', node);
+    }
+    if (node.type === 'inlineMath' && 'value' in node && typeof node.value === 'string') {
+      const value = node.value.trim();
+      const proseWords = value.match(/[A-Za-zÀ-ÖØ-öø-ÿ]{2,}/g) ?? [];
+      const hasMathSyntax = /\\[A-Za-z]+|[=+*/^_{}()[\]-]/.test(value);
+      if (!value.includes('\n') && proseWords.length >= 2 && !hasMathSyntax) {
+        file.fail('Prose-like dollar-delimited text was parsed as math; escape ordinary dollar signs as \\$', node);
+      }
+    }
+    if (node.type === 'inlineMath' || node.type === 'math' || (node.type === 'code' && 'lang' in node && node.lang === 'math')) {
       hasMath = true;
-      break;
     }
     if ('children' in node && Array.isArray(node.children)) nodes.push(...node.children);
   }
@@ -34,10 +78,37 @@ const remarkMathPresence = () => (tree, file) => {
   file.data.astro.frontmatter.hasMath = hasMath;
 };
 
+/** @type {import('@astrojs/markdown-remark').RehypePlugin} */
+const rehypeKatexErrors = () => (tree, file) => {
+  /** @type {import('@astrojs/markdown-remark').Node[]} */
+  const nodes = [tree];
+  while (nodes.length > 0) {
+    const node = nodes.pop();
+    if (!node) continue;
+    if (
+      node.type === 'element'
+      && 'tagName' in node
+      && node.tagName === 'span'
+      && 'properties' in node
+      && node.properties
+      && typeof node.properties === 'object'
+      && 'className' in node.properties
+      && Array.isArray(node.properties.className)
+      && node.properties.className.includes('katex-error')
+    ) {
+      const title = 'title' in node.properties && typeof node.properties.title === 'string'
+        ? node.properties.title
+        : 'Could not render math with KaTeX';
+      file.fail(title, node);
+    }
+    if ('children' in node && Array.isArray(node.children)) nodes.push(...node.children);
+  }
+};
+
 // https://astro.build/config
 export default defineConfig({
   site: siteUrl,
-  integrations: [sitemap({
+  integrations: [emitLocalizedErrorDocuments(), sitemap({
     i18n: {
       defaultLocale,
       locales: Object.fromEntries(locales.map((locale) => [locale, locale])),
@@ -63,11 +134,12 @@ export default defineConfig({
   },
   markdown: {
     processor: unified({
-      remarkPlugins: [remarkMath, remarkMathPresence],
-      rehypePlugins: [rehypeKatex, rehypeRawUrls],
+      remarkPlugins: [remarkValidateLocalImages, remarkEditorialSafety, remarkMath, remarkMathPresence],
+      rehypePlugins: [rehypeKatex, rehypeKatexErrors, rehypeRawUrls],
     }),
   },
   vite: {
+    plugins: [validatePublicAssets()],
     build: {
       assetsInlineLimit(filePath) {
         const normalizedPath = filePath.replaceAll('\\', '/');

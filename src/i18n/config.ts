@@ -6,8 +6,6 @@ export type Locale = (typeof locales)[number];
 export const isLocale = (value: string | undefined): value is Locale =>
   locales.includes(value as Locale);
 
-export const nonDefaultLocales = locales.filter((locale) => locale !== defaultLocale);
-
 export const localeTags: Record<Locale, string> = {
   en: 'en-GB',
   de: 'de-DE',

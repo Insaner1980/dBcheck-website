@@ -71,18 +71,18 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     <meta property="og:image:type" content="image/webp" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={socialImage.alt} />
+    <meta property="og:image:alt" content={socialImage.alt[locale]} />
     <meta property="og:locale" content={openGraphLocales[locale]} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImageUrl} />
-    <meta name="twitter:image:alt" content={socialImage.alt} />
+    <meta name="twitter:image:alt" content={socialImage.alt[locale]} />
     {jsonLd.map((item) => <script is:inline type="application/ld+json" set:html={serializeJsonLd(item)} />)}
   </>}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet" media="print" onload="this.setAttribute('media', 'all')" />
   {stylesheet && <link rel="stylesheet" href={stylesheet} />}
 </head>
 <body>
@@ -105,7 +105,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
           <a href={toolsRoute} aria-current={isCurrentSection(toolsRoute) ? 'page' : undefined}>Tools</a><a href="/#features">Features</a><a href="/#pricing">Pricing</a><a href={articlesRoute} aria-current={isCurrentSection(articlesRoute) ? 'page' : undefined}>Articles</a>
         </>}
       </div>
-      {Astro.url.pathname !== '/' && <LanguageSwitcher locale={locale} alternates={alternates} />}
+      {Astro.url.pathname !== '/' && !isLocalized && <LanguageSwitcher locale={locale} alternates={alternates} />}
       {showSearch && (
         <button class="search-btn" id="search-open" aria-label={copy.search} title={`${copy.search} ( / )`}>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -131,6 +131,21 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
         </div>
         <ul id="search-results" class="search-results"></ul>
         <p id="search-empty" class="search-empty" hidden>{copy.searchEmpty}</p>
+        <div id="search-error" class="search-empty" hidden>
+          <span>{copy.searchError}{' '}</span>
+          <button class="search-retry" id="search-retry" type="button">{copy.retrySearch}</button>
+        </div>
+        <span
+          class="search-announcement"
+          data-search-announcement
+          data-result-one={copy.searchResult}
+          data-result-many={copy.searchResults}
+          data-no-results={copy.searchEmpty}
+          data-error={copy.searchError}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        ></span>
       </div>
     </dialog>
   )}
@@ -172,7 +187,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
   </footer>
 
   <script>
-    const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // ---- Mobile navigation ----
     const menuToggle = document.getElementById('menu-toggle');
@@ -185,13 +200,40 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     primaryLinks?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setMenuOpen(false)));
 
     // ---- Shared heading transition ----
+    type PendingHeadingTransition = { heading: HTMLElement; destination: string };
+    let pendingHeadingTransition: PendingHeadingTransition | null = null;
+
     document.addEventListener('click', (event) => {
+      pendingHeadingTransition = null;
+      if (!(event instanceof MouseEvent) || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+
       const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[href^="/"]');
-      const card = link?.closest('.article-group li, .tool-card');
-      const cardHeading = card?.querySelector<HTMLElement>('h2, h3, strong');
-      if (!cardHeading) return;
-      document.querySelector<HTMLElement>('main h1')?.style.setProperty('view-transition-name', 'none');
-      cardHeading.style.setProperty('view-transition-name', 'page-heading');
+      if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+
+      const card = link.closest('.article-group li, .tool-card');
+      const heading = card?.querySelector<HTMLElement>('h2, h3, strong');
+      if (!heading) return;
+      pendingHeadingTransition = { heading, destination: link.href };
+    });
+
+    window.addEventListener('pageswap', (event) => {
+      const pending = pendingHeadingTransition;
+      pendingHeadingTransition = null;
+      const pageSwap = event as Event & {
+        activation?: { entry?: { url?: string } };
+        viewTransition?: { finished: Promise<unknown> };
+      };
+      if (!pending || !pending.heading.isConnected || pageSwap.activation?.entry?.url !== pending.destination || !pageSwap.viewTransition) return;
+
+      const pageHeading = document.querySelector<HTMLElement>('main h1');
+      pageHeading?.style.setProperty('view-transition-name', 'none');
+      pending.heading.style.setProperty('view-transition-name', 'page-heading');
+
+      const clearNames = () => {
+        pageHeading?.style.removeProperty('view-transition-name');
+        pending.heading.style.removeProperty('view-transition-name');
+      };
+      void pageSwap.viewTransition.finished.then(clearNames, clearNames);
     });
 
     // ---- Search overlay ----
@@ -199,70 +241,260 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     const input = document.getElementById('search-input') as HTMLInputElement | null;
     const resultsEl = document.getElementById('search-results');
     const emptyEl = document.getElementById('search-empty');
-    let index: { title: string; description: string; tags: string[]; url: string; kind: string }[] | null = null;
+    const errorEl = document.getElementById('search-error');
+    const searchAnnouncement = document.querySelector<HTMLElement>('[data-search-announcement]');
+    type SearchEntry = { title: string; description: string; tags: string[]; url: string; kind: string };
+    let index: SearchEntry[] | null = null;
+    let indexLoad: Promise<SearchEntry[] | null> | null = null;
     let searchTrigger: HTMLElement | null = null;
+    let searchSession = 0;
+    let searchGeneration = 0;
+    let searchAnnouncementTimer: ReturnType<typeof setTimeout> | undefined;
+    const isSearchEntry = (value: unknown): value is SearchEntry => {
+      if (!value || typeof value !== 'object') return false;
+      const entry = value as Partial<SearchEntry>;
+      return typeof entry.title === 'string'
+        && typeof entry.description === 'string'
+        && Array.isArray(entry.tags)
+        && entry.tags.every((tag) => typeof tag === 'string')
+        && typeof entry.url === 'string'
+        && typeof entry.kind === 'string';
+    };
 
-    async function loadIndex() {
-      if (index) return index;
-      const res = await fetch(overlay?.dataset.searchIndex ?? '/search.json');
-      index = await res.json();
-      return index;
+    const announceSearch = (message: string) => {
+      if (!searchAnnouncement) return;
+      if (searchAnnouncementTimer !== undefined) clearTimeout(searchAnnouncementTimer);
+      searchAnnouncement.textContent = '';
+      if (!message) {
+        searchAnnouncementTimer = undefined;
+        return;
+      }
+      searchAnnouncementTimer = setTimeout(() => {
+        if (overlay?.open) searchAnnouncement.textContent = message;
+        searchAnnouncementTimer = undefined;
+      }, 200);
+    };
+
+    const showSearchError = () => {
+      resultsEl?.replaceChildren();
+      if (emptyEl) emptyEl.hidden = true;
+      if (errorEl) errorEl.hidden = false;
+      announceSearch(searchAnnouncement?.dataset.error ?? '');
+    };
+    function loadIndex(): Promise<SearchEntry[] | null> {
+      if (index) return Promise.resolve(index);
+      if (indexLoad) return indexLoad;
+      const pending = Promise.resolve().then(async () => {
+        const res = await fetch(overlay?.dataset.searchIndex ?? '/search.json');
+        if (!res.ok) throw new Error(`Search index request failed: ${res.status}`);
+        const loadedIndex = await res.json();
+        if (!Array.isArray(loadedIndex) || !loadedIndex.every(isSearchEntry)) {
+          throw new Error('Search index response contains invalid entries.');
+        }
+        index = loadedIndex;
+        return index;
+      }).catch((error) => {
+        index = null;
+        console.error('Unable to load the search index.', error);
+        return null;
+      }).finally(() => { indexLoad = null; });
+      indexLoad = pending;
+      return pending;
+    }
+    const internalSearchHref = (value: string) => {
+      try {
+        const candidate = value.trim();
+        if (candidate.startsWith('//')) return null;
+        const url = new URL(candidate, window.location.origin);
+        if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.origin !== window.location.origin) return null;
+        return `${url.pathname}${url.search}${url.hash}`;
+      } catch {
+        return null;
+      }
+    };
+    const normalizeSearchText = (value: string) => value.trim().toLocaleLowerCase(document.documentElement.lang).replaceAll('ß', 'ss');
+    function renderSearchResults(data: SearchEntry[], query: string) {
+      if (!resultsEl || !emptyEl) return;
+      errorEl?.setAttribute('hidden', '');
+      resultsEl.replaceChildren();
+      const normalizedQuery = normalizeSearchText(query);
+      if (!normalizedQuery) {
+        emptyEl.hidden = true;
+        announceSearch('');
+        return;
+      }
+      const hits = data.filter((d) =>
+        normalizeSearchText(d.title).includes(normalizedQuery) ||
+        normalizeSearchText(d.description).includes(normalizedQuery) ||
+        d.tags.some((t) => normalizeSearchText(t).includes(normalizedQuery))
+      ).map((hit) => ({ hit, href: internalSearchHref(hit.url) })).filter((entry): entry is { hit: SearchEntry; href: string } => entry.href !== null).slice(0, 12);
+      emptyEl.hidden = hits.length > 0;
+      for (const [hitIndex, { hit, href }] of hits.entries()) {
+        const li = document.createElement('li');
+        li.style.setProperty('--hit-index', String(hitIndex));
+        const a = document.createElement('a');
+        a.href = href;
+        const kind = document.createElement('span');
+        kind.className = 'hit-kind';
+        kind.textContent = hit.kind;
+        const title = document.createElement('span');
+        title.className = 'hit-title';
+        title.textContent = hit.title;
+        const desc = document.createElement('span');
+        desc.className = 'hit-desc';
+        desc.textContent = hit.description;
+        a.append(kind, title, desc);
+        li.appendChild(a);
+        resultsEl.appendChild(li);
+      }
+      announceSearch(
+        hits.length === 0
+          ? searchAnnouncement?.dataset.noResults ?? ''
+          : hits.length === 1
+            ? searchAnnouncement?.dataset.resultOne ?? ''
+            : `${hits.length} ${searchAnnouncement?.dataset.resultMany ?? ''}`.trim(),
+      );
+    }
+    const isCurrentSearch = (session: number, generation: number) =>
+      overlay?.open && session === searchSession && generation === searchGeneration;
+    async function searchCurrentQuery() {
+      const session = searchSession;
+      const generation = ++searchGeneration;
+      const data = await loadIndex();
+      if (!isCurrentSearch(session, generation)) return;
+      if (!data) {
+        showSearchError();
+        return;
+      }
+      renderSearchResults(data, input?.value ?? '');
     }
 
     function openSearch() {
-      if (!overlay || overlay.open) return;
-      searchTrigger = document.activeElement as HTMLElement | null;
-      overlay.hidden = false;
-      overlay.classList.remove('is-closing');
-      overlay.showModal();
+      if (!overlay || overlay.open || typeof overlay.showModal !== 'function') return false;
+      const wasHidden = overlay.hidden;
+      const wasClosing = overlay.classList.contains('is-closing');
+      const bodyWasSearchOpen = document.body.classList.contains('search-open');
+      const focusedBeforeOpening = document.activeElement as HTMLElement | null;
+      const restoreFailedOpen = () => {
+        try {
+          if (overlay.open) overlay.close();
+        } catch {
+          // The dialog did not open cleanly, so keep the page usable without search.
+        }
+        overlay.hidden = wasHidden;
+        overlay.classList.toggle('is-closing', wasClosing);
+        document.body.classList.toggle('search-open', bodyWasSearchOpen);
+      };
+      try {
+        overlay.hidden = false;
+        overlay.classList.remove('is-closing');
+        overlay.showModal();
+        if (!overlay.open) {
+          restoreFailedOpen();
+          return false;
+        }
+      } catch {
+        restoreFailedOpen();
+        return false;
+      }
+      searchTrigger = focusedBeforeOpening;
+      const session = ++searchSession;
       document.body.classList.add('search-open');
-      loadIndex();
-      requestAnimationFrame(() => input?.focus());
+      void searchCurrentQuery();
+      requestAnimationFrame(() => {
+        if (overlay.open && session === searchSession) input?.focus();
+      });
+      return true;
     }
     function closeSearch() {
-      if (!overlay?.open) return;
+      if (!overlay?.open || overlay.classList.contains('is-closing')) return;
+      searchSession += 1;
+      let settled = false;
+      let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+      const panel = overlay.querySelector('.search-panel');
+      const onAnimationFinish = (event: AnimationEvent) => {
+        if (event.target !== panel) return;
+        finish();
+      };
       const finish = () => {
-        overlay.close();
+        if (settled) return;
+        settled = true;
+        if (fallbackTimer !== undefined) clearTimeout(fallbackTimer);
+        panel?.removeEventListener('animationend', onAnimationFinish as EventListener);
+        panel?.removeEventListener('animationcancel', onAnimationFinish as EventListener);
+        if (overlay.open) overlay.close();
         overlay.classList.remove('is-closing');
       };
-      const panel = overlay.querySelector('.search-panel');
-      if (prefersReduced || !panel) {
+      if (prefersReduced() || !panel) {
         finish();
         return;
       }
       overlay.classList.add('is-closing');
-      const onAnimationEnd = (event: AnimationEvent) => {
-        if (event.target !== panel) return;
-        panel.removeEventListener('animationend', onAnimationEnd as EventListener);
-        finish();
-      };
-      panel.addEventListener('animationend', onAnimationEnd as EventListener);
+      panel.addEventListener('animationend', onAnimationFinish as EventListener);
+      panel.addEventListener('animationcancel', onAnimationFinish as EventListener);
+      fallbackTimer = setTimeout(finish, 240);
     }
 
     document.getElementById('search-open')?.addEventListener('click', openSearch);
     document.getElementById('search-close')?.addEventListener('click', closeSearch);
+    document.getElementById('search-retry')?.addEventListener('click', () => void searchCurrentQuery());
     overlay?.addEventListener('click', (event) => {
-      const panel = overlay.querySelector('.search-panel')?.getBoundingClientRect();
-      if (!panel) return;
-      const outside = event.clientX < panel.left || event.clientX > panel.right || event.clientY < panel.top || event.clientY > panel.bottom;
-      if (outside) closeSearch();
+      if (event.target === overlay) closeSearch();
     });
     overlay?.addEventListener('cancel', (event) => {
       event.preventDefault();
       closeSearch();
     });
+    overlay?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Tab' || event.defaultPrevented) return;
+      const focusable = Array.from(overlay.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => element.getClientRects().length > 0 && !element.closest('[hidden], [inert]'));
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
     if (overlay?.open) overlay.close();
     if (overlay) overlay.hidden = true;
     overlay?.addEventListener('close', () => {
+      if (overlay.open) return;
       overlay.hidden = true;
       document.body.classList.remove('search-open');
-      searchTrigger?.focus();
+      if (searchAnnouncementTimer !== undefined) clearTimeout(searchAnnouncementTimer);
+      searchAnnouncementTimer = undefined;
+      if (searchAnnouncement) searchAnnouncement.textContent = '';
+      const isVisibleFocusTarget = (element: HTMLElement | null) =>
+        Boolean(element?.isConnected
+          && element.matches('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])')
+          && element.getClientRects().length > 0
+          && !element.closest('[hidden], [inert]'));
+      const defaultTrigger = document.getElementById('search-open');
+      const restoreTarget = isVisibleFocusTarget(searchTrigger) ? searchTrigger : defaultTrigger;
+      if (isVisibleFocusTarget(restoreTarget)) restoreTarget?.focus();
+      searchTrigger = null;
     });
+    const isSearchTextEntry = (target: EventTarget) => {
+      if (!(target instanceof Element)) return false;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
+      if (target instanceof HTMLElement && target.isContentEditable) return true;
+      return target.getAttribute('role')?.split(/\s+/).some((role) => ['textbox', 'searchbox', 'combobox'].includes(role)) ?? false;
+    };
+    const isLegacyImeKey = (event: KeyboardEvent) => (event as { keyCode: number }).keyCode === 229;
     document.addEventListener('keydown', (e) => {
-      if (overlay && e.key === '/' && !overlay.open && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
-        e.preventDefault();
-        openSearch();
-      }
+      if (!overlay || overlay.open || e.key !== '/' || e.defaultPrevented || e.isComposing || isLegacyImeKey(e) || e.ctrlKey || e.metaKey || e.altKey || e.getModifierState('AltGraph') || e.composedPath().some(isSearchTextEntry)) return;
+      if (openSearch()) e.preventDefault();
+    });
+    input?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || event.isComposing || isLegacyImeKey(event) || !overlay?.open) return;
+      event.preventDefault();
+      closeSearch();
     });
 
     // ---- Scroll reveal ----
@@ -277,75 +509,55 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       '.editorial-head', '.sound-summary', '.related', '.article-cta',
     ];
     const revealEls = Array.from(document.querySelectorAll(revealSelectors.join(',')));
+    const showRevealFallback = () => revealEls.forEach((el) => el.classList.add('in'));
     revealEls.forEach((el) => el.classList.add('reveal'));
-    if (prefersReduced || !('IntersectionObserver' in window)) {
-      revealEls.forEach((el) => el.classList.add('in'));
+    if (prefersReduced() || !('IntersectionObserver' in window)) {
+      showRevealFallback();
     } else {
-      const io = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          const el = entry.target as HTMLElement;
-          const siblings = Array.from(el.parentElement?.children ?? [])
-            .filter((c) => c.classList.contains('reveal') && !c.classList.contains('in'));
-          const idx = Math.max(0, siblings.indexOf(el));
-          el.style.transitionDelay = `${Math.min(idx, 7) * 80}ms`;
-          el.classList.add('in');
-          io.unobserve(el);
-        }
-      }, { threshold: 0.1, rootMargin: '0px 0px -48px 0px' });
-      revealEls.forEach((el) => io.observe(el));
+      try {
+        const io = new IntersectionObserver((entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            const el = entry.target as HTMLElement;
+            const siblings = Array.from(el.parentElement?.children ?? [])
+              .filter((c) => c.classList.contains('reveal') && !c.classList.contains('in'));
+            const idx = Math.max(0, siblings.indexOf(el));
+            el.style.transitionDelay = `${Math.min(idx, 7) * 80}ms`;
+            el.classList.add('in');
+            io.unobserve(el);
+          }
+        }, { threshold: 0.1, rootMargin: '0px 0px -48px 0px' });
+        revealEls.forEach((el) => io.observe(el));
+      } catch (error) {
+        console.error('Unable to initialize scroll reveal; showing content instead.', error);
+        showRevealFallback();
+      }
     }
 
     // ---- Live result motion ----
-    if (!prefersReduced) {
-      const resultFrames = new WeakMap<Element, number>();
-      document.querySelectorAll('.calculator-result strong').forEach((output) => {
-        const observer = new MutationObserver(() => {
-          const result = output.closest('.calculator-result');
-          if (!result) return;
-          const pendingFrame = resultFrames.get(result);
-          if (pendingFrame) cancelAnimationFrame(pendingFrame);
-          result.classList.remove('result-updated');
-          resultFrames.set(result, requestAnimationFrame(() => {
-            result.classList.add('result-updated');
-            resultFrames.delete(result);
-          }));
+    if (!prefersReduced() && 'MutationObserver' in window) {
+      try {
+        const resultFrames = new WeakMap<Element, number>();
+        document.querySelectorAll('.calculator-result strong').forEach((output) => {
+          const observer = new MutationObserver(() => {
+            const result = output.closest('.calculator-result');
+            if (!result) return;
+            const pendingFrame = resultFrames.get(result);
+            if (pendingFrame) cancelAnimationFrame(pendingFrame);
+            result.classList.remove('result-updated');
+            resultFrames.set(result, requestAnimationFrame(() => {
+              result.classList.add('result-updated');
+              resultFrames.delete(result);
+            }));
+          });
+          observer.observe(output, { childList: true, characterData: true, subtree: true });
         });
-        observer.observe(output, { childList: true, characterData: true, subtree: true });
-      });
+      } catch (error) {
+        console.error('Unable to initialize result update motion; continuing without it.', error);
+      }
     }
 
-    input?.addEventListener('input', async () => {
-      const q = input.value.trim().toLowerCase();
-      const data = (await loadIndex()) ?? [];
-      if (!resultsEl || !emptyEl) return;
-      resultsEl.innerHTML = '';
-      if (!q) { emptyEl.hidden = true; return; }
-      const hits = data.filter((d) =>
-        d.title.toLowerCase().includes(q) ||
-        d.description.toLowerCase().includes(q) ||
-        d.tags.some((t) => t.toLowerCase().includes(q))
-      ).slice(0, 12);
-      emptyEl.hidden = hits.length > 0;
-      for (const [hitIndex, hit] of hits.entries()) {
-        const li = document.createElement('li');
-        li.style.setProperty('--hit-index', String(hitIndex));
-        const a = document.createElement('a');
-        a.href = hit.url;
-        const kind = document.createElement('span');
-        kind.className = 'hit-kind';
-        kind.textContent = hit.kind;
-        const title = document.createElement('span');
-        title.className = 'hit-title';
-        title.textContent = hit.title;
-        const desc = document.createElement('span');
-        desc.className = 'hit-desc';
-        desc.textContent = hit.description;
-        a.append(kind, title, desc);
-        li.appendChild(a);
-        resultsEl.appendChild(li);
-      }
-    });
+    input?.addEventListener('input', () => void searchCurrentQuery());
   </script>
 
   <style is:global>
@@ -400,10 +612,14 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     .tool-card > * { min-width: 0; }
     :where(h1, h2, h3, h4, h5, h6) {
       word-break: normal;
-      overflow-wrap: normal;
+      overflow-wrap: break-word;
       hyphens: auto;
     }
-    :where(code, kbd, samp, var, .katex) { hyphens: none; }
+    :where(code, kbd, samp, var, .katex) {
+      word-break: normal;
+      overflow-wrap: normal;
+      hyphens: none;
+    }
     .skip-link {
       position: absolute; left: -999px; top: 0;
       background: var(--on-surface); color: var(--bg);
@@ -638,6 +854,10 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     .hit-title { font-weight: 600; }
     .hit-desc { font-size: 13px; color: var(--on-surface-v); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .search-empty { color: var(--secondary); font-size: 14px; padding: 16px 4px 4px; margin: 0; }
+    .search-announcement {
+      position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
+      clip: rect(0 0 0 0); white-space: nowrap;
+    }
 
     /* ---- Footer ---- */
     .site-footer { border-top: 1px solid var(--ghost); margin-top: 96px; }
@@ -668,11 +888,13 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
         min-height: 40px; padding: 0 12px; border: 1px solid var(--ghost); border-radius: 999px;
         background: transparent; color: var(--on-surface-v); font: 500 13px/1 var(--font-body); cursor: pointer;
       }
+      .menu-btn, .search-btn, .language-switcher { flex: 0 0 auto; }
       .menu-icon { position: relative; width: 14px; height: 10px; border-block: 1px solid currentColor; }
       .menu-icon::after { content: ''; position: absolute; left: 0; right: 0; top: 4px; border-top: 1px solid currentColor; }
       .nav-links {
         display: none; position: absolute; top: 100%; left: 12px; right: 12px;
         grid-template-columns: 1fr 1fr; gap: 0; margin: 0; padding: 10px;
+        max-height: calc(100dvh - 68px); overflow-y: auto;
         border: 1px solid var(--ghost); border-radius: 0 0 var(--radius-tile) var(--radius-tile);
         background: rgba(8,8,8,.98); box-shadow: 0 20px 40px rgba(0,0,0,.35);
       }
@@ -686,6 +908,9 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       .menu-btn { width: 40px; justify-content: center; padding: 0; }
       .nav-links { grid-template-columns: 1fr; }
       .search-panel { padding: 20px; }
+    }
+    @media (max-width: 340px) {
+      .nav .brand-name { display: none; }
     }
   </style>
 </body>

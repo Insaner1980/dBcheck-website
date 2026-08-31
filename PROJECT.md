@@ -1,1604 +1,1017 @@
-# dBcheck
+# dBcheck-verkkosivusto: toteutus- ja tarkistusviite
 
-**Premium Android-desibelimittari ja kuuloterveys-sovellus.**
+Päivitetty 30.8.2026. Dokumentti kuvaa tämän repositorion paikallista toteutusta, ei tavoitetilaa eikä erillisen Android-sovelluksen arkkitehtuuria. Tarkistuksen lähtöcommit oli `a2fc23f` (28.8.2026). Tiedostopolut ovat tämän repositorion juureen suhteutettuja, ellei toisin sanota.
 
-Paivitetty nykyisen checkoutin perusteella: **2026-06-30**.
+Käytä tätä dokumenttia karttana koodintarkistuksiin, UI-muutoksiin, artikkelityöhön, lokalisointiin ja julkaisutarkistuksiin. Varsinainen todiste toiminnasta on aina nykyinen lähdekoodi, tuore rakennettu sivu tai nimenomaisesti ajettu testi. Historiallinen auditointi, suunnitelma tai tämä tilannekuva ei yksin todista nykyisen tuotantojulkaisun käyttäytymistä.
 
-dBcheck on Kotlin / Jetpack Compose -sovellus, joka mittaa ympariston melua
-reaaliajassa, tallentaa melualtistussessioita, nayttaa analytiikkaa, tarjoaa
-Pro-gatetun suhteellisen kuulotestin ja recovery-checkin, rakentaa sessioista
-jaettavia raportteja ja sisaltaa useita rajattuja Pro-lisapolkuja, kuten
-Camera Overlayn, WAV-exportin, ambient sound playbackin, tinnitus pitch
--profiilin, live sound detectionin ja voice/TTS-riskikehotteet.
-Visuaalinen identiteetti on "Auditory Observatory": rauhallinen, editorial
-wellness -henkinen mittari, ei geneerinen tyokaluapp.
+## Sisältö
 
-Nykytila: runko ja iso osa v1.0-ominaisuuksista on toteutettu. Meter,
-Analytics, History, Session Detail, Settings, Health Connect, local backup,
-CSV/PDF/PNG/WAV-exportit, Pro-entitlement, hearing-test-flow, Sleep Monitor,
-passive monitoring ja paikallinen ambient playback ovat koodissa kytkettyja.
-Sovellus ei ole viela julkaisukypsa ilman laitetason audio-, permission-,
-foreground-service-, Billing-, Play Console-, release-signing- ja
-saavutettavuusverifiointia seka akustisten/klinisten rajojen lopullista
-dokumentointia.
+1. Projektin rajaus ja tärkeimmät lähtökohdat
+2. Lähdekoodin omistajuuskartta
+3. Tekniikkapino, konfiguraatio ja komennot
+4. Julkiset reitit ja kieliparit
+5. Lokalisointi, navigaatio ja haku
+6. Yhteinen UI, typografia ja responsiivisuus
+7. Etusivu, video, mittaridemo ja ominaisuusesittely
+8. Sound Explorer ja yhteinen äänidata
+9. Laskurit, kaavat ja syötevalidointi
+10. Artikkelijärjestelmä ja toimituksellinen työ
+11. Metadata, structured data ja resurssit
+12. Verkkopyynnöt, tietosuoja ja julkaisu
+13. Testit ja todentamisen rajat
+14. Muutoskohtaiset tarkistuslistat
+15. Nykyiset poikkeukset ja dokumenttien asema
+16. Tämän dokumentin ylläpito
 
-Tama dokumentti kuvaa nykyista koodia, ei tavoitetilaa.
+## 1. Projektin rajaus ja tärkeimmät lähtökohdat
 
----
+Sivusto on Astro 7:llä rakennettava staattinen monisivusivusto. Se yhdistää englanninkielisen dBcheck Android -sovelluksen esittelysivun, englannin- ja saksankieliset tietosisällöt, Common Sounds Explorerin sekä maksuttomat selaimessa toimivat laskurit.
 
-## Ulkoiset tarkistukset 2026-06-30
+Keskeiset rajat:
 
-Projektin ohjeen mukaan ulkoisesti muuttuvat Android-kaytannot tarkistettiin
-virallisista lahteista ennen dokumenttipaivitysta:
+- Sivustossa ei ole Android-/Compose-/Room-/Hilt-toteutusta, käyttäjätilejä, sovelluksen entitlement-tarkistusta, maksamista tai mittaussessioiden tietokantaa.
+- Etusivun Free/Pro-listat ja hinnat ovat markkinointisisältöä. Ne eivät toteuta tai todista Android-sovelluksen ominaisuusportteja.
+- Kaikki verkkotyökalut ovat maksuttomia, eikä niitä ole sidottu dBcheck Prohon.
+- Hero-mittari käsittelee hero-videon ääntä Web Audiolla. Se ei mittaa huoneen ääntä, käytä mikrofonia eikä anna kalibroitua SPL-/dBA-tulosta.
+- Englanti on oletuskieli ilman URL-etuliitettä. Saksa käyttää `/de/`-alkuisia sisältöreittejä.
+- Etusivu on vain englanniksi. `/de/`-etusivua ei generoida.
+- Tässä repositoriossa toteutettu käyttöliittymä on tumma. Etusivun Android-ominaisuuslistan `Dark / light theme` ei tarkoita verkkosivuston teemavalitsinta.
+- Sivuston lähteessä ei ole GA4-lataajaa tai analytiikan suostumuspaneelia. Hosting-tilin asetuksia ei voi päätellä tästä.
+- Sivuston build, Git-push ja tuotantojulkaisu ovat eri tapahtumia.
 
-- Lahteet:
-  [Android foreground service types](https://developer.android.com/develop/background-work/services/fgs/service-types),
-  [Health Connect data types](https://developer.android.com/health-and-fitness/health-connect/data-types).
-- Android 14+ vaatii foreground servicelle sopivan service-tyypin ja siihen
-  liittyvan foreground-service-permissionin. Mikrofoni-service kayttaa
-  `android:foregroundServiceType="microphone"`, manifest-permissionia
-  `FOREGROUND_SERVICE_MICROPHONE` ja `startForeground()`-tyyppia
-  `FOREGROUND_SERVICE_TYPE_MICROPHONE`. Ambient playback kayttaa erillista
-  `android:foregroundServiceType="mediaPlayback"` -servicea ja
-  `FOREGROUND_SERVICE_MEDIA_PLAYBACK` -manifest-permissionia. `RECORD_AUDIO` on
-  while-in-use -runtime-lupa, joten backgroundista kaynnistettavaa
-  mikrofonipalvelua koskee rajoituksia.
-- Health Connectin nykyinen datatyyppilista sisaltaa `ExerciseSessionRecord`-
-  ja `HeartRateRecord`-tyypit. Nykyisesta virallisesta listasta ei loydy
-  dBcheckin kayttotarpeeseen natiivia melualtistus- tai audiometriatietuetta,
-  joten koodin nykyinen malli kirjoittaa melun exercise sessionina ja jattaa
-  kuulotestin Health Connect -kirjoituksen tietoisesti no-opiksi.
+Nykyisen sisältökannan laajuus:
 
----
+| Kohde | Englanti | Saksa | Yhteensä |
+| --- | ---: | ---: | ---: |
+| Tavalliset artikkelit | 15 | 15 | 30 |
+| Sound-artikkelit | 5 | 5 | 10 |
+| Explorerin äänivertailut | 9 | 9 | Samat 9 teknistä tietuetta |
+| Työkaluhakemiston kohteet | 6 | 5 | 11 paikallista esitystä |
+| Varsinaiset laskurisivut | 5 | 4 | 9 |
+| Indeksoitavat HTML-sivut | 29 | 27 | 56 |
 
-## Tekniikkapino
+Kaikki nykyiset 40 Markdown-sisältöä ovat julkaistavia, eivät `draft: true` -sisältöjä. Rakennuksen odotettu HTML-kokonaisuus on 56 indeksoitavaa sivua, 8 legacy-uudelleenohjausdokumenttia sekä englannin `404.html` ja saksan `de/404.html`, yhteensä 66. Hakua palvelee lisäksi kaksi JSON-tiedostoa. Määrät ovat nykytilan testibaseline, eivät arkkitehtuurin yleinen rajoitus.
 
-Versiot on tarkistettu tiedostoista `gradle/libs.versions.toml`,
-`app/build.gradle.kts`, `build.gradle.kts` ja
-`gradle/wrapper/gradle-wrapper.properties`.
+## 2. Lähdekoodin omistajuuskartta
 
-| Teknologia | Versio | Kayttotarkoitus |
-|---|---:|---|
-| Kotlin | 2.3.20 | Kieli ja Compose compiler plugin |
-| Android Gradle Plugin | 9.1.0 | Android build |
-| Gradle wrapper | 9.4.1 | Build tool |
-| JVM / Java target | 21 | Compile target |
-| Compose BOM | 2026.03.00 | Compose-kirjastojen versiohallinta |
-| Material 3 | BOM | UI-komponentit custom-teeman paalla |
-| AndroidX Core KTX | 1.16.0 | Android Kotlin extensions |
-| Activity Compose | 1.10.1 | Compose activity integration |
-| Lifecycle | 2.9.0 | ViewModel, runtime ja runtime-compose |
-| Navigation Compose | 2.9.7 | Compose-reititys |
-| Hilt | 2.59.2 | Dependency injection |
-| Hilt Navigation Compose | 1.2.0 | `hiltViewModel()` navigaatiossa |
-| KSP | 2.3.6 | Room/Hilt annotation processing |
-| Room | 2.8.4 | Lokaali tietokanta |
-| DataStore Preferences | 1.2.1 | Asetukset ja Pro-entitlement |
-| Coroutines | 1.10.2 | Async/Flow |
-| Google Play Billing KTX | 8.3.0 | Kertaosto Pro-tuotteelle |
-| Health Connect client | 1.1.0 | Melusessioiden synkkaus ja sykkeen luku |
-| CameraX | 1.6.1 | Camera overlay -preview, live dB readout, photo share burned-in overlay ja silent video capture |
-| Glance | 1.1.1 | Kotinayton widget |
-| WorkManager | 2.11.2 | Glance-riippuvuuden korjattu constraint |
-| Guava Android | 33.6.0-android | Health Connect / transitiivinen constraint |
-| Detekt | 2.0.0-alpha.3 | Staattinen analyysi |
-| Detekt Compose rules | 0.5.8 | Compose-saannot |
-| Compose Stability Analyzer | 0.7.4 | Compose-stabiliteettidumpit |
-| Android Security Lints | 1.0.4 | Android security lintChecks |
-| Screenshot test plugin/API | 0.0.1-alpha14 | Compose preview screenshot -testit |
-| Sentry Android Core | 8.43.1 | Debug-only crash-diagnostiikka, ei release-riippuvuutta |
-| TensorFlow Lite Task Audio | 0.4.4 | YAMNet sound detection -inference |
-| OWASP Dependency-Check Gradle plugin | 12.2.2 | CVE-skannaus |
-| SonarQube Gradle plugin | 7.3.0.8198 | SonarCloud-analyysi |
-| JaCoCo | 0.8.14 | Unit-test coverage |
-| Min SDK | 26 | Android 8.0 |
-| Compile / Target SDK | 36 | Android API |
+### 2.1 Mistä aloittaa
 
-Testikirjastot: JUnit 4.13.2, MockK 1.13.16, Turbine 1.2.0,
-AndroidX Test Core 1.7.0, Robolectric 4.16.1 ja Coroutines Test 1.10.2.
+| Kysymys tai muutos | Ensisijaiset lähteet |
+| --- | --- |
+| Sivun yhteinen ulkoasu, fontit, header, footer, haku, metadata | `src/layouts/Base.astro` |
+| Etusivun tekstit, hinnoittelukortit, Pro-esittely, Web Audio -demo | `src/pages/index.astro` |
+| Locale, päivämääräkieli ja Open Graph -locale | `src/i18n/config.ts` |
+| Yhteiset käännetyt tekstit ja artikkeliryhmien nimet | `src/i18n/ui.ts` |
+| Slugit, en–de-parit ja hreflangit | `src/i18n/routes.ts` |
+| Hakutulosten muodostus | `src/i18n/search.ts` |
+| Kielivalitsimen toiminta ja saavutettavuus | `src/components/LanguageSwitcher.astro` |
+| Sisältöskeema ja kokoelmien ID:t | `src/content.config.ts` |
+| Artikkelin rakenne, CTA, related-lista ja Article-schema | `src/components/EditorialPage.astro` |
+| Artikkeli-indeksin ryhmittely ja järjestys | `src/components/ArticleIndexPage.astro` |
+| Sound-arvot, lähteet, järjestys ja lokalisoidut tekstit | `src/data/sounds.ts` |
+| Explorerin valinta, vaihteluvälipalkki ja mobiiliesitys | `src/components/SoundExplorer.astro` |
+| Työkalujen nimet, järjestys ja hakumetadata | `src/data/tools.ts` |
+| Laskurien yhteinen sivurakenne ja lomaketyylit | `src/components/CalculatorPage.astro` |
+| Monikenttälaskurit, rivien lisäys ja numerostepperit | `src/scripts/tool-calculators.ts` |
+| Alueelliset Free-/Pro-hinnat | `src/data/prices.ts`, `src/scripts/localized-price.ts` |
+| Scramble-liike | `src/scripts/motion.ts`, `src/scripts/scramble-engine.ts` |
+| Kaavojen käsittely, sitemap, legacy-reitit | `astro.config.mjs` |
+| HTTP-suojaus, HTTP-uudelleenohjaukset ja Cloudflare-kohde | `public/_headers`, `public/_redirects`, `wrangler.jsonc` |
+| Tuoreen buildin sopimukset ja regressiot | `test/` |
+| Otsikoiden ja linkkien oikea selainrivitys | `scripts/text-wrapping.browser.mjs` |
 
-Vico on poistettu. Kaaviot ovat custom Canvas / Android Canvas -toteutuksia.
+### 2.2 Hakemistot ja suoritusympäristöt
 
----
+| Polku | Vastuu |
+| --- | --- |
+| `src/pages/` | Astro-reitit. Useimmat ovat ohuita yhteisten sivukomponenttien kääreitä. |
+| `src/components/` | 16 Astro-komponenttia: yhteiset sivut, laskurien HTML, Explorer, kielivalitsin, 404-rakenne ja koristekisko. |
+| `src/layouts/` | Yksi yhteinen `Base.astro`. |
+| `src/content/articles/en/`, `src/content/articles/de/` | Tavalliset artikkelit. |
+| `src/content/sounds/en/`, `src/content/sounds/de/` | Viisi sound-opasta kummallakin kielellä. |
+| `src/i18n/` | Locale-konfiguraatio, yhteinen UI-copy, reittirekisteri ja hakudatan rakentaja. |
+| `src/data/` | Äänet, työkalut, hinnat ja sosiaalisten jakojen kuvavalinnat. |
+| `src/lib/` | Puhtaat laskennat, näyttöasteikko sekä build-assetien, editorial-reittien ja Markdownin turvallisuusguardit. |
+| `src/scripts/` | Selaimen yhteinen laskuri-, hinta- ja scramble-logiikka. |
+| `src/assets/` | Astro-putken kautta käsiteltävät artikkeli- ja ominaisuuskuvat. |
+| `public/` | Suoraan buildiin kopioitavat videot, logo, OG-kuvat, robots ja hosting-tiedostot. |
+| `test/` | Node-testit lähdetiedostoille, puhtaille funktioille ja valmiille HTML/CSS/JSON/XML-tiedostoille. |
+| `scripts/` | Build-wrapper ja sen tuoreusvartija sekä oikean selaimen rivitys- ja vuorovaikutusharness. |
+| `docs/audits/`, `docs/owner-input/` | Päivättyä evidenssiä ja omistajalta tarvittavia tietoja. |
+| `output/` | Aikaisempia selain-/Lighthouse-artefakteja; ei sivuston runtime-lähde. |
+| `dist/`, `.astro/`, `node_modules/` | Generoitu tuotos, Astro-tyypit/välimuisti ja asennetut riippuvuudet. |
 
-## Arkkitehtuuri
+Build-vaiheessa Astro lukee Markdownin ja datan, generoi reitit ja HTML:n sekä rakentaa selainassetit, hakuindeksit ja sitemapin. Selaimessa suoritetaan vain sivuihin liitetyt scriptit. `astro:content`-kyselyt eivät ole selainpuolen API-pyyntöjä.
 
-Single Activity + Compose Navigation + MVVM. Riippuvuudet injektoidaan Hiltilla.
-Korkean tason vastuunjako nykyisessa paketissa:
+Tyypillinen sisältöketju:
 
 ```text
-com.dbcheck.app/
-├── DbCheckApplication.kt     App startup: debug Sentry, billing, interrupted-session recovery,
-│                             widget refresh Pro-oikeuden muuttuessa
-├── MainActivity.kt           Edge-to-edge Compose host, theme bootstrap,
-│                             billing refresh, restore restart
-├── di/                       AppModule, DatabaseModule, BillingModule,
-│                             SyncModule, CoroutineDispatchers
-├── billing/                  BillingManager, BillingGateway,
-│                             BillingRuntimeGateway,
-│                             BillingEntitlementSource, ProFeatureManager
-├── data/
-│   ├── export/               ExportCsvUseCase, CsvExportFormatter,
-│   │                         ExportFileCache
-│   ├── local/db/             Room database, schema, migrations, DAOt, entities
-│   ├── local/preferences/    UserPreferencesDataStore and typed preference models
-│   ├── model/                Room -> domain mappings
-│   └── repository/           Session, Measurement, SoundDetection,
-│                             Preferences, HearingTest, HearingRecovery,
-│                             SleepSession, PassiveMonitoring
-├── domain/
-│   ├── analytics/            ExposureAnalyticsCalculator and models
-│   ├── ambient/              AmbientSoundPolicy, AmbientSoundGenerator
-│   ├── audio/                AudioEngine, DecibelCalculator,
-│   │                         FrequencyWeightingFilter, FFTProcessor,
-│   │                         SpectralAnalyzer, OctaveBandRtaCalculator,
-│   │                         SoundClassifier, TfliteSoundClassifier,
-│   │                         YamnetAudioWindowAdapter, ToneGenerator,
-│   │                         AudioRecordPolicies, AudioInputDevice,
-│   │                         AudioInputDeviceRouter
-│   ├── calibration/          CalibrationProfile, CalibrationOffsetPolicy,
-│   │                         OctaveCalibrationOffsets
-│   ├── entitlement/          ProEntitlementPolicy
-│   ├── hearingtest/          Hughson-Westlake procedure, codec, scoring,
-│   │                         HearingRecoveryCalculator
-│   ├── noise/                NoiseLevel, NoiseAlertPolicy,
-│   │                         NoiseNotificationSchedule,
-│   │                         AudibleAlarmPolicy,
-│   │                         AudibleAlarmEvaluator
-│   ├── passive/              PassiveMonitoringAggregator and aggregate models
-│   ├── report/               SessionReportCalculator and report models
-│   ├── session/              Session, SessionMetadata, SessionLocationMetadata,
-│                             SessionAudioInputDeviceMetadata,
-│                             SessionHistoryQuery, SessionHistoryPolicy
-│   ├── sleep/                SleepRecordingConfig, SleepResultsCalculator,
-│                             SleepInsightsCalculator
-│   ├── tinnitus/             TinnitusPitchProfile, TinnitusPitchPolicy
-│   └── voice/                VoiceBaseline, VoiceVolumeWarning and TTS risk policies
-├── service/                  AudioSessionManager, MeasurementForegroundService,
-│                             MeasurementPersistenceSampler, NotificationHelper,
-│                             NotificationPrivacyPolicy, NoiseAlertEvaluator,
-│                             HealthConnectService, HearingTestService,
-│                             BackupService, SessionLocationCapturePort,
-│                             AudioInputDeviceDiscoveryPort,
-│                             HearingRecoveryService,
-│                             PassiveMonitoringManager,
-│                             AudibleAlarmPlaybackController,
-│                             TtsRiskPromptController,
-│                             AmbientSoundPlaybackService,
-│                             AmbientSoundPlaybackController,
-│                             AmbientSoundPlayer
-├── sync/                     HealthConnectManager, HealthConnectModels,
-│                             BackupGateway, LocalBackupManager,
-│                             BackupDatabaseValidator
-├── ui/
-│   ├── ambient/              Ambient sound playback route
-│   ├── analytics/            Analytics screen, Pro analytics cards
-│   ├── common/               Context/Window helpers, KeepScreenOnEffect
-│   ├── components/           Shared Compose components
-│   ├── hearingtest/          Setup -> Active -> Results
-│   ├── history/              Session history and naming sheet
-│   ├── history/detail/       Session Detail, PDF and PNG report actions
-│   ├── meter/                Live meter
-│   ├── navigation/           Screen, DbCheckNavHost, BottomNavDestination
-│   ├── settings/             Settings, Pro, Health Connect, backup/export
-│   ├── sleep/                Sleep setup route, options state, CTA and active start/stop
-│   ├── tinnitus/             Tinnitus pitch matcher route
-│   └── theme/                Color, Type, Shape, Spacing, Gradient, Theme
-├── util/                     ShareResultsGenerator, ExportPdfReportUseCase,
-│                             PdfChartRenderer, ReportTextFormatter,
-│                             StringResourceIds, UserFacingError
-└── widget/                   Glance widget and receiver
+Markdown + content.config.ts
+  -> Astro-kokoelma (locale/slug-ID)
+  -> getStaticPaths: julkaistu sisältö + locale
+  -> EditorialPage -> Base -> dist/HTML
+
+Sama kokoelma
+  -> ArticleIndexPage
+  -> buildSearchIndex -> search.json
+
+routes.ts
+  -> URL:t + kieliparit
+  -> Base-hreflangit + kielivalitsin
+  -> sitemapin kielilinkit
 ```
 
-Arkkitehtuurisopimukset:
-
-- `domain/` ei importtaa `data/`, `service/`, `sync/`, `ui/`, `billing/` tai
-  `widget/` -kerroksia.
-- UI-, widget- ja service-koodi ei kasittele Room-entityja suoraan.
-  Repositoryt ja service-portit mapittavat data/sync-mallit domain-, report-
-  tai UI-facing-malleiksi. `AudioSessionManager` jonottaa
-  `domain/session/SessionMeasurement`-riveja ja optional
-  `SessionLocationMetadata`-metadatan, ja `SessionRepository` mapittaa ne
-  Room-kirjoituksiin.
-- `DbCheckDatabase.DATABASE_NAME` on Room-tietokannan nimen lahde. Room builder,
-  LocalBackupManager ja backup-testit viittaavat samaan vakioon.
-- `ExportFileCache` omistaa FileProviderin authority-suffixin ja
-  `cache/exports/`-hakemiston nimet. `file_paths.xml` julkaisee lisäksi
-  app-private `files/wav_recordings/`-polun vain WAV-sharelle. Manifest/XML/
-  runtime/testit pidetaan samassa sopimuksessa.
-- `domain/hearingtest/HearingTestPolicy` ja `HearingRating` omistavat
-  kuulotestin taajuuslistan, tone timing -arvot ja rating-koodit.
-- `domain/noise/NoiseAlertPolicy` omistaa noise notificationien exposure-
-  keston ja peak-warning-rajan. `NoiseNotificationSchedule` omistaa
-  notificationien active day/hour -aikaikkunan ilman UI- tai Android
-  notification -riippuvuutta.
-- `domain/noise/AudibleAlarmPolicy` ja `AudibleAlarmEvaluator` omistavat
-  audible alarm -threshold/duration/cooldown-päätökset puhtaana domain-koodina.
-  Ne eivät toista ääntä, pyydä audio focusta tai koske Android notification
-  -polkuihin.
-- `domain/voice/*` omistaa voice baseline-, voice volume warning- ja TTS risk
-  prompt -päätökset puhtaana domain-koodina. Android TextToSpeech, notification
-  delivery ja haptic/audio playback pysyvät `service/`-kerroksessa.
-- `domain/passive/PassiveMonitoringAggregator` koostaa käyttäjän käynnistämän
-  passiivisen sample-jakson aggregate-arvot. Se ei luo sessioita, measurement-
-  rivejä tai raakaaudion persistointia.
-- `util/UserFacingError.kt` keskittaa teknisten `Throwable`-viestien
-  suodatuksen kayttajalle naytettaviksi fallback-resurssiteksteiksi. UI ei saa
-  nayttaa raakaa exception-viestia esimerkiksi share-, export-, Health
-  Connect-, history- tai hearing-test-virheissa.
-- Health Connectin status, hallintaintentit ja sykedata kulkevat
-  `service/HealthConnectService.kt`-portin kautta, mutta Settingsin
-  `HealthSyncSection` kayttaa AndroidX Health Connect
-  `PermissionController`-result-contractia permission-pyyntojen
-  kaynnistamiseen.
-- Coroutine dispatcherit tulevat Hiltista qualifiereilla
-  `DefaultDispatcher`, `IoDispatcher` ja `MainDispatcher`. `AppModule` on
-  niiden provider-lahde.
-- Raportoinnissa on yksi laskennan lahde:
-  `domain/report/SessionReportCalculator.kt` rakentaa `SessionReportData`-
-  mallin. Session Detail UI, PDF-export, PNG-jako ja Health Connect -notes
-  nojaavat samaan raporttidataan.
-- Room-kirjoitusten ja mittaussession completionin koordinointi kuuluu
-  `SessionRepository`lle ja `AudioSessionManager`ille, ei UI:lle.
-
----
-
-## Startup ja prosessilifecycle
-
-- `DbCheckApplication.onCreate()` kutsuu source-set-kohtaista `SentryInit`-polkua; debug voi alustaa Sentry Android Coren `DBCHECK_SENTRY_DSN`-/`SENTRY_DSN`-ympäristömuuttujalla tai ignored `debug.credentials.properties` -tiedoston `sentry.dsn`-arvolla, release on no-op
-- `DbCheckApplication.onCreate()` kaynnistaa Billing-yhteyden
-  `BillingRuntimeGateway.startConnection()`-polulla.
-- Sama startup kaynnistaa `AudioSessionManager.recoverInterruptedSession()`-
-  tehtavan. Jos edellisen prosessin jaljilta Roomissa on aktiivinen sessio,
-  se viimeistellaan hiljaisesti persistoiduista mittausriveista ilman
-  auto-navigointia.
-- `DbCheckApplication` seuraa `ProFeatureManager.isProUser`-virtaa ja paivittaa
-  Glance-widgetit, kun Pro-oikeus muuttuu ensimmaisen emission jalkeen.
-- `MainActivity` odottaa ensimmaista `UserPreferences`-emissiota ennen
-  `DbCheckTheme`/`DbCheckNavHost`-sisallon piirtamista. Tama estaa tallennetun
-  teeman valahdyksen system-teemana.
-- `MainActivity.onResume()` kutsuu `BillingRuntimeGateway.refreshPurchases()`, jotta
-  Play Billingin ulkopuolella valmistuneet tai pending-tilasta valmistuneet
-  ostot kasitellaan foregroundiin palatessa.
-- Restore-flow kaynnistaa sovelluksen uudelleen `AlarmManager` +
-  immutable `PendingIntent` + `finishAffinity()` + `Process.killProcess()` -
-  polulla, koska suljettua Room-instanssia ei kayteta turvallisesti samassa
-  prosessissa.
-
----
-
-## Manifest, oikeudet ja privaattidata
-
-Manifestin keskeiset faktat:
-
-- `applicationId` / namespace: `com.dbcheck.app`
-- `minSdk = 26`, `compileSdk = 37`, `targetSdk = 36`
-- `MainActivity` on ainoa launcher activity ja `android:exported="true"`.
-- `HealthConnectPermissionDisclosureActivity` on `exported=false`.
-- Health Connectin exported entrypointit ovat activity-aliaksia:
-  `.HealthConnectPermissionsRationaleActivity` ja
-  `.HealthConnectPermissionUsageActivity`. Ne targetoivat staattista
-  `HealthConnectPermissionDisclosureActivity`a, eivat varsinaista
-  navigation/data-muutosflow'ta.
-- `MeasurementForegroundService` on `exported=false` ja
-  `android:foregroundServiceType="microphone"`.
-- `AmbientSoundPlaybackService` on `exported=false` ja
-  `android:foregroundServiceType="mediaPlayback"`.
-- `DbCheckWidgetReceiver` on `exported=false`.
-- `FileProvider` on `exported=false`, `grantUriPermissions=true`, ja
-  `file_paths.xml` rajaa jaettavat tiedostot `cache/exports/`-polkuun ja
-  WAV-jakoa varten app-private `files/wav_recordings/`-polkuun.
-- `android:allowBackup="false"`, `backup_rules.xml` ja
-  `data_extraction_rules.xml` sulkevat appin root-datan pois cloud backupista
-  ja device transferista.
-- `android:usesCleartextTraffic="false"`.
-
-Manifest-oikeudet:
-
-- `RECORD_AUDIO` - mikrofoni, runtime-pyynto Meterissa.
-- `CAMERA` - Camera Overlay -polun runtime-lupa; route pyytaa luvan ennen
-  CameraX preview -sidontaa.
-- `POST_NOTIFICATIONS` - Android 13+ ilmoitukset, pyydetaan mittauksen
-  kaynnistyksen yhteydessa tarvittaessa.
-- `FOREGROUND_SERVICE` ja `FOREGROUND_SERVICE_MICROPHONE` - mikrofonin
-  foreground service.
-- `FOREGROUND_SERVICE_MEDIA_PLAYBACK` - ambient sound playbackin foreground
-  service.
-- `VIBRATE` - haptiikka.
-- `com.android.vending.BILLING` - Google Play Billing.
-- `android.permission.ACCESS_COARSE_LOCATION` - optional approximate session
-  location metadata.
-- `android.permission.health.WRITE_EXERCISE` - Health Connect
-  melusessiosynkkaus.
-- `android.permission.health.READ_HEART_RATE` - Health Connect sykeoverlay.
-- Manifestin `<queries>` sallii Health Connect -paketin ja Android 11+
-  TextToSpeech service -intenttien näkyvyyden.
-- Kamera on deklaroitu optional-featureina: `android.hardware.camera.any` ja
-  `android.hardware.camera`, molemmat `required=false`.
-
-Session location -scope:
-
-- Session sijainti on optional metadata, ei mittauksen vaatimus.
-- Manifestissa on vain `ACCESS_COARSE_LOCATION` approximate metadataa varten.
-- `ACCESS_FINE_LOCATION`, `ACCESS_BACKGROUND_LOCATION` ja foreground service
-  `location` -tyyppi eivät kuulu nykyiseen scopeen.
-- Runtime-pyyntö näytetään vasta käyttäjän sijaintitoiminnon yhteydessä; nykyinen
-  adapteri palauttaa `null`, jos runtime-lupaa ei ole myönnetty.
-- Jos sijainti on denied/unavailable tai stop tapahtuu ilman foreground-
-  käyttötilannetta, sessio jatkuu ja sijainti jätetään tyhjäksi.
-
----
-
-## Design system ja tekstiresurssit
-
-- Varit: dark/light-tokenit `ui/theme/Color.kt`:ssa. Paagradientti ja
-  tonaaliset surface-tasot tulevat teeman kautta.
-- Typografia: Manrope yleistekstissa ja Space Grotesk numeerisessa/datanaytossa.
-- Muodot ja spacing: `Shape.kt` ja `Spacing.kt`; spacing nojaa 8dp-gridiin.
-- Komponentit: mm. `DbCheckButton`, `DbCheckCard`, `DbCheckChip`,
-  `DbCheckSlider`, `DbCheckToggle`, `ProLockOverlay`, `SessionCard`,
-  `BottomNavBar`, `SkeletonLoader` ja `EmptyState`.
-- Uudet design-arvot tulee keskittaa teemaan. Inline-varit, spacingit,
-  animaatiokesto- ja card-oletukset ovat koodintarkistuksessa punaisia lippuja,
-  jos niille on jo token.
-- `app/src/main/res/values/strings.xml` sisaltaa nykyisin laajan
-  default-English-resurssipohjan: 764 `string`-merkintaa ja 11
-  `plurals`-merkintaa, mukaan lukien saavutettavuuskuvaukset.
-- `app/src/main/res/values-fi/strings.xml` on rajattu Finnish launch -baseline:
-  68 `string`-merkintaa ja 2 `plurals`-merkintaa. Se kattaa nykyisessa
-  checkoutissa erityisesti ambient soundin, hearing recoveryn, tinnitus pitchin
-  ja muutaman yleisen/a11y/notification-tekstin; koko sovellus ei ole viela
-  lokalisoitu.
-- Arvo-/teemakansioista loytyvat `values`, `values-fi` ja `values-night`. Muut
-  nykyiset `res`-hakemistot ovat `drawable`, `font`, `layout`,
-  `mipmap-anydpi-v26`, `raw` ja `xml`.
-
----
-
-## Navigaatio
-
-`DbCheckNavHost` kayttaa bottom navigationia puhelimella ja NavigationRailia,
-kun nayton leveys on vahintaan 600dp.
-
-| Reitti | Naytto | Nykyinen kayttaytyminen |
-|---|---|---|
-| `meter` | Meter | Start destination. Live gauge, waveform, Min/Avg/Max/Peak, Play/Pause, Reset ja Share. Pyytää `RECORD_AUDIO`-luvan ja Android 13+ ilmoitusluvan mittauksen kaynnistyksen yhteydessa. Kaynnistaa `MeasurementForegroundService`n; valmis normaali stop navigoi Session Detailiin `completedSessionIds`-eventista. |
-| `analytics` | Analytics | Viikon energia-average-altistus Room-datasta, kuuloterveysstatus, Pro-gatettu live-spektri, Pro-gatettu 7 paivan Environment Mix, Pro-gatettu 30 paivan trendi, Pro-gatettu 12 kuukauden raportti, hearing-test CTA, hearing recovery -kortti, tinnitus pitch -kortti, ambient sound -kortti ja effective `sleep_card` -ehdolla Sleep Monitor CTA. Free-kayttajalle Pro-kortit ovat locked-previewta ilman oikeaa Pro-dataa. |
-| `history` | History | 24h-hourly chart, safe hours, viimeisimmat sessiot, View All -tila, SessionNamingSheet ja Session Detail -avaus. Free-kayttajan historia rajataan 7 paivaan `SessionHistoryPolicy`n kautta. |
-| `history/detail/{sessionId}` | Session Detail | Sessioraportti, metadata, LAeq/equivalent-level-label, LCpeak, A-painotetuille sessioille TWA/dose/85 dBA peak events, time-series, PNG-jako, Pro-gatettu PDF-export ja Pro Health Connect -sykeoverlay. Suora reitti vanhaan sessioon lukitaan Free-kayttajalta. |
-| `settings?showPro={showPro}` | Settings | Kalibrointi, frequency weighting, notifications, Display & Features, Health Connect, local backups, clear history, Pro-gatettu CSV-export ja Pro-upsell. `showPro=true` scrollaa Pro-korttiin. Debug-buildissa Pro-kortissa on Force Free -toggle. |
-| `sleep/setup` | Sleep Setup | Non-top-level Sleep Monitor -route, joka avautuu Meterin ja Analyticsin Pro-effective `sleep_card` -CTA:sta. Free/deep-link -polku ohjataan Settingsin Pro-korttiin `SleepSetupViewModel`in execution-gatella. Pro-kayttaja voi valmistella 6h/8h/10h target-keston ja keep screen awake -option seka kaynnistaa Sleep recordingin foreground service -polun kautta. Sleep-start kirjoittaa `sleep_sessions`-metadatan luodulle tavalliselle session ID:lle; History nayttaa Sleep-badgen ja Session Detail avaa Sleep Results -kortin samalle session ID:lle. |
-| `hearing_test/setup` | Hearing Test Setup | Kuulotestin aloitusnaytto. Setup-ruutu ei itse lue Pro-tilaa; varsinainen testin suoritus estyy Free-tilassa `ActiveTestViewModel`issa. |
-| `hearing_test/active` | Hearing Test Active | Pro-kayttajan tone-playback ja Hughson-Westlake-tyyppinen threshold-flow. Free-tilassa execution estetaan ViewModelissa. |
-| `hearing_test/recovery/setup` | Hearing Recovery Setup | Pro-kayttajan lyhyen recovery-checkin aloitusnaytto. Copy rajaa checkin personal tracking -vertailuksi full hearing-test-baselineen, ei diagnoosiksi. |
-| `hearing_test/recovery/active` | Hearing Recovery Active | Kayttaa samaa `HearingTestActiveScreen` / `ActiveTestViewModel` -polkua `HearingTestMode.RECOVERY`-moodilla. Moodissa testataan vain 1/4/8 kHz molemmille korville ja valmis tulos tallennetaan `HearingRecoveryService`n kautta. |
-| `hearing_test/results/{testId}` | Hearing Test Results | Lataa ensisijaisesti route-argumentin `testId` tuloksen; fallback on latest result. Free-tilassa result-dataa ei nayteta eika jaeta. Share Results luo PNG-kortin ja tekstin Android Sharesheetiin. |
-| `tinnitus/pitch` | Tinnitus Pitch Matcher | Non-top-level Pro-gatettu personal tracking -pitch profile. Tallentaa DataStoreen vain vasemman/oikean korvan pitch-arvot ja päivitysajan, käyttää käyttäjän painamasta Preview-toiminnosta olemassa olevaa `ToneGenerator`ia eikä käynnistä taustapalvelua, sound therapyä, Health Connect -kirjausta tai automaattisia triggereitä. |
-| `ambient/playback` | Ambient Sound Playback | Non-top-level Pro-gatettu local playback -route. Käynnistää käyttäjän Play-toiminnolla erillisen `AmbientSoundPlaybackService` mediaPlayback foreground servicen, vaatii Android 13+ notification-luvan, tarjoaa näkyvän Stop-kontrollin ja ei käytä mikrofonia, Room-skeemaa, Health Connectiä tai therapy/safety-copya. |
-
-Top-level navigation palauttaa valitun stackin rootiin konservatiivisesti:
-samassa top-level stackissa statea ei palauteta, eri top-level stackissa
-`saveState`/`restoreState` on kaytossa.
-
----
-
-## Free vs Pro
-
-| Ominaisuus | Free | Pro | Nykytila koodissa |
-|---|:---:|:---:|---|
-| Live dB-mittari, waveform ja session stats | x | x | Kytketty Meterissa |
-| Aktiivisen session info bar | x | x | REC, kesto, effective weighting ja response time; Prolle sample rate ja input device |
-| Foreground measurement notification | x | x | Kytketty `MeasurementForegroundService`ssa |
-| Melutasoilmoitukset ja threshold-asetus | x | x | `NoiseAlertEvaluator` tukee threshold-, dose-, projected-dose- ja peak-alertteja schedulella ja cooldownilla |
-| Passive monitoring 5 min aggregate sample | x | x | Settingsin Noise Notifications -kortista käyttäjän käynnistämä foreground-service sample; tallentaa vain aggregate-rivit `passive_monitoring_samples`-tauluun |
-| Dark / Light / System -teema | x | x | DataStore + startup theme bootstrap |
-| Waveform style Line/Filled/Bars | x | x | Free-asetus, vaikuttaa Meter UI:hin |
-| Meter refresh rate High/Standard/Low | x | x | Free-asetus, vaikuttaa vain Meter UI -paivitysvali, ei AudioRecordiin tai Room-kadenssiin |
-| 7 paivan historia | x | x | `SessionHistoryPolicy.FREE_HISTORY_WINDOW_MILLIS` |
-| Rajoittamaton historia |  | x | History ja Session Detail rajaavat Free-kayttajan nakyman 7 paivaan; repositoryssa on seka raw-all-kyselyita etta gated listauspolkuja |
-| Viikon altistumiskaavio ja kuuloterveys | x | x | Kytketty Room-dataan |
-| Health Connect -melusessiosynkkaus | x | x | Free-kayttajallekin sallittu Settingsista |
-| Mikrofoniherkkyyden kalibrointi |  | x | `ProAudioPreferencePolicy`, Settings gate ja Room-backed calibration profiles; Settingsissä octave-band sliderit ja reset valitulle profiilille |
-| Frequency weighting A/B/C/Z/ITU-R 468 |  | x | `ProAudioPreferencePolicy` ja AudioEngine |
-| Dosimeter standard NIOSH REL / OSHA PEL |  | x | `DosimeterStandard`, DataStore, Settings state ja `DosimeterCalculator` NIOSH/OSHA-laskennalle |
-| Lock-screen live meter |  | x | Custom RemoteViews notification |
-| Health Connect -sykeoverlay |  | x | Session Detail + PDF heart-rate page |
-| PDF-raportti |  | x | `CreateDocument("application/pdf")` + `ExportPdfReportUseCase` |
-| Session Detail PNG -jakokortti | x | x | `ShareResultsGenerator.shareSessionReportCard()` |
-| Kotinayton widget |  | x | Glance-widget Pro-gatella |
-| Kuulotesti |  | x | Analytics CTA overlay, execution, save, results ja share gateattu; setup-ruutu ei itse gatea Pro-tilaa |
-| Hearing recovery check |  | x | Full hearing-test-baselineen vertaava 1/4/8 kHz short check; tallentaa vain aggregate-shiftit v12-tauluun |
-| CSV-vienti |  | x | Settings Data & Export |
-| WAV recording writer/export |  | x | Pro+opt-in-gatettu PCM16 WAV app storageen; Session Detail FileProvider share/delete, manual share smoke ajettu |
-| Session-nimeaminen ja tagit |  | x | History ja Session Detail |
-| Live-spektrianalyysi |  | x | Raw PCM -datasta, ei persistointia |
-| Live sound detection |  | x | YAMNet/TFLite live inference; optional persistence tallentaa vain label-vaihdos-eventit |
-| Audible alarm |  | x | Settings opt-in, 90 dB / 30 s / 5 min policy, proximity/interactive guard ja bundled alarm WAV |
-| Voice baseline ja voice warning |  | x | Vaatii Pro + aktiivinen mittaus + sound detection; tallentaa vain baseline aggregate -arvot DataStoreen |
-| Spoken TTS risk prompt |  | x | OFF oletuksena; triggeröi vain dosimeter dose/projected-dose -riskieventeistä, kun sound detection ja hearing baseline ovat saatavilla |
-| Tinnitus pitch profile |  | x | User-started ToneGenerator preview ja ear-specific DataStore-profiili; ei taustatoistoa, terapiaa tai Health Connect -kirjausta |
-| Ambient sound playback |  | x | User-started local AudioTrack playback erillisessä mediaPlayback foreground servicessä; ei mikrofonia tai Room-dataa |
-| Environment Mix |  | x | 7 paivan Room-jakauma; Free saa locked-previewn |
-| 30 paivan trendi |  | x | `ExposureAnalyticsCalculator` |
-| 12 kuukauden raportti |  | x | `ExposureAnalyticsCalculator` + session count |
-
----
-
-## Billing ja entitlement
-
-- `BillingGateway.kt` on Settingsin ostovirran testattava rajapinta.
-- `BillingRuntimeGateway` on appin startup/resume-lifecycleportti ja
-  `BillingEntitlementSource` on ostotilan stream-portti. Tuotantokoodi
-  injektoi billingia naiden rajapintojen kautta; `BillingManager` on vain
-  tuotantototeutus ja Hilt-bindingien parametri.
-- `BillingManager` on gatewayn tuotantototeutus ja kasittelee yhden INAPP-
-  tuotteen: `dbcheck_pro`.
-- `BillingEntitlementSource.isPurchased` alkaa arvosta `null`. `ProFeatureManager`
-  synkkaa DataStoreen vain varmistetun `true`/`false`-ostotilan, jotta appin
-  kaynnistys tai Play Billing -haun virhe ei ylikirjoita aiemmin tallennettua
-  Pro-oikeutta Free-tilaan.
-- `BillingRuntimeGateway.refreshPurchases()` kasittelee startup-/resume-snapshotit.
-  `PURCHASED`-ostot acknowledgeataan tarvittaessa myos reconnect/refresh-
-  polussa.
-- `PurchaseEvent`: `Completed`, `Pending`, `Cancelled`, `AlreadyOwned` ja
-  `Failed(reason)`.
-- `ITEM_ALREADY_OWNED` laukaisee ostosnapshotin haun, jotta token ja mahdollinen
-  acknowledge-puute saadaan kasiteltya.
-- `PurchaseState.PENDING` ei avaa Pro-oikeutta.
-- `domain/entitlement/ProEntitlementPolicy.kt` on effective entitlementin
-  ainoa policy-lahde: release kayttaa ostotilaa; debug on Pro oletuksena,
-  ellei debug-only `debugForceFreeEnabled` pakota Free-tilaa.
-- `UserPreferences.isProUser` on UI:n ja domain-policyjen effective Pro-arvo.
-
----
-
-## Audio engine ja mittaussessio
-
-Audio-domain:
-
-- `AudioProcessingConfig`: `SAMPLE_RATE = 44100`, `CHUNK_SIZE = 4096`,
-  `FFT_SIZE = 4096`.
-- `AudioRecordPolicies`: keskittaa AudioRecord-bufferin mitoituksen ja read-
-  tulosten tulkinnan. Capture-buffer on suurempi kuin PCM16-read-chunk.
-- `AudioEngine`: AudioRecord mono PCM16, permission check ennen tallennusta,
-  `@RequiresPermission` AudioRecord-luonnissa, `StateFlow<SpectralFrame?>`
-  live-spektrille ja `StateFlow<AudioInputInfo>` aktiivisen tallennuksen
-  input-metadatalle.
-- `AudioInputDevice` ja `AudioInputDeviceType`: Androidista riippumaton input-
-  device-listausmalli. `AudioInputDeviceMapper` on listauksen ja routing-
-  fallbackin yhteinen lähde. `AndroidAudioInputDeviceDiscoveryPort` lukee
-  `AudioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)` -source-laitteet,
-  mapittaa USB/Bluetooth/wired/built-in-tyypit ja julkaisee normalisoidut
-  display-nimet, external-lipun, sample rate -listat ja channel count -listat
-  Settings UI-statea varten. `selected_audio_input_device_id` on Pro-
-  effective DataStore-valinta; Free-käyttäjän execution-polku saa aina
-  effective null -arvon.
-- `AudioInputDeviceRouteResolver` valitsee tallennetun device-id:n, mutta jos
-  valittu external input ei ole enää listassa, se fallbackaa built-in-
-  mikrofoniin ylikirjoittamatta tallennettua preferenceä. `AndroidAudioInputDeviceRouter`
-  kutsuu `AudioRecord.setPreferredDevice(...)` ennen `AudioRecord.startRecording()`-
-  kutsua ja julkaisee routed-device-nimen `AudioInputInfo`n kautta.
-- `DecibelCalculator`: RMS/peak -> dB, referenssi `32768.0`, offset `+90`,
-  kalibrointioffset ja clamp 0-130 dB.
-- `FrequencyWeightingFilter`: `A`, `B`, `C`, `Z`, `ITUR468`. A/B/C/ITU-R 468
-  ovat 44.1 kHz:n SOS/biquad-kaskadeja. Painotettu signaali pysyy
-  `DoubleArray`na dB-laskentaan asti, jotta positiiviset vahvistukset eivat
-  leikkaudu PCM16-alueeseen.
-- `AudioEngine.DecibelReading` kuljettaa raw RMS -arvon (`instantDb`),
-  valitulla painotuksella lasketun RMS-arvon (`weightedDb`) ja C-painotetun
-  peak-arvon (`peakDb`).
-- `FFTProcessor`: 4096-point radix-2 FFT, Hann window, DC-bin ohitus
-  dominanttitaajuushaussa ja yhteinen FFT-binien taajuusmuunnos.
-- `SpectralAnalyzer`: 24 logaritmista 20 Hz-20 kHz bandia, dominantti taajuus
-  ja bandwidth-luokka raw PCM16 -chunkista.
-- `OctaveBandRtaCalculator`: nykyisen `FFTProcessor`in päälle rakennettu
-  octave/third-octave RTA-domain-laskuri. Se käyttää IEC/ANSI base-10-kaavaa
-  keskitaajuuksiin ja band edgeihin, aggregoi FFT-magnitudit bandikohtaisesti,
-  voi lukea `OctaveCalibrationOffsets`-mallin octave-resoluutiolle ja normalisoi
-  amplitudit vahvimpaan kalibroituun RTA-bandiin. `AudioEngine.rtaFrame`
-  julkaisee octave-RTA-datan live-only Analytics UI -polkuun zero-offset-
-  oletuksella, kunnes runtime-kytkentä valittuun profiiliin on valmis; Room-persistointia
-  ei tehdä.
-- `YamnetAudioWindowAdapter`: muuntaa 44.1 kHz PCM16 -chunk-virran 16 kHz
-  float-windowiksi YAMNetille ilman raw-audion persistointia.
-- `SoundClassifier`: testattava inference-portti. `TfliteSoundClassifier`
-  käyttää TensorFlow Lite Task Audio `AudioClassifier`ia YAMNet-assetilla ja
-  mapittaa kategoriat `SoundClassificationPolicy`n confidence thresholdin kautta.
-- `SoundDetectionWindowFanout`: `AudioEngine`n live-only raw-audio fanout
-  YAMNet-windoweille. `AudioSessionManager` ohjaa sitä effective-ehdolla
-  `isProUser && soundDetectionEnabled`, ja manager julkaisee
-  `soundDetectionState`-tilassa current detectionin sekä recent detections
-  -listan. `AudioEngine` ei tee classifier-inferenceä eikä raw-audiota
-  persistöidä.
-- `SoundDetectionRepository`: tallentaa vain erillisellä
-  `soundDetectionPersistenceEnabled`-opt-inillä aggregoidut detection-eventit
-  (`sessionId`, timestamp, label, confidence). Sama label tallennetaan
-  aktiivisen session aikana uudelleen vasta, kun detected label vaihtuu tai
-  classifier palauttaa välissä tyhjän tuloksen; raakaaudiota tai float-windowia
-  ei tallenneta.
-- `ToneGenerator`: AudioTrack MODE_STATIC sine wave ja 50 ms fade in/out
-  kuulotestille.
-
-Session orchestration:
-
-- `MeasurementForegroundService` kutsuu `ServiceCompat.startForeground(...)`
-  ensin ja kaynnistaa `AudioSessionManager.startSession()`-polun vasta, jos
-  foreground-promootio onnistuu.
-- Foreground service palauttaa onnistuneestakin kaynnistyksesta
-  `START_NOT_STICKY`; prosessin tappamisen jalkeen AudioRecord-sessiota ei
-  yriteta herattaa automaattisesti.
-- `AudioSessionManager.startSession()` palauttaa `true` vasta, kun
-  `AudioEngine.startRecording(...)` on saanut AudioRecordin kayntiin ja
-  julkaissut `onRecordingStarted`-callbackin.
-- `AudioSessionManager` kayttaa `Mutex`eja session lifecycleen ja measurement
-  flushiin. Stop/completion odottaa kaynnissa olevan flushin loppuun.
-- `SessionStats.avgDb` on energia-average painotetuista lukemista.
-  `minDb`/`maxDb` ovat weighted-arvoja ja `peakDb` on C-painotettu LCpeak.
-- `AudioSessionManager.liveExposureState` on aktiivisen session live-dosimeter-
-  tila. Se paivittyy jokaisesta `DecibelReading.aWeightedDb`-lukemasta,
-  laskee A-painotetun LAeq-arvon ja lukee NIOSH_REL/OSHA_PEL TWA-, dose-,
-  projected dose- ja remaining exposure time -arvot `DosimeterCalculator`ista.
-- `MeterUiState.measurementMode` kertoo Meterin `DB_METER` / `DOSIMETER`
-  -valinnan. `MeterViewModel.setMeasurementMode(...)` paivittaa vain UI-statea;
-  se ei kaynnista tai pysayta mittausta.
-- `MeterUiState.sessionInfo` on aktiivisen session infobar-malli.
-  `MeterViewModel` rakentaa sen `AudioSessionManager.isRecording`- ja
-  `activeSessionStartTimeMs`-virroista, `ProAudioPreferencePolicy`n effective
-  weighting/response time -arvoista seka `AudioEngine.audioInputInfo`sta.
-  Free-kayttaja nakee REC-tilan, keston, weightingin ja response timen; Pro
-  nakee lisaksi sample raten ja input devicen.
-- `MeterScreen` käyttää aktiivisen mittauksen aikana yhteistä `KeepScreenOnEffect` /
-  `KeepScreenOnController` -polkua `FLAG_KEEP_SCREEN_ON` -window flagille.
-  Controller clearataan recordingin päättyessä tai composable-disposessa, eikä
-  nykyisessä checkoutissa ole `PowerManager.WakeLock`-polkua. Sleep setup käyttää
-  samaa helperiä vain `isRecording && keepAwakeEnabled` -ehdolla.
-  `ui/common/ContextActivity.findActivity()` on yhteinen Activity-resolver
-  Settingsille, Camera overlaylle, Meterille ja Sleep setupille.
-- `MeasurementPersistenceSampler` tallentaa Roomiin kiintealla 1s cadencella,
-  mutta pakottaa persistoinnin ensimmaiselle lukemalle,
-  `NoiseLevel.ELEVATED.maxDb` / 85 dB boundary-crossingille, uudelle weighted
-  maxille, uudelle LCpeak maxille ja stopin viimeiselle tallentamattomalle
-  lukemalle.
-- `MeterRefreshRate` (`HIGH = 100 ms`, `STANDARD = 250 ms`, `LOW = 1000 ms`)
-  throttlettaa vain Meter UI -paivityksia. Se ei muuta AudioRecordin 44.1 kHz
-  sample ratea, 4096 sample chunkia, painotusfiltterin tilaa tai Roomin 1s
-  persistointikadenssia.
-- `AudioSessionManager.completedSessionIds` ajaa normaalin stopin jalkeisen
-  Session Detail -navigoinnin. Reset- ja failure-polut viimeistelevat session
-  hiljaisesti ilman auto-navigointia.
-
----
-
-## Tietokanta ja preferenssit
-
-Room database: `DbCheckDatabase`, `SCHEMA_VERSION = 12`, `exportSchema = true`.
-Skeematiedostot ovat `app/schemas/.../1.json` ... `12.json`.
-
-Migraatiot:
-
-- `MIGRATION_1_2`: lisaa `sessions.activeSlot`, varmistaa yhden aktiivisen
-  session slotin, sulkee ylimaaraiset aktiiviset sessiot ja luo deterministiset
-  indeksit sessioille, mittauksille ja hearing-test-resultseille.
-- `MIGRATION_2_3`: lisaa `measurements.peakDb` -sarakkeen ja backfillaa vanhat
-  rivit `dbWeighted`-arvolla.
-- `MIGRATION_3_4`: lisaa `measurements.aWeightedDb`- ja `measurements.responseTime`
-  -sarakkeet. Vanhat rivit backfillataan arvoilla `aWeightedDb = dbWeighted` ja
-  `responseTime = FAST`.
-- `MIGRATION_4_5`: lisaa `sound_detection_events`-taulun aggregoiduille
-  sound detection -eventeille ja indeksit `sessionId,timestamp`-export-/session
-  -kyselyille seka `timestamp`-poistopolitiikoille. Taulu cascadoituu
-  `sessions.id`-avaimeen.
-- `MIGRATION_5_6`: lisaa nullable session location -metadatasarakkeet
-  `sessions.locationLatitude`, `locationLongitude`, `locationAccuracyMeters` ja
-  `locationCapturedAt`. Vanhoja riveja ei backfillata; location on optional.
-- `MIGRATION_6_7`: lisaa `calibration_profiles`-taulun ja
-  `index_calibration_profiles_name`-indeksin. Profiilit ovat UI:sta riippumaton
-  Room-data source calibration profile -pinnoille.
-- `MIGRATION_7_8`: lisaa `calibration_profiles.octaveBandOffsets` TEXT NOT NULL
-  -sarakkeen default-arvolla tyhja string. V8:n Room identity hash on lisatty
-  `BackupDatabaseValidator`in tuettuihin hasheihin, jotta v8-backupit
-  lapaisisivat restore-validaation.
-- `MIGRATION_8_9`: lisaa nullable selected/routed audio input -metadatasarakkeet
-  `sessions.selectedAudioInputDeviceId`, `selectedAudioInputDeviceName` ja
-  `routedAudioInputDeviceName`. V9:n Room identity hash on lisatty
-  `BackupDatabaseValidator`in tuettuihin hasheihin.
-- `MIGRATION_9_10`: lisaa Sleep Monitorin erilliset `sleep_sessions`- ja
-  `sleep_notable_events`-taulut. Sleep metadata ei lisaa sarakkeita tavalliseen
-  `sessions`-tauluun. V10:n Room identity hash
-  `e4c97360fab833b6bc30549ab7e8075f` on lisatty
-  `BackupDatabaseValidator`in tuettuihin hasheihin.
-- `MIGRATION_10_11`: lisaa `passive_monitoring_samples`-taulun vain aggregate
-  passive monitoring -sampleille. Taulu ei viittaa `sessions`-tauluun eikä
-  sisalla raakaaudiota, PCM-bufferia tai YAMNet-windoweita. V11:n Room identity
-  hash `716c7f0bf6a88b295970a3f5459e7cbf` on lisatty
-  `BackupDatabaseValidator`in tuettuihin hasheihin.
-- `MIGRATION_11_12`: lisaa `hearing_recovery_results`-taulun short recovery
-  check -tuloksille. Taulu viittaa `hearing_test_results.id`-baselineen
-  cascade-FK:lla, ja indeksit ovat `timestamp` sekä `baselineTestId`. V12:n
-  Room identity hash `f73f218710d7988e02fb65939ff4fd56` on lisatty
-  `BackupDatabaseValidator`in tuettuihin hasheihin.
-
-Entiteetit:
-
-- `sessions`: `id`, `startTime`, `endTime`, `minDb`, `avgDb`, `maxDb`,
-  `peakDb`, `name`, `emoji`, `tags`, `isActive`, `activeSlot`,
-  `frequencyWeighting`, `locationLatitude`, `locationLongitude`,
-  `locationAccuracyMeters`, `locationCapturedAt`, `selectedAudioInputDeviceId`,
-  `selectedAudioInputDeviceName`, `routedAudioInputDeviceName`.
-- `measurements`: `id`, `sessionId`, `timestamp`, `dbValue`, `dbWeighted`,
-  `peakDb`, `aWeightedDb`, `responseTime`, optional `frequencyData`.
-- `hearing_test_results`: `id`, `timestamp`, `overallScore`, `rating`,
-  `leftEarData`, `rightEarData`, `speechClarity`, `highFreqLimit`,
-  `avgThreshold`.
-- `hearing_recovery_results`: `id`, `baselineTestId`, `timestamp`,
-  `testedFrequencyCount`, `averageShiftDb`, `maxShiftDb`, `status`,
-  `leftEarShiftData` ja `rightEarShiftData`. Taulu tallentaa vain aggregate-
-  shiftit, ei uutta tone-audio- tai kliinista audiometriadataa.
-- `sound_detection_events`: `id`, `sessionId`, `timestamp`, `label`,
-  `confidence`. Taulu ei sisalla raakaaudiota, PCM-windowia tai float-windowia.
-- `calibration_profiles`: `id`, `name`, `micSensitivityOffset`,
-  `octaveBandOffsets`, `isDefault`, `createdAt`, `updatedAt`.
-- `sleep_sessions`: one-to-one Sleep Monitor -metadata `sessions.id`-avaimeen
-  sarakkeilla `sessionId`, `targetDurationMinutes`, `keepAwakeEnabled` ja
-  `createdAt`. Taulu cascadoituu, kun parent-session poistetaan.
-- `sleep_notable_events`: Sleep-session event-rivit sarakkeilla `id`,
-  `sessionId`, `timestamp`, `eventType`, optional `levelDb` ja optional
-  `durationMs`. Taulu viittaa `sleep_sessions.sessionId`-avaimeen, joten
-  notable eventteja ei voi tallentaa tavalliselle ei-Sleep-sessiolle ilman
-  Sleep metadata -rivia.
-- `passive_monitoring_samples`: käyttäjän käynnistämien Passive monitoring
-  -samplejen aggregate-rivit sarakkeilla `id`, `startedAtMs`, `endedAtMs`,
-  `readingCount`, `minDb`, `averageDb`, `maxDb`, `peakDb` ja `totalEnergy`.
-  Taulu ei sisalla session ID:tä, raakaaudiota, PCM-bufferia tai YAMNet-windowia.
-
-Repository/dataflow:
-
-- `SessionRepository.recordActiveSessionMeasurements(...)` kirjoittaa
-  measurement-rivit ja aktiivisen session runtime-summaryn samassa Room
-  transactionissa.
-- `SessionRepository.completeSessionWithMeasurements(...)` kirjoittaa
-  viimeiset rivit ja sulkee session samassa transactionissa.
-- `SessionRepository.createActiveSession(...)` tallentaa active-session
-  luontiin valitun ja Androidin raportoiman routed audio input -metadatan,
-  jos `AudioEngine.audioInputInfo` julkaisi sen onnistuneen AudioRecord-startin
-  jalkeen.
-- `SessionRepository.updateSessionLocation(...)` on optional
-  `SessionLocationMetadata` -kirjoitusportti. `AudioSessionManager` kutsuu sita
-  startissa ja stop-fallbackissa `SessionLocationCapturePort`in tuloksella;
-  locationin puuttuminen tai capture/update-virhe ei kaada sessiota.
-- `SessionRepository.getFilteredSessions(SessionHistoryQuery)` on Historyn
-  hakudatan portti. Se säilyttää Free-käyttäjän 7 päivän policy-alarajan,
-  antaa Pro-käyttäjälle koko historian ja mapittaa name/tag/date/avg dB/
-  weighting/location-filtterit `SessionDao.searchSessions(...)` -kyselyyn.
-  SQL-order on deterministinen `startTime DESC, id DESC`.
-- `MeasurementRepository` on nykyisin read/analytics-repository. Se palauttaa
-  hourly/daily/weighted/environment mix -virtoja ja tekee energia-average-
-  mappaukset domain-malleihin.
-- `SoundDetectionRepository.recordEvent(...)` on optional detection
-  persistence -kirjoitusportti. `AudioSessionManager` kutsuu sita vain, kun
-  kayttaja on Pro, live sound detection on paalla ja erillinen persistence-opt-in
-  on paalla.
-- `PassiveMonitoringRepository.recordSample(...)` kirjoittaa vain aggregate
-  passive monitoring -samplet `passive_monitoring_samples`-tauluun.
-  `observeDailySummary(...)` koostaa Settingsin daily summaryn samasta
-  aggregate-datasta ilman `measurements`-riveja.
-- `CalibrationOffsetPolicy` on flat mic sensitivity- ja octave-band-offsetien
-  yhteinen +/-10 dB clamp/default-lahde. `OctaveCalibrationOffsets` omistaa
-  octave-band-offsetien supported center frequency -listan, reset-to-zero-
-  mallin ja deterministisen Room TEXT -codec-muodon.
-- `CalibrationProfileRepository` mapittaa `CalibrationProfileDao`n Room-entityt
-  domain-malliksi ja tarjoaa UI:sta riippumattomat `createProfile(...)`,
-  `observeProfiles()`, `getProfile(...)`, `renameProfile(...)`,
-  `deleteProfile(...)`, `updateOctaveBandOffsets(...)` ja
-  `resetOctaveBandOffsets(...)` -polut. Se normalisoi flat
-  `micSensitivityOffset`-arvon ja octave-offsetit `CalibrationOffsetPolicy`n
-  kautta ja estaa viimeisen `isDefault`-profiilin poiston data-kerroksessa.
-- Settingsin `AudioCalibrationSection` hallitsee calibration profile
-  -profiileja ProLockOverlayn takana. `SettingsViewModel` mapittaa
-  repository-virran `CalibrationProfileUiState`-riveiksi, joihin sisältyvät
-  valitun profiilin octave-band-offsetit `OctaveCalibrationBandUiState`-listana.
-  Settings näyttää valitulle profiilille `DbCheckSlider`-bandisäätimet ja reset-
-  ikonipainikkeen; update/reset kirjoittaa `CalibrationProfileRepository`n
-  `updateOctaveBandOffsets(...)`- ja `resetOctaveBandOffsets(...)` -polkuihin.
-  ViewModel bootstrappaa Pro-kayttajalle `Device default` -profiilin vasta
-  ensimmaisen Room-profiiliemission jalkeen, tallentaa selectin
-  `selected_calibration_profile_id`-avaimeen ja vaihtaa valitun profiilin
-  fallbackiin, jos kayttaja poistaa nykyisen valinnan. Free-kayttaja ei voi
-  create/select/rename/delete/update/reset-profiileja ViewModelin kautta.
-- DAO-kyselyissa on deterministiset `ORDER BY` -tie-breakerit, joissa
-  aikaleiman lisaksi kaytetaan primary keyta.
-
-DataStore-preferenssit:
-
-- `theme_mode`
-- `exposure_alerts`
-- `peak_warnings`
-- `notification_threshold`
-- `notification_schedule_active_days`
-- `notification_schedule_start_minute`
-- `notification_schedule_end_minute`
-- `mic_sensitivity_offset`
-- `frequency_weighting`
-- `response_time`
-- `dosimeter_standard`
-- `selected_calibration_profile_id`
-- `selected_audio_input_device_id`
-- `waveform_style`
-- `refresh_rate`
-- `lockscreen_meter`
-- `show_lockscreen_meter_publicly`
-- `health_connect`
-- `heart_rate_overlay`
-- `technical_metadata`
-- `dosimeter_card`
-- `sound_detection`
-- `sound_detection_persistence`
-- `sleep_card`
-- `wav_recording_default`
-- `audible_alarm`
-- `tts_risk_prompt`
-- `ambient_sound_preset`
-- `ambient_sound_volume`
-- `ambient_sound_timer_minutes`
-- `tinnitus_left_pitch_hz`
-- `tinnitus_right_pitch_hz`
-- `tinnitus_pitch_updated_at_ms`
-- `voice_baseline_level_db`
-- `voice_baseline_sample_count`
-- `voice_baseline_captured_at_ms`
-- `debug_force_free`
-- `is_pro_user`
-
-`UserPreferenceDefaults` keskittaa defaultit ja normalisoinnin. Pro-mittausarvot
-luetaan effective-arvoina `ProAudioPreferencePolicy`n kautta, joten Free-
-kayttajan tallennettu vanha calibration, weighting, response time tai dosimeter
-standard ei vaikuta mittauspolkuihin.
-
----
-
-## Analytics, History ja Session Detail
-
-Analytics:
-
-- `MeasurementRepository.getDailyAveragesLast7Days()` tuottaa viikon
-  energia-average-paivapisteet.
-- `AnalyticsViewModel` laskee weekly average -arvon, kuuloterveysstatuksen
-  (`SAFE`, `WARNING`, `DANGER`) ja today-vs-week-prosentin.
-- `AnalyticsSection` omistaa Analyticsin section-valinnan (`OVERVIEW`,
-  `SPECTRAL`, `ENVIRONMENT`), `AnalyticsOverviewRange` omistaa Overviewin
-  `WEEKLY` / `MONTHLY` -range-valinnan, ja `SpectralMode` omistaa spektrikortin
-  `BARS` / `SPECTROGRAM` / `RTA` -renderointitilan. `AnalyticsViewModel` sailyttaa nama
-  omissa state-lahteissaan ja julkaisee ne `AnalyticsUiState.Success` -kentissa,
-  jotta dataemissiot tai Compose-recomposition eivat palauta valintoja
-  oletukseen.
-- `AnalyticsSectionChipRow` nayttaa section-valinnan Analytics-headerin alla.
-  Free-kayttajalle Spectral ja Env Mix ovat nakyvissa lukkoikonilla, eivat
-  piilotettuina.
-- `AnalyticsOverviewRangeChipRow` nakyy vain Overview-sectionissa. Weekly on
-  Free-kayttajalle auki; Monthly nakyy Free-kayttajalle Pro-lukittuna, mutta
-  valinta saa silti nayttaa locked-preview-kortin.
-- `SpectralModeChipRow` renderoityy `SpectralAnalysisCard`issa. `SpectralMode`
-  -arvot ovat `BARS`, `SPECTROGRAM` ja `RTA`; valinta säilyy
-  `AnalyticsViewModel`in state-lähteessä dataemissioiden yli.
-- `SpectrogramBuffer` on Analytics ViewModelin live-only UI-bufferi. Se
-  muodostaa `AudioEngine.spectralFrame`-emissioista `SpectrogramUiState`-
-  waterfall-rivit, sailyttaa enintaan 60 viimeisinta riviä ja ohittaa saman
-  timestampin uudelleenemissiot.
-- `SpectralAnalysisCard` renderöi Bars-, Spectrogram- ja RTA-haarat erikseen.
-  `SpectrogramCanvasModel` muuntaa waterfall-rivit piirrettäviksi soluiksi.
-  `RtaBarsModel` muuntaa `RtaUiState`-bandit octave-bar Canvasille ja PEAK/BANDS
-  -stat pillien arvoiksi. `formatSpectralFrequency(...)` on UI:n yhteinen
-  Hz/kHz-muotoilija.
-- `analyticsSectionCards(...)` on Analyticsin section-kohtaisen korttiryhmittelyn
-  UI-lahde. Overviewin Weekly-range renderoi weekly exposure- ja hearing
-  health -kortit, Monthly-range renderoi monthly trend -kortin, ja yearly report
-  seka hearing-test CTA pysyvat Overviewissa molemmissa rangeissa. Spectral
-  renderoi live-spektrikortin; Environment renderoi Environment Mix -kortin.
-  ViewModel hakee ja julkaisee samat UI-state-kentat riippumatta valitusta
-  sectionista tai range-valinnasta.
-- Pro-kayttajalle Environment Mix lukee 7 paivan Room-countit
-  `MeasurementRepository.getEnvironmentMixLast7Days()`-polusta.
-- Pro-kayttajalle 30 paivan trendi ja 12 kuukauden raportti lasketaan
-  `ExposureAnalyticsCalculator`illa. Ikkunat paivittyvat minuutin tickilla.
-- Free-kayttajalle Pro-analytiikka palauttaa `LockedPreview`-tilat, ei oikeaa
-  dataa overlayn alle.
-- Live-spektri naytetaan Pro-kayttajalle `AudioEngine.spectralFrame`-virrasta;
-  spektria tai spectrogram-bufferia ei persistoda `measurements.frequencyData`
-  -kenttaan. Free-kayttajan spectrogram saa `LockedPreview`-tilan, ja null-frame
-  tyhjentaa live-bufferin.
-- Analyticsin datavirran latausvirhe mapataan `AnalyticsUiState.Error`-
-  tilaksi, joka nayttaa resursoidun fallback-viestin ja CTA:n Meteriin.
-
-History:
-
-- `HistoryViewModel` yhdistaa 24h-hourly-averaget, sessiot, Pro-tilan ja
-  View All -tilan.
-- `SessionRepository.getSessions()` on Pro-aware listauspolku, mutta
-  `HistoryViewModel` kayttaa nykyisin myos raw-all-polkuja ja rajaa
-  Free-kayttajan sessiolistan paikallisesti
-  `SessionHistoryPolicy.FREE_HISTORY_WINDOW_MILLIS` -ikkunaan.
-- Session Detail lukee routeargumentin session ensin raw-kyselylla ja lukitsee
-  vanhan session raporttinakyman Free-kayttajalta saman 7 paivan policy-ikkunan
-  perusteella.
-- `HistoryViewModel.saveSessionMetadata(...)` ei kirjoita metadataa, ellei
-  kayttaja ole Pro.
-- Historyn latausvirhe mapataan `HistoryUiState.Error`-tilaksi. Metadata-
-  tallennuksen virhe naytetaan erillisena `metadataErrorMessage`-viestina
-  onnistuneen History-sisallon sisalla.
-- `SessionMetadata` normalisoi nimen, emojin, tagit ja export-slugit.
-  Tagit rajataan kuuteen 24 merkin tagiin ja duplicate-tagit poistetaan
-  case-insensitive.
-
-Session Detail:
-
-- `SessionDetailViewModel` lukee `sessionId`-routeargumentin `SavedStateHandle`sta.
-- Raportti syntyy `SessionReportCalculator`illa sessiosta ja measurement-
-  riveista.
-- `equivalentLevelLabelForWeighting(...)` erottaa A/B/C/Z/ITU-R 468 -tasot
-  raporttiteksteissa.
-- `domain/noise/DosimeterCalculator.kt` laskee NIOSH_REL- ja OSHA_PEL-altistuksen
-  TWA-, dose-, projected dose- ja remaining exposure time -arvot yhteista
-  completed report / live flow -kayttoa varten. Completed report nayttaa
-  nykyiset NIOSH_REL TWA/dose -kentat, ja `AudioSessionManager.liveExposureState`
-  kayttaa samaa laskuria aktiivisen session live-arvoihin.
-- NIOSH 8h TWA, NIOSH dose ja 85 dBA peak-event-lista ovat saatavilla vain
-  A-painotetuille sessioille. Muilla painotuksilla arvot puuttuvat tietoisesti
-  eivatka nay nollina.
-- Heart-rate overlay latautuu vain, kun kayttaja on Pro, asetus on paalla,
-  Health Connect on saatavilla ja `READ_HEART_RATE` on myonnetty.
-- Session Detail sailyttaa lukitus-/puuttuva-sessio-tilat eksplisiittisina
-  unavailable-tiloina ja mapittaa load/share/PDF/metadata-virheet
-  resursoituihin `errorMessage`-viesteihin.
-
----
-
-## Health Connect
-
-Integraatioadapteri on `sync/HealthConnectManager.kt`. UI kayttaa sita
-`service/HealthConnectService.kt`-portin kautta.
-
-- Saatavuus tarkistetaan `HealthConnectClient.getSdkStatus(context,
-  "com.google.android.apps.healthdata")`-polulla.
-- Permission-setit:
-  - Noise sync: `HealthPermission.getWritePermission(ExerciseSessionRecord::class)`
-  - Heart rate read: `HealthPermission.getReadPermission(HeartRateRecord::class)`
-- Melusession kirjoitus:
-  - record type: `ExerciseSessionRecord`
-  - `exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT`
-  - `Metadata.clientRecordId = "noise_dose_<date>_session_<session.id>"`
-  - `Metadata.recordingMethod = RECORDING_METHOD_ACTIVELY_RECORDED`
-  - notes-kenttaan kirjataan `SessionReportData`sta equivalent-level-label ja arvo, max, LCpeak seka weighting-label.
-- `AudioSessionManager.publishCompletionSideEffects(...)` kutsuu
-  `HealthConnectManager.writeNoiseDose(...)` vain normaalissa completionissa ja
-  vain, jos `healthConnectEnabled` on paalla.
-- Kuulotestin `HealthConnectManager.writeHearingTestResult(...)` palauttaa
-  tarkoituksella `Skipped`, koska natiivia audiometriatietuetta ei ole.
-- `HealthConnectService.readHeartRateForSession(...)` mapittaa Health Connectin
-  samplet Session Detailin UI-stateen ja PDF:n `ReportHeartRateSection`iin.
-- Health Connect -status kantaa `errorMessage`-kenttaa, jos saatavuus- tai
-  permission-tarkistus epaonnistuu. Settings ja Session Detail nayttavat sen
-  resursoituna kayttajaviestina eivatka piilota status-tarkistuksen virhetta.
-- Settingsissa Install/Update-toiminto avaa Health Connectin Play Store
-  -sivulle `market://details?id=com.google.android.apps.healthdata` -intentilla,
-  jos Health Connect puuttuu tai vaatii paivityksen.
-- Settingsissa Manage-toiminto avaa Health Connectin hallintanakymaan
-  `HealthConnectClient.getHealthConnectManageDataIntent(...)`-intentilla.
-
----
-
-## Kuulotesti
-
-- Domain-proseduuri on `domain/hearingtest/HearingTestProcedure.kt`.
-- `ActiveTestViewModel` ohjaa tone playbackia ja kayttajavastetta; se ei
-  kaynnista testia Free-tilassa.
-- `HearingTestService.saveCompletedTest(...)` tarkistaa Pro-oikeuden ennen
-  tallennusta.
-- `HearingTestRepository` tarjoaa `getResultById(id)` ja `getLatestResult()`.
-- Results-naytto lataa ensisijaisesti `hearing_test/results/{testId}`-
-  reittiargumentin tuloksen. `getLatestResult()` on fallback, jos argumentti
-  puuttuu.
-- Results-naytto erottaa latausvirheen, Pro-lukituksen ja puuttuvan tuloksen
-  omiksi content modeiksi. Share- ja tone playback -virheet naytetaan
-  resursoituina fallback-viesteina.
-- Share Results rakentaa PNG-kortin ja saatetekstin
-  `ShareResultsGenerator.shareHearingTestResults(...)`-polulla.
-- Tulokset ovat suhteellisia appin tone-output / dBFS -tasoja, eivat
-  kalibroitua kliinista dB HL -audiometriaa.
-- Hearing recovery käyttää samaa `HearingTestProcedure` / `HearingTestActiveScreen`
-  -polkua `HearingTestMode.RECOVERY`-moodilla. Moodin frekvenssit ovat 1 kHz,
-  4 kHz ja 8 kHz molemmille korville.
-- `HearingRecoveryService.saveCompletedRecoveryCheck(...)` vaatii Pro-oikeuden
-  ja viimeisimmän full hearing-test -baseline-tuloksen. Jos baseline puuttuu,
-  tallennus epäonnistuu resursoidulla baseline-required-viestillä.
-- `HearingRecoveryCalculator` laskee matching ear/frequency -threshold-deltat,
-  `averageShiftDb`-, `maxShiftDb`- ja `STABLE` / `SMALL_SHIFT` /
-  `ELEVATED_SHIFT` -statusarvon. `HearingRecoveryRepository` persistoi vain
-  aggregate-tuloksen `hearing_recovery_results`-tauluun.
-
----
-
-## Raportointi, export ja jakaminen
-
-Session report:
-
-- `SessionReportCalculator` laskee equivalent-level-arvon, durationin, LCpeakin,
-  A-painotetun TWA/dosen, time-series-pisteet ja A-painotetut 85 dBA
-  peak-event-jaksot.
-- `SessionReportData` sisaltaa myos session custom-nimen, emojin ja tagit.
-- `PdfChartRenderer` keskittaa PDF Canvas -kaavion ja Session Detailin staattisen
-  Compose-kaavion koordinaattimuunnoksen.
-
-PDF:
-
-- Session Detail kayttaa `ActivityResultContracts.CreateDocument("application/pdf")`.
-- `ExportPdfReportUseCase` kirjoittaa natiivin `PdfDocument`in:
-  5 sivua normaalisti, 6 sivua kun `ReportHeartRateSection.enabled` on true.
-- Sivut: summary, metrics, data availability, time series, peak events ja optional heart rate.
-- Metrics-sivun Report Context nayttaa app-version, Android-laitetiedon,
-  persisted response time -summaroinnin, export-hetken effective calibration
-  offsetin ja disclaimerin. Kalibrointioffset on export-metadataa, ei viela
-  historiallinen session field ennen upstream-persistointia.
-- Data Availability -sivu nayttaa vain valmiin upstream-datan: session location,
-  A-painotetun NIOSH dosimeter standardin, projected dosen ja persisted sound detection -yhteenvedon.
-  Octave breakdown pysyy N/A-tilassa, ellei `SessionReportData.octaveBreakdownAvailable` tai non-zero
-  `octaveCalibrationOffsets` kerro saatavasta octave-kontekstista; RTA time-series -dataa ei viela persistöidä.
-  Puuttuvat lahteet naytetaan `N/A`-tekstina, ei nollina.
-
-PNG / Sharesheet:
-
-- `ShareResultsGenerator.shareSessionStats(...)` on Meterin text/plain-share.
-- `ShareResultsGenerator.shareHearingTestResults(...)` rakentaa hearing-test
-  PNG-kortin.
-- `ShareResultsGenerator.shareSessionReportCard(...)` rakentaa Session Detailin
-  PNG-raporttikortin.
-- PNG-jaot kirjoitetaan `cache/exports/`-hakemistoon ja julkaistaan
-  `FileProvider`in `content://`-URIlla.
-- Jakointentit antavat valiaikaisen lukuoikeuden seka `EXTRA_STREAM`in etta
-  `ClipData`n / `FLAG_GRANT_READ_URI_PERMISSION`in kautta.
-
-CSV:
-
-- Settingsin Data & Export kutsuu `SettingsViewModel.createCsvExportIntent()` all-sessions exportille.
-- `ExportCsvUseCase` kirjoittaa kolme CSV-tiedostoa:
-  sessioyhteenvedon, mittausrivit ja optional sound detection -eventit.
-- `CsvExportSelection` tukee sekä all-sessions- että selected-session-id -batch-exportia.
-  Settings käyttää all-sessions-polun; valitut sessiot käyttävät samaa tiedostojen, sivutuksen
-  ja FileProviderin sopimusta.
-- CSV-sarakkeissa ovat metadata-kentat `session_name`, `session_emoji` ja
-  `session_tags`; measurement-exportissa myos `peak_db`, ja sound detection
-  -exportissa vain aggregoidut `timestamp`, `label` ja `confidence`.
-- Mittausrivit luetaan sivuina
-  `MeasurementDao.getMeasurementsForSessionExportPage(...)`-polulla, jotta
-  export ei rakenna koko raw-aineistoa muistiin.
-- Sound detection -eventit luetaan sivuina
-  `SoundDetectionEventDao.getEventsForSessionExportPage(...)`-polulla.
-- CSV-jako kayttaa `ACTION_SEND_MULTIPLE`-intentia ja FileProvider-URIja.
-- Settingsin Clear history -toiminto on kaikkien kayttajien datanhallintatoiminto. Se vaatii
-  vahvistusdialogin, estyy aktiivisen mittauksen aikana ja kutsuu `HistoryClearService.clearHistory()`
-  -polkua. `SessionRepository.clearInactiveHistory()` poistaa inactive-sessiot Room-transactionissa,
-  child-rivit poistuvat foreign-key cascaden kautta, ja `WavRecordingFileStore` poistaa poistettujen
-  sessioiden WAV-tiedostot. `filesDir/backups` ei kuulu clear history -poistoon.
-
-Settings Display & Features:
-
-- `DisplayAndFeaturesSection` omistaa Settingsin theme-, waveform style- ja refresh rate -chipit seka
-  lock-screen meter -featurekortin. `SettingsScreen` mapittaa `SettingsUiState`n section-kohtaiseen
-  state/actions-malliin, ja `LockscreenMeterSection(showTitle = false)` sailyttaa olemassa olevan
-  ProLockOverlay-gaten ilman erillista Settingsin audio/notifikaatio-osion otsikkoa.
-- `show_lockscreen_meter_publicly` on lock-screen meterin erillinen default OFF -opt-in. Settings nayttaa
-  privacy-warningin live dB -lukemien nakymisesta lukitusnaytolla, ja `SettingsViewModel` nayttaa public-asetuksen
-  effective ON -tilassa vain Pro-kayttajalle, kun myos `lockscreen_meter` on effective paalla.
-- Feature togglet ovat DataStore-pohjaiset `technical_metadata`, `dosimeter_card`, `sound_detection` ja `sleep_card`.
-  `SettingsViewModel` nayttaa Pro-only-togglet Free-tilassa effective OFF -arvoina eika anna Free-kayttajan enabloida
-  niita ViewModelin kautta.
-- `technical_metadata` ohjaa Meterin session info -kortin Pro-teknisia tietoja kuten sample rate ja input device.
-  `dosimeter_card` ohjaa Meterin Pro-dosimeter modea ja korttia, ja jos arvo poistuu paalta, ViewModel palauttaa
-  mittaustilan DB meter -tilaan. Free-kayttajan lukittu dosimeter-chip ei nayta Pro-dataa.
-- `sound_detection` kayttaa samaa avainta kuin `AudioSessionManager`in inference-gate; Analytics piilottaa Environment
-  -osion sound detection -kortin, kun toggle ei ole effective paalla. `sleep_card` on persisted Pro-gatettu visibility
-  -asetus Sleep Monitor -kortille: Meter ja Analytics Overview nayttavat `SleepSetupCta`-kortin vain effective Pro ON
-  -tilassa, ja `Screen.SleepSetup` / `sleep/setup` gateaa Free/deep-link -execution-polun upgradeen.
-- `SleepSetupViewModel` hoistaa Sleep setup -ruudun valmistelutilan: Pro-readiness tulee effective `isProUser`-arvosta,
-  ei `sleep_card`-visibility-asetuksesta. Valmisteltavat valinnat ovat 6h/8h/10h target-kesto ja `keepAwakeEnabled`.
-  Free-tila pysyy locked-tilassa eika ViewModel muuta setup-valintoja.
-- Sleep active recording kayttaa samaa `MeasurementForegroundService`- ja `AudioSessionManager`-mittauspolkua kuin Meter.
-  `MeasurementRecordingMode.Sleep` valitsee Sleep notification copyn ja target-duration auto-stopin, ja
-  `AudioSessionManager.startSleepSession(...)` kirjoittaa `SleepSessionRepository`n kautta `sleep_sessions`-metadatan
-  luodulle tavalliselle session ID:lle. `MeasurementRecordingMode.Passive` on erillinen aggregate-only foreground
-  sample eikä käytä Sleep-session polkua.
-- `KeepScreenOnEffect` on yhteinen Window-flag-helper. Meter pitaa ruudun hereilla aktiivisessa mittauksessa; Sleep
-  pitaa ruudun hereilla vain kayttajan `keepAwakeEnabled`-opt-inilla, muuten foreground service jatkaa mittausta ilman
-  UI:n paalla pysymista.
-- Sleep results lukee `sleep_sessions`-metadatan `SleepSessionRepository`n read-flow'illa. History saa erillisen Sleep
-  session ID -joukon UI-stateen ja nayttaa Sleep-badgen `SessionCard`issa muuttamatta tavallista `Session`-mallia.
-- Session Detail nayttaa Sleep Results -kortin vain Sleep-session metadatalle. `SleepResultsCalculator` muodostaa
-  target/recorded-keston, equivalent levelin, maxin, LCpeakin, peak-event-countin, loud-period-countin ja histogram
-  bucketit olemassa olevasta `SessionReportData`sta.
-- Sleep export/report käyttää samaa report-dataflow'ta: `SessionDetailViewModel` tallentaa Sleep-yhteenvedon
-  `SessionReportData.sleep` / `ReportSleepSection` -kenttiin, PDF:n Data Availability -sivu näyttää Sleep-rivit
-  `N/A`-fallbackeilla ja sessions CSV hakee `sleep_sessions`-metadatan `SleepSessionDao`n export-kyselyllä.
-- Sleep insights on report-pohjainen domain-analyysi: `SleepInsightsCalculator` muuntaa `SessionReportData.timeSeries`
-  -sarjan loud-period notable event -yhteenvedoiksi ja palauttaa `MissingMeasurements`, kun time-series puuttuu.
-  `SleepResultsCalculator` jättää peak/loud/sample-countit nullable-arvoiksi unavailable-tilassa, jotta Session Detail
-  näyttää `N/A`-fallbackin eikä nollaa.
-- Audible alarm policy on pure domain -kerroksessa: `AudibleAlarmPolicy` omistaa 90 dB / 30 s / 5 min oletukset ja
-  `AudibleAlarmEvaluator` palauttaa `BelowThreshold`, `Waiting`, `CoolingDown` tai `Trigger` -päätöksen. Thresholdin
-  alitus resetoi duration-ikkunan, ja cooldownin jälkeen vaaditaan uusi duration-ikkuna ennen seuraavaa triggeriä.
-- Audible alarm playback on Pro-gatettu runtime-polku: `audible_alarm` DataStore-default on OFF, Settingsin Noise
-  Notifications -kortti tarjoaa toggle- ja preview-polun Pro-käyttäjälle, `SoundPoolAudibleAlarmPlayer` soittaa bundled
-  `res/raw/audible_alarm.wav` -äänen `USAGE_ALARM`-attribuutilla, ja `AndroidAudibleAlarmPlaybackGuard` estää toiston,
-  jos näyttö ei ole interactive-tilassa tai proximity-sensori on peitetty. `AudioSessionManager` välittää live weighted
-  dB -lukemat `AudibleAlarmPlaybackController`ille ja pysäyttää guardin kaikissa session stop/failure/cleanup-polkuissa.
-- Voice baseline käyttää olemassa olevaa YAMNet/Sound Detection -polkua: `VoiceBaselineCalibrator` aggregoi vain
-  `Speech`-luokittelemien live-jaksojen weighted dB -lukemat, `AudioSessionManager.captureVoiceBaseline(...)` palauttaa
-  capturen vain Pro + aktiivinen mittaus + Sound Detection -ehdolla, ja DataStore tallentaa vain
-  `voice_baseline_level_db`, `voice_baseline_sample_count` ja `voice_baseline_captured_at_ms` -arvot. Raakaaudiota,
-  PCM-bufferia tai YAMNet-windowia ei persistöidä baselinea varten.
-- Voice volume warnings käyttää samaa YAMNet/Sound Detection -live-luokitusta ja tallennettua baseline-aggregaattia:
-  `VoiceVolumeWarningEvaluator` vaatii `Speech`-luokituksen, baseline + 8 dB -ylityksen 3 sekunniksi ja 60 sekunnin
-  cooldownin. `AudioSessionManager` dispatchaa triggerissä best-effort haptic-palautteen sekä
-  `NotificationHelper.sendVoiceVolumeWarning(...)` -alert-kanavan notificationin. Polku ei lisää raakaaudion
-  tallennusta, uutta Room-skeemaa tai background microphone -toteutusta.
-- TTS risk prompt on Pro-gatettu opt-in-polku: `tts_risk_prompt` DataStore-default on OFF, Settingsin Noise
-  Notifications -kortti näyttää Spoken risk prompt -kytkimen, ja `TtsRiskPromptEvaluator` triggeröi vain
-  dosimeter-pohjaisista `DOSE`/`PROJECTED_DOSE` -riskieventeistä. `AudioSessionManager` kutsuu
-  `TtsRiskPromptController`ia vain olemassa olevan mittauksen riskipäätöksistä ja antaa sille effective Pro +
-  opt-in-, Sound Detection -saatavuus- ja latest hearing-test-baseline -tilat. `AndroidTextToSpeechPlayer` käyttää
-  Android `TextToSpeech` -APIa `QUEUE_FLUSH`-toistolla, ja manifestin `<queries>` sisältää Android 11+ TTS service
-  -näkyvyysdeklaraation. Spoken copy on varovainen melualtistuskehotus eikä tee diagnoosi-, kuulovaurio- tai
-  turvallisuusväitteitä; polku ei persistoi raakaaudiota, YAMNet-windowia, hearing-test-muutosta tai uutta Room-dataa.
-- Hearing recovery check on Pro-gatettu lyhyt kuulotestipolku full hearing-test-baselineen verrattavaksi.
-  `HearingTestMode.RECOVERY`
-  käyttää samaa `HearingTestProcedure`- ja `HearingTestActiveScreen` -toteutusta kuin full hearing test, mutta rajaa
-  frekvenssit arvoihin 1 kHz, 4 kHz ja 8 kHz molemmille korville. `HearingRecoveryService` vaatii Pro-oikeuden ja latest
-  full hearing-test-baselinen, laskee `HearingRecoveryCalculator`illa vain matching ear/frequency -threshold-deltat ja
-  tallentaa aggregate-tuloksen `HearingRecoveryRepository`n kautta. Room schema v12 lisää
-  `hearing_recovery_results`-taulun: `baselineTestId`, timestamp, tested count, average/max shift, status sekä left/right
-  shift data; taulu ei sisällä raakaaudiota, PCM-bufferia, YAMNet-windowia tai uutta kliinistä audiometriadataa.
-- Analytics Overview näyttää `HearingRecoveryCard`in. Missing-baseline-tila ohjaa full hearing testiin, ready/result-tila
-  avaa short recovery setup -polun, ja Free-käyttäjä näkee locked-previewn ilman recovery-dataa. Recovery-copy kuvaa
-  tuloksia vain personal tracking -vertailuna eikä diagnoosi-, kuulovaurio- tai turvallisuusväitteenä.
-- Tinnitus scope gate 2026-06-28: tinnitus ei kuulu v1.0-releaseen. Osa 91 saa edetä aikaisintaan v1.5-tason
-  personal tracking -pitch profileksi: käyttäjän itse käynnistämä ToneGenerator-pohjainen pitch matching, ear-specific
-  profiili ja playback limits. Se ei saa sisältää diagnoosia, hoitoa, oireiden vähentämis-/parantamisväitteitä,
-  kuulovaurio- tai turvallisuusväitteitä, Health Connect -kirjausta, background playbackia, sound therapyä tai
-  automaattisia triggereitä. Vanha Osa 92 sound therapy -scope pysyy pois rajauksesta; Osa 92:n hyväksytty toteutus on
-  erikseen rajattu ambient sound playback ilman medical/therapy-väitteitä, oireseurantaa, Health Connectiä tai
-  automaattisia triggereitä. Ennen tinnitus-ominaisuuden julkaisua tarkista Google Playn
-  health content / user data -vaatimukset, health disclaimer / declaration -tarve ja FDA:n device software
-  -käyttötarkoitusrajaus.
-- Tinnitus pitch matcher on toteutettu Osa 91:n rajattuna v1.5 personal tracking -ominaisuutena. `domain/tinnitus`
-  omistaa `TinnitusPitchProfile`-mallin ja `TinnitusPitchPolicy`n, joka normalisoi pitch-arvot nykyisen
-  hearing-test-taajuusalueen 250-8000 Hz sisään 50 Hz stepillä ja käyttää previewlle kiinteää -36 dB amplitudia.
-  DataStore-avaimet ovat `tinnitus_left_pitch_hz`, `tinnitus_right_pitch_hz` ja `tinnitus_pitch_updated_at_ms`;
-  Room-skeemaa ei muutettu. Analytics Overview näyttää `TinnitusPitchCard`in, joka avaa `tinnitus/pitch`-reitin.
-  Free-käyttäjän effective pitch profile on tyhjä/locked, eikä `TinnitusPitchMatcherViewModel` previewaa tai tallenna
-  profiilia ilman Pro-oikeutta. Toteutus ei lisää background playbackia, serviceä, media notificationia, sound therapyä,
-  Health Connect -kirjausta, raakaaudiota tai automaattisia triggereitä.
-- Ambient sound playback on Osa 92:n rajattu Pro-ominaisuus: Analytics Overview näyttää `AmbientSoundCard`in ja avaa
-  non-top-level `ambient/playback` -reitin. `AmbientSoundPlaybackViewModel` gateaa Playn Pro-oikeuteen,
-  käyttäjätoimintoon ja Android 13+ notification-lupaan; Free-käyttäjä ei voi käynnistää playbackia eikä persistöidä
-  ambient-asetuksia.
-- Ambient playbackin DataStore-avaimet ovat `ambient_sound_preset`, `ambient_sound_volume` ja
-  `ambient_sound_timer_minutes`; `AmbientSoundPolicy` normalisoi presetit `WHITE_NOISE`/`PINK_NOISE`/`BROWN_NOISE`/`FAN`,
-  volume-alueen `0.05f..1.0f` ja timer-vaihtoehdot `0/15/30/60/120`.
-- `AmbientSoundPlaybackService` on erillinen `mediaPlayback` foreground service omalla
-  `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permissionilla ja low-importance playback notification channelilla. Se ei käytä
-  `MeasurementForegroundService`ä, `RECORD_AUDIO`-lupaa, mikrofonityyppiä, Room-skeemaa, playback-historiaa,
-  raakaaudiota, pilvisynkkaa tai Health Connect -kirjausta.
-- `AmbientSoundPlayer` generoi white/pink/brown/fan PCM16-äänen paikallisesti `AudioTrack.MODE_STREAM` -toistoon
-  `USAGE_MEDIA` / `CONTENT_TYPE_MUSIC` -attribuuteilla. Audio focus permanent loss pysäyttää, transient loss pausettaa,
-  ja sleep timer vain pysäyttää jo käyttäjän käynnistämän playbackin.
-- Passive monitoring on käyttäjän Settingsistä käynnistämä lyhyt foreground-service sample. Settingsin Noise
-  Notifications -kortti näyttää disclosure-copyt, pyytää mikrofoniluvan käyttäjätoiminnolla ja käynnistää
-  `MeasurementForegroundService.startPassiveMonitoringIntent(...)` -polun; notificationissa on ongoing Stop-toiminto.
-- `MeasurementRecordingMode.Passive` ei käytä `AudioSessionManager.startSession()`ia. `PassiveMonitoringManager` lukee
-  live dB -arvot `AudioEngine`sta, pitää runtime-tilastot muistissa ja pysäytyksessä persistoi vain aggregate-samplen.
-  Se ei luo sessiota, ei kirjoita `measurements`-rivejä, ei käynnistä WAV-, Sound Detection-, spectral-, audible alarm-,
-  voice warning- tai alert-trigger-polkuja eikä emittoi completed-session navigointia.
-- Room schema v11 lisää `passive_monitoring_samples` -taulun aggregate-kentille (`startedAtMs`, `endedAtMs`,
-  `readingCount`, min/avg/max/peak ja `totalEnergy`). `PassiveMonitoringRepository.observeDailySummary(...)` tuottaa
-  Settingsin daily summaryn. Clear history poistaa myös passive monitoring -summaryt.
-- Ilman uutta eksplisiittistä product/privacy-päätöstä dBcheck ei saa lisätä bootista, ajastimesta, receiveristä,
-  WorkManagerista tai muusta taustatriggeristä alkavaa mikrofonisamplingia eikä raakaaudion, PCM-bufferien tai
-  YAMNet-windowien persistointia.
-
-Export cache:
-
-- `ExportFileCache` kayttaa `cache/exports/`-hakemistoa ja omistaa seka
-  FileProvider authority suffixin etta XML-polun runtime-sopimuksen.
-- Yli 24 tuntia vanhat export/share-tiedostot poistetaan seuraavan exportin tai
-  share-operaation yhteydessa.
-
----
-
-## Local backup ja restore
-
-- `sync/BackupGateway.kt` on backup-infrastruktuurin testattava rajapinta.
-- `service/BackupService.kt` on Settingsin UI-facing backup-portti.
-- `sync/LocalBackupManager.kt` toteuttaa varsinaiset paikalliset backupit
-  `filesDir/backups`-hakemistoon.
-- Backup tekee Roomille `PRAGMA wal_checkpoint(TRUNCATE)` ennen
-  `dbcheck.db`-tiedoston kopiointia.
-- Restore validoi valitun backupin ennen nykyisen tietokannan korvaamista.
-- Restore luo `dBcheck_pre_restore_*`-turvakopion ennen korvausta ja validoi
-  myos safety backupin.
-- Restore poistaa vanhat `dbcheck.db-wal`- ja `dbcheck.db-shm`-sidecarit ennen
-  korvaavaa tietokantatiedostoa.
-- Backup/restore-operaatiot sarjallistetaan `Mutex`illa.
-- Settings estaa backup- ja restore-toiminnot aktiivisen mittauksen aikana.
-- Onnistunut restore kutsuu Settingsin restore-confirm-polusta annettua
-  `onRestartAfterRestore`-callbackia suoraan `SettingsViewModel.confirmRestoreBackup(...)`
-  -korutiinissa. `MainActivity` toteuttaa callbackin prosessin restartilla.
-- Google Drive -backupia ei ole nykyisessa koodissa.
-
----
-
-## Widget ja ilmoitukset
-
-Glance-widget:
-
-- Receiver: `DbCheckWidgetReceiver`, `exported=false`.
-- Widget provider XML: `app/src/main/res/xml/widget_info.xml`.
-- Paivitysvali XML:ssa: 30 min.
-- Pro + sessiodata: nayttaa viimeisimman session avg dB -arvon,
-  melutasotunnisteen ja suhteellisen ajan.
-- Pro + ei sessiodataa: nayttaa tyhjatilan.
-- Free: nayttaa Pro-lukitun tilan.
-- Latausvirhe: nayttaa erillisen widget error -tilan, jos preferenssi- tai
-  sessiodatan luku epaonnistuu.
-- Widget paivitetaan session completionin ja Pro-oikeuden muuttumisen yhteydessa.
-
-Notificationit:
-
-- `NotificationHelper` rakentaa measurement notificationin.
-- Notification channelit ovat `measurement_channel`, `alerts_channel` ja
-  `ambient_playback_channel`. Ambient playback -kanava on low-importance,
-  ongoing ja private; alert-kanavaa kayttavat exposure/peak/voice warning
-  -notificationit.
-- `NotificationPrivacyPolicy.measurementLockscreenVisibility(...)` palauttaa public-visibilityn vain ehdolla
-  Pro + `lockscreenMeterEnabled` + `showLockscreenMeterPublicly`; muuten measurement notification pysyy
-  `NotificationCompat.VISIBILITY_PRIVATE` -tasolla.
-- Pro + `lockscreenMeterEnabled` kayttaa custom collapsed/expanded
-  `RemoteViews`-layoutteja, joissa nakyvat current dB, peak dB, kesto ja
-  noise-level-piste.
-- Free tai lockscreen-asetus pois paalta kayttaa tavallista private
-  measurement notificationia.
-- `NoiseNotificationSchedule` on DataStoreen persistöity malli active
-  days/hours -rajaukselle. Active days tallennetaan ISO-8601 `DayOfWeek.value`
-  -arvoina, tunnit minute-of-day -arvoina. Sama start/end tarkoittaa koko
-  valittua paivaa; start > end ylittaa yon ja aamuyon osuus kuuluu edellisen
-  aktiivisen paivan ikkunaan. Settingsin Noise Notifications -kortti lukee
-  `SettingsUiState.notificationSchedule`-arvon, paivittaa aktiiviset paivat
-  chip-rivilla ja start/end-tunnit slidereilla, ja kirjoittaa muutokset
-  `SettingsViewModel`in kautta `PreferencesRepository.updateNotificationSchedule(...)`
-  -porttiin. `AudioSessionManager` valittaa schedule-arvon alert-runtimeen ja
-  `NoiseAlertEvaluator` kunnioittaa sita ennen exposure- tai peak-alertin
-  yritysta.
-- Extended exposure alertit voivat laueta 30 minuutin threshold-average-
-  saannosta, 100 % actual dosesta tai 100 % projected dosesta. `NoiseAlertPolicy`
-  omistaa nama rajat, 120 dB peak-rajan ja 30 minuutin retry-cooldownin.
-  Onnistuneen deliveryn jalkeen sama alert-tyyppi ei toistu session aikana;
-  epaonnistunut delivery voi retryta cooldownin jalkeen.
-- `MeasurementForegroundService.stopIntent(...)` kayttaa
-  `ACTION_STOP_MEASUREMENT`ia ja `EXTRA_EMIT_COMPLETED`-lippua, jotta reset ei
-  julkaise normaalia completion-navigointia.
-
----
-
-## Testit
-
-Source setit nykyisessa checkoutissa:
-
-- `main`
-- `test`
-- `screenshotTest`
-- `screenshotTestDebug`
-
-`androidTest`-hakemistoa ei ole nykyisessa checkoutissa.
-
-Unit-testit:
-
-- `app/src/test/java/com/dbcheck/app` sisaltaa **195 Kotlin-lahdetiedostoa**
-  unit-testien ja testiapurien alla.
-- Kattavuusalueet: Billing, ProFeatureManager startup, CSV/export/cache,
-  Room schema/DAO/query contract, History search filters, DataStore mapping,
-  repository rolling windows/transactions/history policy, domain audio/math/
-  weighting/FFT/spectral, hearing-test procedure/result scoring, hearing
-  recovery, tinnitus pitch, ambient sound policy/playback, passive monitoring,
-  audible alarm, voice baseline/warnings, TTS risk prompt, report calculator,
-  session metadata, privacy config, foreground service policy,
-  AudioSessionManager start/failure, notification policy/helper/noise-level,
-  Health Connect payload/manager/mapper, LocalBackupManager, accessibility
-  plural resources, analytics/history/meter/settings ViewModelit, navigation
-  policy, localization baseline, release QA document contracts, Gradle wrapper
-  checksum pinning, PDF chart rendering, report text, share generation, string
-  resource ids, user-facing error mapping and widget state.
-
-Screenshot-testit:
-
-- `ComponentScreenshotTests.kt` sisaltaa **54 `@PreviewTest`-funktiota**.
-- `app/src/screenshotTestDebug/reference/...` sisaltaa **54 baseline-PNG:tä**.
-- Screenshot-source set on kytketty AGP:n kokeellisella
-  `android.experimental.enableScreenshotTest = true` -asetuksella.
-- UI-komponenttien animaatioita voi poistaa screenshot-determinismia varten
-  esim. `animationsEnabled=false`-parametreilla.
-
-Keskeisia nykyisia regressiosuojia:
-
-- `RoomSchemaContractTest` - Room schema version/migrations/schema contract.
-- `SessionRepositoryTransactionContractTest` - session summary + measurement
-  write transaction contract.
-- `AudioSessionManagerAudioStartTest` - AudioRecord start/failure behavior.
-- `MeasurementForegroundServicePolicyTest` - foreground service start/stop policy.
-- `PassiveMonitoringManagerTest`, `PassiveMonitoringRepositoryTest` ja
-  `PassiveMonitoringAggregatorTest` - passive aggregate sample -polku ilman
-  session/measurement- tai raw-audio-persistointia.
-- `MeterStartupPermissionPolicyTest` - startup permission prompts.
-- `ProAudioPreferencePolicyTest` - Free/Pro effective audio preferences.
-- `HearingTestServiceProGateTest` - hearing-test execution/save gate.
-- `HearingRecoveryServiceTest`, `HearingRecoveryRepositoryTest` ja
-  `HearingRecoveryCalculatorTest` - recovery baseline, aggregate-shift ja
-  v12-tallennuspolku.
-- `ResultsViewModelShareTest` - hearing-test share gate and intent path.
-- `SessionDetailScreenActionTest` and `SessionDetailViewModelMetadataTest` -
-  PDF/metadata/Pro action contracts.
-- `PrivacyConfigTest` - backup/fileprovider/privacy config.
-- `LocalBackupManagerTest` - local backup/restore validation.
-- `HealthConnectManagerTest`, `HealthConnectNoiseDosePayloadTest`,
-  `HealthConnectHeartRateMapperTest` - Health Connect contracts.
-- `AmbientSoundPlaybackServicePolicyTest`, `AmbientSoundPlaybackViewModelTest`,
-  `AmbientSoundPolicyTest` ja `AmbientSoundGeneratorTest` - user-started local
-  mediaPlayback -polun gate, policy ja generointi.
-- `AudibleAlarmPlaybackControllerTest`, `SoundPoolAudibleAlarmPlayerContractTest`,
-  `VoiceBaselineCalibratorTest`, `VoiceVolumeWarningPolicyTest`,
-  `TtsRiskPromptPolicyTest`, `TtsRiskPromptControllerTest` ja
-  `AndroidTextToSpeechPlayerContractTest` - audible/voice/TTS-riskipolkujen
-  domain- ja service-sopimukset.
-- `TinnitusPitchPolicyTest`, `TinnitusPitchMatcherViewModelTest` ja
-  `TinnitusPitchMatcherScopeTest` - pitch normalisointi, Pro-gate ja scope guardit.
-- `PluralAccessibilityResourceTest` - pluralized accessibility strings.
-- `AccessibilityAuditPolicyTest` - Osa 93:n source-level touch target, role ja selected-state guardit.
-- `LocalizationBaselineTest` - Osa 94:n `values-fi` baseline, placeholder-pariteetti ja uusien UI-pintojen inline-tekstiscanni.
-- `PermissionDeviceQaMatrixTest`, `BillingProductionQaTest`, `ReleaseSigningQaTest` ja `QodanaCiCompatibilityTest` - Osa 95-98 QA-dokumenttien ja release-riskien sopimukset.
-- `GradleWrapperSecurityTest` - Gradle distribution checksum pinning.
-- `UserFacingErrorTest` - teknisia exception-viesteja ei kayteta
-  kayttajalle naytettavina virheina.
-
-Taman `PROJECT.md`-paivityksen yhteydessa ei ajettu uutta Gradle-testisuitea
-eika projektin `lc`/`sc` wrapper-skripteja. Laskennalliset faktat tarkistettiin
-nykyisista lähde-, schema-, manifest-, workflow- ja resource-tiedostoista.
-
----
-
-## Lint, analyysi ja paikalliset wrapperit
-
-Projektin AGENTS.md ohjeistaa:
-
-- `lint-check` / `lc`: kayttajan ajama skripti, joka ajaa ktlint + detekt +
-  Android lint ja kirjoittaa tulokset `reports/`-hakemistoon.
-- `security-check` / `sc`: kayttajan ajama skripti, joka ajaa dependency
-  verificationin, OSV:n, OWASP Dependency-Checkin, Gitleaksin, TruffleHogin,
-  Semgrep secretsin ja Semgrep Kotlin lightin ja kirjoittaa tulokset
-  `reports/`-hakemistoon.
-- Kun kayttaja sanoo "lue lint-tulokset", luetaan `reports/ktlint.txt`,
-  `reports/detekt.txt` ja `reports/lint.txt`.
-- Kun kayttaja sanoo "lue security-tulokset", luetaan
-  `reports/security-summary.txt`, `reports/security-deps.txt`,
-  `reports/security-deps-raw.txt`, `reports/osv.txt`,
-  `reports/semgrep-kotlin.txt`, `reports/semgrep-secrets.txt`,
-  `reports/gitleaks.txt` ja `reports/trufflehog.txt`. Nykyinen wrapper ei
-  tuota `reports/security-code.txt`-tiedostoa.
-- `sentry` tarkistaa debug-only Sentryn: debug-luokkapolussa pitää olla
-  `io.sentry`, release-luokkapolussa ei saa olla `io.sentry`a, ja raportti
-  kirjoitetaan `reports/sentry.txt`-tiedostoon.
-- Agentti ei aja `lc`/`sc`-skripteja itse ilman kayttajan pyyntoa.
-- `reports/` on gitignoressa eika sita commitoida.
-
-Repo-local wrapperit `tools/`-hakemistossa delegoivat
-`C:\Dev\Android-check\tools\InvokeProjectCheck.ps1` -polkuun. Nykyinen
-wrapper-inventaario: `ac`, `ad`, `cr`, `cs`, `db`, `dc`, `ds`, `ga`, `lc`,
-`ms`, `os`, `pc`, `ql`, `sc`, `security-check`, `sentry`, `sonar`, `ss`.
-
-Staattinen konfiguraatio:
-
-- `.editorconfig`: `ktlint_code_style = android` ja Compose-funktioiden
-  nimeamissaannon annotated-poikkeus.
-- `config/detekt/detekt.yml`: LongMethod 80, MaxLineLength 120, MagicNumber
-  pois, wildcard imports pois, UnusedPrivate* paalla, Compose-funktioiden
-  nimeamissaanto rajattu UI:sta.
-- Detektin ktlint-wrapperista poistetaan kaytosta puhtaasti tyylillisia
-  formatointisaantoja, joiden oletukset eivat vastaa Android Studio
-  -formatointia.
-- `app/build.gradle.kts`: `ktlintCheck` on alias, joka riippuu `detekt`-
-  taskista.
-- Dependency locking on paalla root-projektin `allprojects`-tasolla.
-- `app/build.gradle.kts` pinnaa useita transitiivisia build-/scanner-
-  riippuvuuksia korjattuihin versioihin security-checkin vaatimusten vuoksi.
-
----
-
-## CI/CD
-
-GitHub Actions -workflowt nykyisessa repossa:
-
-| Workflow | Tiedosto | Tarkoitus |
-|---|---|---|
-| Android Static Checks | `.github/workflows/lint.yml` | `:app:ktlintCheck`, `:app:detekt`, `:app:lint` main-pushissa, PR:ssa ja manual dispatchissa |
-| CodeQL | `.github/workflows/codeql.yml` | Java/Kotlin CodeQL, JDK 21, Android SDK, manual `assembleDebug`, maanantain schedule |
-| Security Analysis | `.github/workflows/security.yml` | Semgrep pinned container + project config + SARIF upload; OWASP Dependency-Check Gradle task + SARIF upload, maanantain schedule |
-| SonarCloud | `.github/workflows/sonar.yml` | `assembleDebug`, `jacocoDebugUnitTestReport`, Gradle `sonar` |
-| Qodana | `.github/workflows/qodana.yml` | JetBrains Qodana action v2026.1.3, ei-blokkaava `Qodana Analysis (non-blocking AGP 9.2 risk)` -status ja `continue-on-error: true` kunnes Qodana-yhteensopivuus paatetaan nostaa blokkaavaksi |
-| Android Release Build | `.github/workflows/release-build.yml` | PR:ssa unsigned release APK/AAB; pushissa signed build jos release secrets ovat olemassa; apksigner/jarsigner verification |
-
-Sonar:
-
-- `sonar.projectKey = Insaner1980_dBcheck`
-- `sonar.organization = insaner1980`
-- coverage XML:
-  `app/build/reports/jacoco/debugUnitTest/jacocoDebugUnitTestReport.xml`
-- root `build.gradle.kts` antaa Sonarille Gradle-managed source/binary/coverage
-  -polut ja lukee muut arvot `sonar-project.properties`-tiedostosta.
-
-Qodana:
-
-- `qodana.yaml`: `jetbrains/qodana-jvm-android:2026.1`
-- profiili: `qodana.recommended`
-- mukana `CheckDependencyLicenses`.
-- workflow kirjoittaa AGP 9.2.1 -yhteensopivuusriskin `GITHUB_STEP_SUMMARY`yn eikä `continue-on-error`-asetusta saa poistaa
-  ennen erillista paatosta muuttaa Qodana blokkaavaksi.
-
-Release signing:
-
-- Release signing lukee Gradle propertyt tai environment-muuttujat:
-  `DBCHECK_RELEASE_STORE_FILE`, `DBCHECK_RELEASE_STORE_PASSWORD`,
-  `DBCHECK_RELEASE_KEY_ALIAS`, `DBCHECK_RELEASE_KEY_PASSWORD`.
-- Jos osa release signing -arvoista on annettu mutta ei kaikkia, Gradle failaa
-  eksplisiittisesti.
-- Salaisuuksia tai keystorea ei saa commitoida.
-- Debug-only Sentry DSN kuuluu `DBCHECK_SENTRY_DSN`-/`SENTRY_DSN`-ympäristömuuttujaan tai ignored `debug.credentials.properties` -tiedostoon avaimella `sentry.dsn`; Sentry Gradle -pluginia, replayta, tracingia, logcat breadcrumbseja tai release crash reportingia ei ole kytketty.
-
----
-
-## Kehitysymparisto
-
-Windows/PowerShell:
+## 3. Tekniikkapino, konfiguraatio ja komennot
+
+### 3.1 Riippuvuudet
+
+Alla ovat `package-lock.json`-tiedoston ratkaistut versiot. `package.json` sallii osassa paketeista caret-päivityksiä; lockfile määrää toistettavan asennuksen.
+
+| Paketti | Lockfile-versio | Käyttö |
+| --- | --- | --- |
+| `astro` | 7.1.6 | Staattinen sivusto, reitit, komponentit ja build. |
+| `@astrojs/markdown-remark` | 7.2.2 | Markdown-prosessori; myös testien frontmatter-luenta. |
+| `@astrojs/sitemap` | 3.7.3 | Sitemap ja rekisteröityjen kieliparien linkit. |
+| `animejs` | 4.5.0 | Hero-mittari, kisko, CTA-aalto ja scramble-moottori. |
+| `katex` | 0.17.0 | Kaavojen generoitu esitys ja fontti-/CSS-resurssit. |
+| `rehype-katex` | 7.0.1 | Matematiikkasolmujen renderöinti buildissa. |
+| `remark-math` | 6.0.0 | Matematiikan tunnistus Markdownissa. |
+| `@astrojs/check` | 0.9.10 | Erillinen Astro-/TypeScript-tarkistus. |
+| `typescript` | 6.0.3 | Tyyppitarkistus. |
+| `prettier` | 3.9.6 | Muotoilutyökalu. |
+| `prettier-plugin-astro` | 0.14.1 | Astro-tiedostojen Prettier-parseri. |
+| `wrangler` | 4.125.0 | Cloudflare-kehitys- ja julkaisutyökalu. |
+
+Paketti on `dbcheck-website`, versio `0.1.0`, `type: module`, `private: true`. Tämä npm-versio ei ole Android-sovelluksen release-versio.
+
+Juuripaketin `engines` vaatii Node-version `>=22.12.0`. Tämän tarkistuksen paikallinen ympäristö: Node `24.19.0`, npm `11.17.0`.
+
+Ei Reactia, Vuea, Tailwindia, raskasta frontend-kehystä tai erillistä asiakaspuolen tilakirjastoa. KaTeX suoritetaan sisällön build-putkessa; artikkelin matematiikka ei vaadi selaimessa ajettavaa KaTeX-renderöijää. `parse5` on testien suora dev-riippuvuus.
+
+### 3.2 Konfiguraation vastuut
+
+- `astro.config.mjs`: `site: https://dbcheck.app`, i18n, sitemapin serialisointi, Markdown-pluginit, KaTeX-fonttien inline-estot ja 8 legacy-reittiä. SSR-adapteria tai palvelinpuolen sovelluslogiikkaa ei ole konfiguroitu.
+- `tsconfig.json`: laajentaa `astro/tsconfigs/base`-asetusta, ottaa mukaan `.astro/types.d.ts`-tiedoston ja sulkee `dist`-hakemiston pois. Se ei käytä Astro strict -presetiä.
+- `.prettierrc`: Astro-plugin ja `*.astro`-parseriohitus. `.prettierignore` sulkee mm. buildin, työkaluvälimuistit, `output`-hakemiston ja lockfilen pois.
+- `.gitignore`: mm. `node_modules/`, `dist/`, `.astro/`, `.playwright-cli/` ja npm-debug-lokit.
+- `package.json`: kehitys-, check-, build-, preview-, Node-testi-, selain-, dry-run- ja deploy-scriptit. Lint-, format-, coverage- tai watch-testiscriptiä ei ole.
+- Repositorion `.github/workflows/`-hakemistoa ei ole. Paikallinen lähde ei siten todista GitHub Actions -buildia tai automaattista julkaisua.
+
+### 3.3 Komennot
 
 ```powershell
-.\gradlew.bat assembleDebug
-.\gradlew.bat testDebugUnitTest
-.\gradlew.bat lintDebug
-.\gradlew.bat :app:validateDebugScreenshotTest
+npm ci
+npm run dev
+npm run check
+npm run build
+npm test
+npm run test:browser
+npm run preview
+npm run test:text-wrapping
+npm run deploy:dry-run
+npm run deploy
+git diff --check
 ```
 
-Linux/WSL:
+| Komento | Tarkoitus ja raja |
+| --- | --- |
+| `npm ci` | Asentaa lockfilen mukaiset riippuvuudet. Ei tarpeen jokaisen dokumenttimuutoksen yhteydessä. |
+| `npm run dev` | Astro-kehityspalvelin; jää käyntiin, kunnes se pysäytetään. |
+| `npm run check` | Tyyppi-/Astro-diagnostiikka ilman tuotantobuildia. Sama tarkistus sisältyy myös `build`-scriptiin. |
+| `npm run build` | Poistaa vanhan `dist/`-hakemiston ja tuoreusmarkkerin, pakottaa Astron content-syncin, ajaa Astro-checkin, rakentaa sivuston sekä kirjoittaa lähde- ja tuotoshasheihin sidotun `.astro/build-freshness.json`-markkerin. |
+| `npm test` | Ajaa ensin `npm run build` ja sitten koko Node `node --test` -kokonaisuuden. |
+| `npm run preview` | Tarjoilee buildin paikallisesti. Ei jäljittele kaikkia Cloudflaren HTTP-ominaisuuksia. |
+| `npm run test:browser` | Rakentaa sivuston ja ajaa responsiivisuus-, navigaatio-, haku- ja keskeiset vuorovaikutuspolut omassa headless-selaimessa. Käynnistää ja siivoaa preview-palvelimen sekä selainprofiilin itse. |
+| `npm run test:text-wrapping` | Yhteensopivuusalias komennolle `npm run test:browser`. |
+| `npm run deploy:dry-run` | Rakentaa sivuston ja ajaa Wrangler dry-runin; ei julkaise tuotantoon. |
+| `npm run deploy` | Rakentaa ja julkaisee Wranglerin konfiguraatiolla. Ajetaan vain erillisellä julkaisuluvalla. |
+| `node --test test/exposure-time.test.mjs` | Esimerkki kohdistetusta puhtaasta laskentatestistä. |
+| `git diff --check` | Tarkistaa diffiin tulleet whitespace-virheet; ei toiminnallisuutta. |
 
-```bash
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew assembleDebug
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew testDebugUnitTest
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew lintDebug
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:validateDebugScreenshotTest
+Kehitys- tai preview-palvelinta ei jätetä tarpeettomasti käyntiin. `CHROME_BIN` on tekstinrivitysscriptin valinnainen selainpolku, ei sivuston runtime-asetus. Sivuston omassa `src/`-koodissa ei ole vaadittua ympäristömuuttujakonfiguraatiota.
+
+## 4. Julkiset reitit ja kieliparit
+
+### 4.1 Staattiset sivut ja työkalut
+
+| Englanti | Saksa | Toteutus |
+| --- | --- | --- |
+| `/` | Ei vastinetta | `src/pages/index.astro` |
+| `/articles/` | `/de/artikel/` | `ArticleIndexPage.astro` |
+| `/sounds/` | `/de/alltagsgeraeusche/` | `SoundIndexPage.astro` |
+| `/tools/` | `/de/werkzeuge/` | `ToolsIndexPage.astro` |
+| `/tools/safe-listening-time-calculator/` | `/de/werkzeuge/expositionsdauer-rechner/` | `SafeExposureTimePage.astro` ja `ExposureCalculator.astro`; eri laskentamallit. |
+| `/tools/noise-dose-calculator/` | Ei vastinetta | `NoiseDoseCalculator.astro` |
+| `/tools/daily-noise-exposure-level-calculator/` | `/de/werkzeuge/laermexpositionsrechner/` | `DailyNoiseExposureCalculator.astro` |
+| `/tools/decibel-distance/` | `/de/werkzeuge/schallpegel-entfernung/` | `DistanceCalculator.astro` |
+| `/tools/add-decibels/` | `/de/werkzeuge/dezibel-addieren/` | `AddDecibelsCalculator.astro` |
+| `/search.json` | `/de/search.json` | Prerenderöidyt GET-reitit, `buildSearchIndex`. |
+| `/404.html` | `/de/404.html` | Englannin `src/pages/404.astro` ja saksan `src/pages/de/404.astro`; build siirtää saksan dokumentin Cloudflaren polkuun. |
+
+Englannin työkalut ovat omia tiedostojaan `src/pages/tools/`-hakemistossa. Saksan neljä laskurireittiä luetellaan eksplisiittisesti tiedoston `src/pages/[locale]/[toolsSegment]/[slug].astro` `getStaticPaths()`-funktiossa. Saksan työkaluindeksin ja hakuindeksin reitit ovat myös eksplisiittisesti rajattuja. Dynaamiset hakemistojen nimet eivät tarkoita automaattista tukea mille tahansa localelle tai työkalulle.
+
+### 4.2 Tavallisten artikkelien kaikki kieliparit
+
+Englannin täydellinen reitti on `/articles/<en-slug>/`, saksan `/de/artikel/<de-slug>/`. Näiden 15 parin `translationKey` on englannin slug.
+
+| Klusteri | Englannin slug | Saksan slug |
+| --- | --- | --- |
+| fundamentals | `what-is-a-decibel` | `was-ist-ein-dezibel` |
+| fundamentals | `db-vs-dba` | `db-und-dba-unterschied` |
+| fundamentals | `what-is-sound-pressure-level` | `was-ist-schalldruckpegel` |
+| fundamentals | `is-3-db-twice-as-loud` | `sind-3-db-doppelt-so-laut` |
+| fundamentals | `why-is-the-decibel-scale-logarithmic` | `warum-ist-die-dezibelskala-logarithmisch` |
+| exposure | `what-is-a-safe-decibel-level` | `welcher-dezibelwert-ist-sicher` |
+| exposure | `how-long-can-you-listen-at-85-db` | `wie-lange-85-db-hoeren` |
+| exposure | `why-does-85-db-matter` | `warum-sind-85-db-wichtig` |
+| exposure | `what-is-noise-dose` | `was-ist-eine-laermdosis` |
+| exposure | `niosh-vs-osha-noise-exposure-limits` | `laermexpositionsgrenzen-deutschland-eu` |
+| smartphone | `are-decibel-meter-apps-accurate` | `sind-dezibel-apps-genau` |
+| smartphone | `how-to-calibrate-a-decibel-meter-app` | `dezibel-app-kalibrieren` |
+| smartphone | `how-to-measure-decibels-with-android-phone` | `dezibel-messen-mit-android-handy` |
+| smartphone | `why-decibel-meter-apps-show-different-results` | `warum-dezibel-apps-unterschiedliche-werte-zeigen` |
+| smartphone | `phone-sound-meter-vs-professional-meter` | `schallpegelmesser-app-vs-messgeraet` |
+
+`niosh-vs-osha-noise-exposure-limits`-pari on tarkoituksella paikalliseen kontekstiin sovitettu: saksankielinen artikkeli käsittelee Saksaa ja EU:ta. Saman `translationKey`-arvon ei tarvitse tarkoittaa sanasta sanaan samaa sääntelysisältöä.
+
+### 4.3 Sound-artikkelien kaikki kieliparit
+
+Englannin reitti on `/sounds/<en-slug>/`, saksan `/de/alltagsgeraeusche/<de-slug>/`. Kaikkien klusteri on `common-sounds`.
+
+| translationKey / englannin slug | Saksan slug |
+| --- | --- |
+| `normal-conversation` | `normales-gespraech` |
+| `vacuum-cleaner` | `staubsauger` |
+| `lawn-mower` | `rasenmaeher` |
+| `concert` | `konzert` |
+| `baby-crying` | `babygeschrei` |
+
+### 4.4 Legacy-uudelleenohjaukset
+
+`astro.config.mjs` tuottaa staattiset redirect-dokumentit. `public/_redirects` määrittelee vastaavat Cloudflaren 301-ohjaukset sekä slashittomalle että trailing slash -muodolle.
+
+| Vanha reitti | Kohde |
+| --- | --- |
+| `/sounds/normal-conversation-decibels/` | `/sounds/normal-conversation/` |
+| `/sounds/vacuum-cleaner-decibels/` | `/sounds/vacuum-cleaner/` |
+| `/sounds/lawn-mower-decibels/` | `/sounds/lawn-mower/` |
+| `/sounds/concert-decibels/` | `/sounds/concert/` |
+| `/sounds/whisper-decibels/` | `/sounds/` |
+| `/sounds/busy-traffic-decibels/` | `/sounds/` |
+| `/sounds/siren-decibels/` | `/sounds/` |
+| `/sounds/fireworks-decibels/` | `/sounds/` |
+
+Redirect-HTML käyttää meta refresh -ohjausta ja `noindex`-merkintää. Paikallinen Astro preview ei yksin todista hostingin HTTP 301 -vastauksia.
+
+## 5. Lokalisointi, navigaatio ja haku
+
+### 5.1 Locale- ja reittisopimus
+
+`src/i18n/config.ts` määrittelee:
+
+- `defaultLocale = 'en'`, `locales = ['en', 'de']` ja näistä johdetun `Locale`-tyypin.
+- `localeTags`: `en-GB` ja `de-DE` päivämäärille, Article-scheman kielelle ja HTML-headin hreflangeille.
+- `openGraphLocales`: `en_GB` ja `de_DE`.
+- `isLocale`-tyyppitarkistuksen.
+
+`src/i18n/routes.ts` omistaa `contentTranslations`-rekisterin, `routePairs`-listan, `routeForContent`-URL-rakentajan, `findRoutePair`-, `alternatesForPath`- ja `translationFor`-haut. Rekisterissä on 20 sisältöparia ja 7 staattista paria.
+
+`routeForContent` rakentaa polun, mutta ei todista sisältötiedoston olemassaoloa tai julkaisutilaa. `routePairs` ei lue `draft`-kenttää. Sisältö, rekisteri ja generoitu tuotos pitää siksi tarkistaa yhdessä.
+
+Uuden kielen lisääminen ei onnistu vain `locales`-taulukkoa muuttamalla: useissa komponenteissa on suora en/de-haara, reittiparien tyyppi sisältää en/de-kentät ja dynaamisten sivujen `getStaticPaths` luettelee saksan erikseen. Myös tekstit, metadata, reititys ja testit on laajennettava.
+
+### 5.2 Header ja footer
+
+`Base.astro` päättelee kielen ensin `locale`-propista, muuten `Astro.currentLocale`-arvosta ja lopuksi oletuskielestä. Logo johtaa aina `/`-etusivulle.
+
+- Englannin päälinkit: Tools, Features, Pricing, Articles.
+- Saksan päälinkit: Rechner und Werkzeuge sekä Artikel. Ei englannin etusivun Features-/Pricing-linkkejä.
+- Työkalu- ja artikkeliosion aktiivisuus määräytyy polun `startsWith`-vertailusta; linkki saa `aria-current="page"`.
+- Etusivulla wordmark saa `aria-current="page"`. Sound-sivuilla mikään päälinkki ei ole nykyisenä osiona.
+- Leveydellä enintään 900 px päälinkit avataan `#menu-toggle`-painikkeella. `aria-expanded` ja `#primary-links.open` päivittyvät yhdessä. Linkin valinta sulkee valikon.
+- Enintään 520 px:n leveydellä valikon näkyvä tekstilabel piilotetaan visuaalisesti; saavutettava nimi säilyy.
+- Englannin footerissa ovat Explore- ja App-sarakkeet. Saksassa Explore-sarake ja yhteystieto; App-saraketta ei renderöidä.
+- Julkinen yhteysosoite on `contact@finnvek.com`. Finnvek-linkki johtaa `https://finnvek.com`-osoitteeseen.
+- Footerin vuosi tuotetaan buildin aikaisesta `new Date().getFullYear()`-arvosta, ei erillisestä vuosivakiosta.
+
+### 5.3 Lokalisoidun yläpalkin rajaus
+
+Saksankielisillä lokalisoiduilla sivuilla yläpalkissa näkyvät vain paikalliset Rechner und Werkzeuge- ja Artikel-linkit sekä haku niillä osioilla, joilla haku on käytössä. Näkyvää kielivalitsinta ei renderöidä.
+- Nuoli alas/ylös avaa valikon ja siirtää fokuksen; valikossa nuolet kiertävät, Home/End siirtyvät ääripäihin ja Escape sulkee sekä palauttaa fokuksen triggeriin.
+- Ulkopuolinen pointer-painallus ja fokuksen poistuminen sulkevat valikon.
+- Endonyymisanakirjan fr/es/it/pt-nimet eivät tarkoita, että nämä kielet olisivat käytössä.
+
+### 5.4 Haku
+
+Haku renderöidään vain työkalujen ja tavallisten artikkelien reiteille, indekseihin ja niiden alasivuille. Se ei näy etusivulla, sound-indekseissä, sound-artikkeleissa tai 404-sivulla.
+
+`buildSearchIndex(locale)` muodostaa seuraavat kentät: `kind`, `title`, `description`, `tags`, `url`. Järjestys on äänet, artikkelit, työkalut, staattiset kohteet.
+
+- Artikkelit ja sound-artikkelien metadata suodatetaan `!draft && locale`-ehdolla.
+- Jokainen 9 äänestä muodostaa tuloksen. Julkaistun oppaan metadata korvaa lyhyen Explorer-tekstin, jos vastaava sisältö löytyy.
+- Ääni ilman oppaalle määriteltyä `articleRoute`-arvoa johtaa paikallisen sound-indeksin `#library-explorer`-ankkuriin.
+- Työkalut tulevat `getTools(locale)`-listasta; Explorer näkyy siten myös työkalukohteena.
+- Englannissa staattisia kohteita on 3, saksassa 2.
+- Nykyinen indeksikoko: englanti 33, saksa 31. Saman aihealueen useat hakutulokset ovat mahdollisia.
+- Artikkelin koko leipätekstiä ei indeksoida; haku ei ole kokotekstihaku.
+
+Selaintoiminta:
+
+1. `#search-open` tai `/`-näppäin avaa natiivin `dialog`-elementin. Näppäinoikotie ohittaa input- ja textarea-kentät.
+2. Kieli-indeksi ladataan saman originin JSON-tiedostosta ja pidetään sivun elinkaaren ajan muistissa.
+3. Hakusana trimmataan ja muutetaan pienaakkosiksi. Osumat etsitään `includes`-vertailulla otsikosta, kuvauksesta ja tageista.
+4. Näytetään enintään 12 osumaa indeksin järjestyksessä; ei erillistä relevanssipisteytystä.
+5. Osumien tekstit rakennetaan `createElement`-/`textContent`-kutsuilla. Tulossäiliön `innerHTML = ''` vain tyhjentää aiemman listan.
+6. Sulkeminen onnistuu ESC-painikkeella, Escape-näppäimellä tai paneelin ulkopuolelta. Sulkeminen palauttaa fokuksen avaajaan.
+
+Hakutermiä ei lähetetä palvelimelle. Hakudatan latausvirhe näyttää lokalisoidun virheen ja retry-painikkeen. Suljettu tai uudemman pyynnön korvaama hakusessio jättää myöhäisen vastauksen huomiotta. Tämä ei silti tee hausta offline-varmaa.
+
+## 6. Yhteinen UI, typografia ja responsiivisuus
+
+### 6.1 Design tokenit
+
+Verkkosivuston todellinen token-lähde on `Base.astro`, ei Androidia kuvaava `UI-SPEC.md`.
+
+| Token | Arvo |
+| --- | --- |
+| `--bg` | `#080808` |
+| `--surface` | `#101010` |
+| `--surface-c` | `#171717` |
+| `--surface-ch` | `#202020` |
+| `--surface-chh` | `#2A2A2A` |
+| `--on-surface` | `#F5F5F5` |
+| `--on-surface-v` | `#B8B8B8` |
+| `--primary` / `--primary-dim` | `#F7F7F7` / `#CFCFCF` |
+| `--secondary` / `--tertiary` | `#8F8F8F` / `#5E5E5E` |
+| `--muted-text` | `#888888` |
+| `--outline-v` | `#8C8C8C` |
+| `--ghost` | `rgba(140, 140, 140, 0.15)` |
+| `--error` / `--warning` / `--success` | `#E07A7A` / `#C9A24D` / `#8EA58E` |
+| `--result-border-color` | `var(--on-surface)` |
+| `--radius-card` / `--radius-tile` | `24px` / `14px` |
+| `--max-w` | `1120px` |
+| `--font-size-page-title` | `clamp(2.625rem, 7vw, 4.125rem)` |
+
+Leipätekstin fontti on Instrument Sans, data-/otsikkofontti IBM Plex Mono. Molemmat ladataan Google Fontsista. Body on 16 px / 1.5. `.kicker` käyttää 12 px:n monospaced-fonttia, isoja kirjaimia ja `0.14em`-kirjainväliä.
+
+Artikkelin `h1` käyttää omaa `clamp(36px, 7vw, 64px)`-määritystä, lede 19 px / 1.6 ja leipäteksti 17 px / 1.75. Kaikki otsikot eivät siis ole saman sivuotsikkotokenin käyttäjiä. Tavallisen artikkelisisällön enimmäisleveys on 820 px.
+
+Nykyisessä UI:ssa on hillittyjä neutraaleja reunuksia ja pinnanvaihtoja. Uusiin muutoksiin ei lisätä värillisiä korttireunoja, sivuraitoja tai koristekehyksiä. Värillinen mittausluokitus ja tiedollinen vaihteluvälipalkki eivät ole yleinen lupa korostaa kaikkia kortteja.
+
+### 6.2 Tekstin rivityssopimus
+
+- Otsikot: `word-break: normal`, `overflow-wrap: normal`, `hyphens: auto`.
+- Sivun oikea `lang` ohjaa kielikohtaista tavutusta. Pelkkä CSS ei takaa selaimen tavutussanakirjan saatavuutta.
+- `code`, `kbd`, `samp`, `var` ja `.katex`: `hyphens: none`.
+- Pitkiä otsikoita ei yleisesti katkaista `break-all`-/`anywhere`-säännöllä eikä typistetä ellipsillä.
+- Artikkelin raakaa HTTP(S)-URL:ia näyttävä linkki merkitään buildissa `data-raw-url`-attribuutilla vain, jos linkin koko tekstisisältö on täsmälleen sama kuin `href`.
+- Vain nämä raw-URL-linkit saavat `overflow-wrap: anywhere`-säännön. Tavalliset linkkitekstit säilyttävät normaalin rivityksen.
+- Artikkelitaulukot ja `.katex-display` vierivät tarvittaessa paikallisesti vaakasuunnassa; ne eivät saa leventää koko sivua.
+- Hakutuloksen `.hit-desc` käyttää tarkoituksella yksirivistä ellipsiä. Mobiilin `.mobile-sound-name` saa rivittyä.
+- Etusivun tarkoituksellisten `br`-vaihtojen yhteydessä on eksplisiittinen välilyönti. Tekstisisältö ei saa muuttua yhteen kirjoitetuiksi sanoiksi.
+
+### 6.3 Keskeiset breakpointit
+
+| Leveys/ehto | Vaikutus |
+| --- | --- |
+| Enintään 900 px | Headerin mobiilivalikko; footer yhteen sarakkeeseen; Why-osion ExposureRail-kisko piiloon; työkaluindeksin kortit kahteen sarakkeeseen. |
+| Enintään 850 px | Laskurien pääsisältö ja referenssiruudukko yhteen sarakkeeseen; monikenttälaskurin tulospaneeli ei enää sticky. |
+| Enintään 700 px | Artikkeli-indeksin ryhmät/kortit yhteen sarakkeeseen; täysi Sound Explorer natiiveiksi details-riveiksi; hero-videolle mobiilitiedosto. |
+| Enintään 650 px | Monikenttälaskurin syöterivit yhteen sarakkeeseen; ulompi laskuripinta reunoihin asti. |
+| Enintään 620 px | Työkalukortit yhteen sarakkeeseen; artikkelin summary ja related-lista yhteen sarakkeeseen. |
+| Enintään 560 px | ExposureCalculator reunoihin asti, valitun tason otsikko/lukema päällekkäin. |
+| Enintään 520 px | Headerin menu-label visuaalisesti piiloon, valikkolinkit yhteen sarakkeeseen. |
+| Enintään 420 px | Kielivalitsimen triggeri tiiviimmäksi. |
+
+Etusivulla on lisäksi omat 1080/900/820/620/560 px -säännöt. Näitä ei pidä korvata oletetulla yhden breakpoint-järjestelmän abstraktiolla tutkimatta sivun paikallista CSS:ää.
+
+### 6.4 Liike ja saavutettavuus
+
+`Base.astro` omistaa dokumenttien välisen CSS View Transition -liikkeen, `page-heading`-nimen, `revealSelectors`-listan ja laskurin tulosvälähdyksen.
+
+- View Transition on natiivi monisivunavigaatio (`@view-transition { navigation: auto; }`), ei Astro ClientRouter-/SPA-navigaatio.
+- Otsikkonimi siirretään klikattuun artikkelikortin tai työkalukortin otsikkoon.
+- Reveal käyttää IntersectionObserveria, kynnystä 0.1 ja `rootMargin: 0px 0px -48px 0px`. Sisarukset porrastetaan 80 ms välein, enintään seitsemän portaan verran.
+- Observerin puuttuessa tai reduced motion -tilassa sisältö näytetään heti.
+- `.reveal` lisätään JavaScriptissä: ilman scriptiä normaali sisältö ei jää reveal-piilotukseen.
+- Reveal käyttää `translate`-ominaisuutta, kortin hover `transform`-ominaisuutta. Oman `transition`-määrityksen tulee säilyttää myös opacity/translate-siirtymät.
+- `.calculator-result strong`-muutoksia tarkkaileva MutationObserver lisää `result-updated`-luokan. Tuloksen animointi ei muuta sen laskentaa.
+- Artikkelien lukemisviiva käyttää CSS `animation-timeline: scroll(root block)`-aikajanaa. Ilman tukea viiva pysyy näkymättömänä; reduced motion ei poista suoraa vieritystilalukemaa.
+- Skip-link, näkyvät focus-kehykset, natiivi dialog, details-rivit, labelit, status-alueet ja forced-colors-aktiivilinkin alleviivaus ovat osa nykyistä rakennetta.
+- Reduced motion tarkistetaan kutsuhetkellä, ja asetuksen vaihtumiseen kesken avoimen sivun reagoivat aktiiviset/odottavat scramblet, `ExposureRail` sekä etusivun käynnistys- ja CTA-liike. Reduce-tilaan siirtyminen viimeistelee tai purkaa nämä liikkeet vakaaseen lopputilaan; asetuksen palauttaminen ei toista jo valmistuneita reveal- tai CTA-sisääntuloja.
+
+`motion.ts` omistaa `ScrambleProfile`-tyypin, profiilit sekä `prefersReducedMotion()`-, `cancelScramble()`-, `setReadingValue()`-, `scrambleValue()`- ja `scrambleReading()`-rajapinnat. `scramble-engine.ts` tekee nimetyt `animate`-, `scrambleText`- ja `utils`-tuonnit.
+
+`scrambleValue` kirjoittaa lopullisen tekstin heti ja animoi sitten elementin. `scrambleReading` käyttää erillistä ID:töntä, `aria-hidden`-kopiota ja palauttaa alkuperäisen elementin näkyviin animaation jälkeen. Runtime-vaihto reduced motion -tilaan katkaisee myös kesken olevan tai moottorin latausta odottavan scramblen lopulliseen tekstiin. Nopeasti vaihtuvien lukemien ruudunlukijakäyttäytyminen on tarkistettava selaimessa; pelkkä apufunktion nimi ei todista live-alueen toimintaa.
+
+Scramblea käytetään hinnan paikallistamiseen, hero-käynnistykseen/tilanvaihtoon ja Explorerin klikkaukseen. Jatkuvasti päivittyvien laskuriarvojen päivitys käyttää `textContent`-kirjoitusta, ei scramblea.
+
+## 7. Etusivu, video, mittaridemo ja ominaisuusesittely
+
+### 7.1 Osioiden nykyinen järjestys
+
+`src/pages/index.astro` renderöi järjestyksessä:
+
+1. `#hero`: englannin intro, tulossa oleva Google Play -CTA, työkalulinkki, video ja HUD.
+2. `#why`: neljä kysymyskorttia ja niiden natiivit tekniset details-osiot sekä koristeellinen `ExposureRail`.
+3. `#sounds`: kompakti `SoundExplorer` ja linkki sound-kirjastoon.
+4. `#pricing`: Free-/Pro-listat ja yhteisellä maatunnistuksella paikallistettavat hinnat.
+5. `#features`: neljä Free-ominaisuusryhmää, neljä Pro-kategoriaa ja privacy-rajausteksti.
+6. `#get`: julkaisuun valmistautumisen CTA ja koristeellinen aalto.
+
+Etusivulla ei tällä hetkellä ole erillistä artikkelifeediä eikä upotettua ExposureCalculatoria.
+
+### 7.2 Video ja Web Audio -polku
+
+Videon staattinen HTML käyttää `muted`, `loop`, `playsinline`, `preload="none"` ja poster-kuvaa. Varsinainen `src` asetetaan scriptissä:
+
+- enintään 700 px: `/dBcheck-hero-mobile.mp4`;
+- leveämpi: `/dBcheck-hero-desktop.mp4`;
+- poster: `/images/hero-poster.webp`.
+
+Normaalissa tilassa video yritetään käynnistää mykistettynä. Reduced motion tai selaimen `saveData` estää automaattisen lähteen asettamisen/toiston. Käyttäjän Listen-valinta saa silti ladata ja käynnistää videon. Kun 700 px:n media query vaihtuu jo ladatulla videolla, lähde vaihdetaan ja nykyinen toistoaika, mykistys sekä toistointentio säilytetään vain, jos käyttäjän ohjaustila ja sivun elinkaari eivät ole vaihtuneet kesken asynkronisen vaihdon.
+
+Ääniketju alkaa `HTMLVideoElement -> MediaElementAudioSourceNode`; lähdesolmu syöttää sekä `AudioContext.destination`-ulostuloa että erillistä `AnalyserNode`-haaraa. AudioContext luodaan käyttäjän painalluksesta. FFT-koko on 4096 ja smoothingTimeConstant 0.6.
+
+Näytön laskenta:
+
+```text
+rms = sqrt(sum(sample²) / sampleCount)
+dbfs = 20 * log10(max(rms, 1e-7))
+displayDb = clamp(dbfs + 90, 0, 130)
 ```
 
-Asennus laitteelle:
+Offset `+90` on demomuunnos. Se ei ole selaimen äänenvoimakkuudesta ympäristön SPL:ään tehty kalibrointi. Sivun näkyvä huomautus kertoo lähteeksi hero-filmin ja erottaa demon puhelimen mittauspolusta.
 
-```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+- Spektri piirtää 24 logaritmisesti jaettua kaistaa välillä 20 Hz–20 kHz.
+- Ilman aktiivista analyysiä kaistat jäävät minimikorkeuteen; niihin ei generoida satunnaista kohinaa.
+- Session min/max ja energiaan perustuva keskiarvo lasketaan havaituista demoarvoista, kun arvo ylittää 1 dB:n näyttöarvon.
+- Keskiarvo on `10 log10(mean(10^(displayDb/10)))`. Näytteet kertyvät ruutukierroksista, eivät Androidin väitetystä tallennuskadenssista.
+- Uusi Listen-session käynnistys nollaa tilastojen kertymän.
+- Mute mykistää videon ja vie lukeman `--`-/STANDBY-tilaan. Se ei pysäytä taustavideota eikä tyhjennä viimeksi näytettyjä tilastotekstejä.
+- Tavallinen mittarisilmukka jatkuu vain kuuntelun, käynnistyssekvenssin tai neulan nollaan asettumisen ajan. Nollassa alle 0.05:n toleranssilla se lopettaa uusien requestAnimationFrame-kutsujen tekemisen.
+- Web Audio -virheessä toiminta yrittää pudota pelkkään videon mykistyksen vaihtoon; mittausta ei tällöin väitetä toimivaksi.
+- `pagehide` pysäyttää videon ja ruutusilmukan, suspendoi reititetyn AudioContextin sekä palauttaa mittarin ja spektrin nollatilaan. Ohjaus- ja elinkaarirevisiot estävät aiemmin käynnistettyä `resume()`-, `play()`-, autoplay- tai lähteenvaihtopyyntöä herättämästä mediaa sivulta poistumisen jälkeen.
+
+`display-scale.ts` omistaa 0–130 dB -näyttöasteikon:
+
+| Raja | `levelForDb`-luokka |
+| --- | --- |
+| alle 55 | `quiet` |
+| 55–alle 70 | `normal` |
+| 70–alle 85 | `elevated` |
+| vähintään 85 | `dangerous` |
+
+Tickit ovat `[0, 40, 70, 85, 100, 130]`. `scalePercent` rajaa syötteen 0–130-välille ja muuntaa sen prosentiksi. Nämä ovat näyttöluokkia, eivät henkilökohtaisia turvallisuusluokituksia.
+
+### 7.3 Pro-esittely ja markkinointidatan rajat
+
+Pro-kategoriat ovat Measurement & analysis, Protection & monitoring, History & access sekä Hearing & recovery. Ne käyttävät neljää `src/assets/features/`-WebP-kuvaa.
+
+- Kategoriat ovat ARIA-tablist/tab/tabpanel-rakenne.
+- Vain valittu tab on normaalissa tab-järjestyksessä; nuolet vasen/oikea sekä Home/End vaihtavat kategoriaa.
+- Epäaktiiviset paneelit ovat `aria-hidden` ja `inert`.
+- Kategorian sisäiset ominaisuuspainikkeet käyttävät `aria-pressed`-tilaa ja päivittävät otsikon/kuvauksen `textContent`-kirjoituksella.
+- Ominaisuuskuvat ovat koristeellisia (`alt=""`); tekstiesitys kantaa tiedon.
+
+Sivun Free-lista mainitsee muun muassa live-mittarin, hälytykset, viikkoyhteenvedon, 7 päivän historian, passiiviset näytteet, valinnaisen Health Connectin ja PNG-jaon. Pro-lista mainitsee rajattoman historian, kuulotestin/recovery-checkin, dosimetrian, painotukset, kalibroinnin, spektrin, tunnistuksen, sleep monitorin, viennit, tinnitusprofiilin, ambient-äänet ja widgetin.
+
+Näiden toteutus on vahvistettava Android-repositoriosta ennen tuotelupausten muuttamista. Sivuston oma koodi todistaa vain, että tämä copy renderöidään. Google Play -CTA on edelleen Coming soon; `#get` sisältää disabled-esityksen, ei toimivaa osto- tai asennuslinkkiä.
+
+### 7.4 Hinnat
+
+`DEFAULT_PRO_PRICE` on `12,99 €`. Free-hinta johdetaan saman maan Pro-esityksen valuuttaetuliitteestä/-jälkiliitteestä korvaamalla summa nollalla.
+
+| Maa/ryhmä | Konfiguroitu Pro-esitys |
+| --- | --- |
+| EUR-oletus ja tiedoston euroaluekoodit | `12,99 €` |
+| US / GB | `$14.99` / `£10.99` |
+| SE / NO / DK | `149 kr` / `149 kr` / `99 kr` |
+| CH / PL / CZ | `CHF 12.90` / `54,99 zł` / `299 Kč` |
+| HU | `4 490 Ft` |
+| CA / AU / NZ | `CA$19.99` / `A$21.99` / `NZ$24.99` |
+| JP | `¥2 400` |
+
+Nämä ovat lähdekoodin esityshintoja, eivät tästä dokumentista vahvistettavia tämänhetkisiä Play-hintoja.
+
+`localized-price.ts` tekee yhden `fetch('/cdn-cgi/trace', { cache: 'no-store' })` -pyynnön, kun molemmat hintaelementit löytyvät. `parseCloudflareTraceCountry` poimii `loc=XX`-rivin ja normalisoi koodin isoiksi kirjaimiksi. Virheessä, tuntemattomalla maalla tai ilman JavaScriptiä EUR-esitys säilyy. Maatunnusta ei tallenneta selaimen pysyvään tallennustilaan.
+
+## 8. Sound Explorer ja yhteinen äänidata
+
+### 8.1 Tietomalli ja julkaisu
+
+`src/data/sounds.ts` yhdistää yhden `technical`-järjestyksen ja `text.en`-/`text.de`-tekstipaketit. `getCommonSounds(locale)` palauttaa `LocalizedCommonSound[]`-listan. `CommonSound` on sen tyyppialias, `commonSounds` englannin valmis lista ja `findCommonSound(slug, locale)` lokalisoitu slug-haku.
+
+Tietueen kentät: `translationKey`, `locale`, `slug`, `name`, `category`, `typicalMinDb`, `typicalMaxDb`, `measurementDistance`, `soundType`, `shortDescription`, `exposureNote`, `riskLevel`, `markerLane`, valinnainen `rangeReference` ja valinnainen `articleRoute`.
+
+| Järjestys / avain | Näyttöalue | Riskityyli | Lane | Julkaistu opas |
+| --- | --- | --- | --- | --- |
+| `whisper-decibels` | 25–30 | everyday | low | Ei |
+| `normal-conversation` | 55–75 | everyday | top | Kyllä |
+| `vacuum-cleaner` | 65–85 | everyday | low | Kyllä |
+| `busy-traffic-decibels` | 73–83 | warning | middle | Ei |
+| `lawn-mower` | 86–96 | warning | low | Kyllä |
+| `concert` | 85–105 | danger | middle | Kyllä |
+| `baby-crying` | 75–100 | warning | top | Kyllä |
+| `siren-decibels` | 110–129 | danger | middle | Ei |
+| `fireworks-decibels` | 100–115 | danger | low | Ei |
+
+Taulukko kertoo tämän sivuston datan, ei yleispäteviä mittaustuloksia. Explorerin `riskLevel` on toimituksellinen tyylikenttä, eikä sitä lasketa automaattisesti hero-mittarin `levelForDb`-funktiolla.
+
+`publishedKeys` sisältää täsmälleen viisi oppaallista ääntä. `articleRoute` syntyy vain, jos avain on tässä joukossa ja käännösrekisteristä löytyy slug. Sound-artikkelin summary hakee tietueen lokalisoidulla slugilla.
+
+Julkaisuun liittyy kaksi erillistä porttia: Markdownin `draft` ja datan `publishedKeys`. `publishedKeys` ei automaattisesti seuraa `draft`-tilaa. Oppaan poistossa tai draftiksi palautuksessa myös Explorerin/hakudatan linkitys ja reittipari on tarkistettava.
+
+### 8.2 Lähteistetyt vertailualueet
+
+Neljä ääntä ilman täyttä opasta saa suoran `rangeReference`-lähteen:
+
+| Ääni | Rekisteriavain | Kontekstin erityisraja |
+| --- | --- | --- |
+| Whisper | `whisperUsGs` | USGS-kooste; 1.5–5 metrin etäisyys. |
+| Busy traffic | `busyTrafficBangkok` | Bangkokin tienvarsitutkimus; raportoitu minimi 72.8, näytetty minimi pyöristetty 73. |
+| Siren | `emergencySirenNidcd` | NIDCD/NIH:n opastava alue; etäisyyttä ja keskiarvoistusaikaa ei lähteessä eritellä. |
+| Fireworks | `aerialFireworksTanaka` | Yhden ilotulituksen A-painotettu Fast-lukema noin 100 metristä, ei todellisen impulssihuipun alue. |
+
+`SoundRangeSource` säilyttää tekijä-/julkaisijatiedot, otsikon, julkaisu-/päivityspäivän, URL:n, tuetut avaimet, raportoidut min/max-arvot, näyttöarvot ja `metric: 'dBA'`-kentän. Lokalisoitu konteksti on tietueessa erikseen.
+
+Explorer renderöi nämä lähteet tavalliseen HTML `details`-osioon sekä etusivulla että kummassakin sound-indeksissä. Pelkkä lähteen URL:n olemassaolo ei todista alueen oikeellisuutta: lähteen tarkka mittari, etäisyys, aikavakio ja tutkimuskonteksti on tarkastettava muutettaessa väitettä.
+
+### 8.3 Desktop ja mobiili
+
+`SoundExplorer`-propsit: pakolliset `sounds` ja `id` sekä valinnaiset `compact = false`, `locale = 'en'` ja `detailHeadingLevel = 3` (sallitut arvot 2 tai 3). Tyhjä lista tuottaa lokalisoidun status-tekstin; ei-tyhjän listan ensimmäinen tietue on alkuvalinta.
+
+Desktop-esityksessä:
+
+- Markkeri asetetaan vaihteluvälin keskipisteeseen ja lane-kentän mukaiseen korkeuteen.
+- Tickit, markkerit ja vaihteluvälipalkki käyttävät samaa `.sound-markers`-koordinaatistoa ja `scalePercent`-muunnosta.
+- Markkerialueen vähimmäisleveys on 720 px; tarvittaessa vieritys on Explorerin sisäinen.
+- Valinta päivittää nimen, alueen, kuvauksen, altistumishuomautuksen, oppaan linkin sekä palkin alun/leveyden ja riskityylin.
+- Klikkaus käyttää scramblea ja valintaliikettä. Ei-touch-pointerin hover vaihtaa tiedon ilman scramblea.
+- Markkerit ovat painikkeita ja ilmaisevat valinnan `aria-pressed`-attribuutilla. Detail-alue on `aria-live="polite"`.
+
+Enintään 700 px:n leveydellä täysi, ei-kompakti Explorer näyttää natiivit `details/summary`-rivit ja piilottaa desktop-asteikon/detailin. Nämä rivit sisältävät valmiiksi kaikki tekstit, aluepalkit ja mahdolliset opaslinkit sekä toimivat ilman JavaScriptiä. Yhteinen `name` ryhmittelee avautuvat details-elementit.
+
+Etusivun `compact`-Explorer säilyttää desktop-tyyppisen vaakavieritettävän asteikon myös mobiilissa. Koko sivun mobiiliesitystä ei siis voi päätellä pelkästä yhteisestä komponentista.
+
+`SoundIndexPage` omistaa lisäksi en/de-overview-kuvan, opas-/vertailumäärät, erillisen sound-listan ja mittauksen rajausosion. Enintään 700 px:n leveydellä erillinen library-head ja sound-list piilotetaan, koska Explorerin mobiilirivit kattavat vertailut.
+
+## 9. Laskurit, kaavat ja syötevalidointi
+
+### 9.1 Yhteinen rakenne
+
+`CalculatorPage` saa propsit `title`, `description`, `kicker`, `heading`, `intro`, `socialImage` ja valinnaisen `locale`. Se renderöi sivuotsikon, paluulinkin, oletusslotin laskurille ja `references`-slotin. Se myös lataa `tool-calculators.ts`-scriptin.
+
+Exposure Time käyttää erillistä `SafeExposureTimePage`-sivukomponenttia ja omaa `ExposureCalculator`-scriptiä; sitä ei alusteta monikenttälaskurien scriptillä.
+
+`NumberField` omistaa numeroinputin labelin ja stepper-painikkeiden HTML:n. Propsit ovat `id`, `label`, `inputAttributes`, `locale`.
+
+`tool-calculators.ts`:
+
+- alustaa vain DOMista löytyvät laskuriperheet data-attribuuttien perusteella;
+- estää formien submitin ja päivittää tulokset syötemuutoksista;
+- käyttää `form.checkValidity()`-porttia kaikissa neljässä laskuriperheessä;
+- antaa kloonatuille numerokentille uudet ID:t ja päivittää labelien `for`-arvot;
+- käyttää inputin natiiveja `stepUp()`-/`stepDown()`-kutsuja ja lähettää kuplivan input-eventin;
+- näyttää mukautetut stepperit vasta `number-steppers-ready`-luokan jälkeen;
+- pitää viimeisen altistusrivin ja kaksi viimeistä summattavaa tasoa poistamattomina;
+- siirtää fokuksen uuden rivin ensimmäiseen inputiin;
+- näyttää virheellisellä syötteellä `—`-tuloksen ja selitetekstin.
+
+HTML:ssä olevat oletustulokset ovat nimettyjen esimerkkisyötteiden tuloksia. `noscript` selittää, ettei muokattujen arvojen live-laskenta toimi ilman JavaScriptiä.
+
+### 9.2 Kaavat ja rajat
+
+| Laskuri | Laskenta | UI-syöterajat ja oletus |
+| --- | --- | --- |
+| Englannin Exposure Time | `T = 8 * 2^((85-L)/3)` tuntia | Slider 70–115 dBA, askel 1; oletus 94 dBA -> 1 hour. |
+| Saksan Expositionsdauer | `T = 8 * 10^((85-L)/10)` tuntia | Sama slider; tulos on aika ylempään `L_EX,8h = 85 dB(A)` -arvoon. |
+| Noise Dose | `D = sum(100 * hours_i / T_i)`, NIOSH 3 dB -malli | 1–12 jaksoa, 70–115 dBA, askel 0.1; oletus 4 h @85 ja 2 h @88 -> 100 %. |
+| Daily Noise Exposure | `L_EX,8h = 10 log10(sum((hours_i/8) * 10^(L_i/10)))` | 1–12 jaksoa, 0–200 dB(A), askel 0.1; oletus 8 h @85 -> 85.0 / 85,0 dB(A). |
+| Distance | `L2 = L1 - 20 log10(r2/r1)` | Referenssitaso 0–200, etäisyydet 0.01–100000; oletus 90 dB, 1 -> 2 -> noin 84.0 dB. |
+| Add Decibels | `Lmax + 10 log10(sum(10^((Li-Lmax)/10)))` | 2–12 tasoa, −100–200 dB, askel 0.1; oletus 80 + 80 -> noin 83.0 dB. |
+
+Aikajaksoissa duration on vähintään 0.01 valittua yksikköä, askel 0.01. Tuntikentän maksimi on 24 ja minuuttikentän 1440. Kokonaiskesto ei saa ylittää 24 tuntia.
+
+Saksan energiapohjainen aikamalli ja NIOSH:n täsmälleen 3 dB:n vaihtosuhde eivät ole numeerisesti identtisiä. Esimerkiksi 94 dBA:n saksalainen aika on noin 1.007 tuntia, jonka UI esittää yhtenä tuntina. Kaavoja ei saa yhdistää yhden yhteisen vakion alle vain siksi, että tavalliset vertailupisteet pyöristyvät samoiksi.
+
+### 9.3 Puhtaiden funktioiden sopimukset
+
+`src/lib/exposure-time.ts`:
+
+- `ExposureTimeModel = 'niosh' | 'eu-upper-action'`.
+- `calculateExposureHours(levelDb, model)` palauttaa tuntimäärän; funktio ei itse validoi sliderin vaihteluväliä.
+- `formatExposureTime(hours, locale)` valitsee päivät, tunnit, minuutit tai sekunnit ja paikallistaa luvun.
+- Epäkelpo kesto saa `invalid-duration`-virheen; sekunneiksi muunnettaessa ylivuotava äärellinen kesto saa `unrepresentable-duration`-virheen eikä `Infinity`-tekstiä.
+- Vähintään 24 h esitetään päivinä, vähintään 2 h pyöristetään kokonaisiksi tunneiksi; pienemmillä arvoilla on omat tunti-/minuutti-/sekuntihaaransa.
+- UI:n aikateksti ei ole täydellä tarkkuudella esitetty matemaattinen tulos.
+
+`src/lib/daily-noise-exposure.mjs`:
+
+- Vie `MAX_PERIODS = 12` ja `calculateDailyNoiseExposure(periods)`.
+- Hyväksyy 1–12 oliota, joissa `level` on äärellinen välillä 0–200 dB, `hours` on äärellinen ja kesto positiivinen.
+- Hylkää yli 24 tunnin summan `RangeError('duration-over-24h')`-virheellä.
+- Muut virheavaimet ovat `period-count`, `invalid-period` ja epäesitettävälle laskentatulokselle `unrepresentable-exposure`.
+- Palauttaa `{ lex8h, totalHours, category }`.
+- `lex8h` säilyttää laskentatarkkuuden, mutta `category` ratkaistaan yhden desimaalin pyöristyksen jälkeen: alle 80 -> `below-lower`, 80–alle 85 -> `lower`, vähintään 85 -> `upper`.
+- Puhdas funktio ja HTML-validointi testataan erillisinä kerroksina, vaikka niiden tasorajat ovat samat.
+- Monikenttäscripin `MAX_ROWS` johdetaan samasta `MAX_PERIODS`-vakiosta.
+
+`src/lib/noise-dose.ts` omistaa Noise Dose -kaavan, käyttää samaa NIOSH-aikamallia ja 24 tunnin rajaa sekä hylkää epäesitettävän äärellisyys-/alivuototuloksen `unrepresentable-dose`-virheellä. DOM-ohjain delegoi siihen ja puhdas funktio testataan suoraan. Distance- ja Add Decibels -kaavat sijaitsevat edelleen DOM-ohjaimen sisällä, joten niille ei pidä väittää samaa suoraa yksikkötestikattavuutta.
+
+### 9.4 Sisällölliset turvallisuusrajat
+
+Nämä ovat sivuston nykyiset copy- ja laskentamallirajat, eivät henkilökohtaisia terveys- tai oikeudellisia ohjeita:
+
+- NIOSH-tulos tarkoittaa työperäistä 85 dBA / 8 h / 3 dB -vertailumallia, ei henkilökohtaista turvallisuustakuuta.
+- Saksan aikareitti kertoo myös 80 dB(A):n alemman arvon; 85 dB(A):n saavuttamiseen laskettua aikaa ei nimetä sallituksi enimmäisajaksi tai turvalliseksi kuunteluajaksi.
+- Päivätason EU-laskuri ei käsittele C-painotettuja huippuja eikä vähennä nimellistä kuulonsuojainvaimennusta.
+- 87 dB(A):n EU-vertailu on mukana selitetekstissä, mutta laskuri ei tee tästä yksilöllistä kuulonsuojainten jälkeistä luokitusta.
+- Distance olettaa vapaan kentän pistelähteen. Heijastukset, esteet, maanpinta, lähteen koko/suuntaavuus, sää ja absorptio voivat muuttaa tulosta.
+- Add Decibels olettaa riippumattomat ja yhteensopivilla mittareilla/painotuksilla ilmaistut tasot. Se ei ole koherenttien vaiheeseen sidottujen signaalien yleissumma.
+- Mittauksen epävarmuus ei poistu laskemalla.
+- Verkkosivustolla ei ole OSHA-mallin valittavaa laskuria, vaikka Android-markkinointiteksti ja artikkelit käsittelevät OSHAa.
+
+## 10. Artikkelijärjestelmä ja toimituksellinen työ
+
+### 10.1 Kokoelmat ja frontmatter
+
+`src/content.config.ts` määrittelee `articles`- ja `sounds`-kokoelmat. Molemmat käyttävät `glob({ pattern: '**/*.md' })`-lataajaa ja samaa Zod-skeemaa.
+
+| Kenttä | Tyyppi / oletus | Käyttö |
+| --- | --- | --- |
+| `title` | string, pakollinen | H1, sivun title, kortit, haku, Article-headline. |
+| `description` | string, pakollinen | Lede, meta description, OG/Twitter, kortit, haku. |
+| `slug` | string, pakollinen | Paikallinen julkinen reitti ja kokoelman ID. |
+| `locale` | en tai de | Suodatus, UI, polut ja muotoilu. |
+| `translationKey` | string, pakollinen | Sisältöparin pysyvä yhteinen avain; sound-datan yhdistäminen. |
+| `clusterKey` | fundamentals / exposure / smartphone / common-sounds | Indeksiryhmä, OG-kuva ja osa CTA-logiikasta. |
+| `primaryIntent` | string, pakollinen | Toimituksellinen hakuintentti ja hakutagi. |
+| `contentCluster` | string, pakollinen | Näkyvä kategoria ja hakutagi. |
+| `researchSources` | string[], pakollinen | Lähdetyön metadata; ei automaattinen näkyvä lähdeluettelo. |
+| `publishedAt` | dateksi muunnettava arvo | Näkyvä julkaisupäivä ja Article.datePublished. |
+| `lastReviewed` | dateksi muunnettava arvo | Article.dateModified-laskenta; ei erillinen näkyvä reviewed-päivä artikkelissa. |
+| `draft` | boolean, oletus false | Sulkee sisällön reittien ja kokoelmapohjaisten indeksien ulkopuolelle. |
+
+ID muodostetaan `locale/slug`-muodossa, kun molemmat kentät ovat merkkijonoja; muussa tapauksessa lataaja käyttää tiedostopolkua ilman `.md`-päätettä, minkä jälkeen skeemavalidointi edelleen pätee. Julkinen URL perustuu frontmatterin slugiin, ei suoraan tiedoston basenameen.
+
+Skeema ei aseta otsikon/kuvauksen pituuksia, vaadi ei-tyhjää lähdelistaa, varmista lähteiden URL-tyyppiä, tarkista kieliparien olemassaoloa eikä todista väitteiden totuutta. Tyyppivalidoinnin läpäisy ei yksin tarkoita julkaisukelpoisuutta.
+
+Nykyisessä kannassa julkaisuajat ovat 12.7.2026; reviewed-ajankohdat eivät aina ole samat. Näitä ei nosteta automaattisesti dokumentti- tai build-päivään.
+
+### 10.2 Artikkelin renderöinti
+
+`EditorialPage` saa `entry`, `kind: 'article' | 'sound'` ja valinnaisen `sound`-tietueen.
+
+Renderöity järjestys:
+
+1. Breadcrumb: englannin etusivu, paikallinen artikkeli-/sound-indeksi, nykyinen otsikko.
+2. Kategoria, dBcheck-julkaisija ja lokalisoitu julkaisupäivä.
+3. Yksi H1 ja description-lede.
+4. Sound-sivulla summary, jos vastaava datatietue löytyi: alue dBA, etäisyys, äänityyppi, altistumiskonteksti.
+5. Markdownista renderöity `.prose`.
+6. Related-lista vain, jos linkkien perusteella löytyi sopivia muita julkaistuja sisältöjä.
+7. Kontekstikohtainen CTA.
+
+Sisältö käyttää tavallista Markdownia, ei MDX-komponentteja. `<Content />` tuodaan `render(entry)`-kutsusta. Yhteinen template omistaa varsinaisen H1:n; artikkelirunkoon ei lisätä toista H1:tä.
+
+Related-lista ei ole klusterisuositusmoottori. `remarkEditorialSafety` kerää Markdown-AST:stä inline-, fragmentti- ja reference-tyylisten root-relative-linkkien normalisoidut reitit dokumenttijärjestyksessä. `EditorialPage.astro` poistaa duplikaatit, rajaa julkaistuihin saman kielen sisältöihin, poistaa nykyisen artikkelin ja ottaa ensimmäiset neljä.
+
+Buildin publication-integrity-portti käyttää samaa AST-metadataa ja estää myös reference-style-linkin `draft: true` -kohteeseen; fenced code ei muodosta linkkiä. Sound-oppaalla Explorer-datan localen, `translationKey`n, lokalisoidun slugin ja `articleRoute`n on vastattava julkaistua Markdownia.
+
+### 10.3 CTA-logiikka
+
+| Tyyppi | Englanti | Saksa |
+| --- | --- | --- |
+| Sound-opas | `/sounds/` | `/de/alltagsgeraeusche/` |
+| Exposure-artikkeli | NIOSH Exposure Time -laskuri | EU/Saksa `laermexpositionsrechner` |
+| Smartphone-artikkeli | `/#features` | Android-mittausopas; itse mittausopas ohjaa kalibrointioppaaseen. |
+| Fundamentals / muu | `/sounds/` | `/de/alltagsgeraeusche/` |
+
+Molempien kielten exposure-/smartphone-haarat käyttävät vakaata `clusterKey`-arvoa. Saksan Android-mittausoppaalla on lisäksi slug-poikkeus, joka ohjaa kalibrointioppaaseen.
+
+### 10.4 Matematiikka ja pitkät lähde-URL:t
+
+Markdown-putki määritellään `astro.config.mjs`-tiedostossa:
+
+1. `remarkValidateLocalImages` tarkistaa paikalliset kuvat.
+2. `remarkEditorialSafety` estää kielletyt rakenteet ja julkaisee related-linkkien `linkedRoutes`-metadatan.
+3. `remarkMath` tunnistaa matematiikan.
+4. Paikallinen `remarkMathPresence` käy AST:n läpi ja asettaa `file.data.astro.frontmatter.hasMath`-lipun.
+5. `rehypeKatex` tuottaa valmiin kaavaesityksen.
+6. `rehypeRawUrls` merkitsee tarkasti rajatut raw-URL-linkit.
+
+Käytä tuettua dollaridelimiterimuotoa: inline-kaava `$...$`, lohkokaava `$$...$$`. Nykyisissä artikkeleissa on myös usealle riville kirjoitettuja yksittäisten dollarimerkkien pareja. Älä oleta `\(...\)`-/`\[...\]`-muotojen toimivan; saksan sisällöille on tätä koskeva testi.
+
+`EditorialPage` liittää `katex.min.css?url`-tyylitiedoston Baseen vain, jos `remarkPluginFrontmatter.hasMath === true`. Nykyisistä 40 editorial-sivusta 17 sisältää KaTeX-matematiikkaa ja 23 ei. Kaavat tuottavat myös MathML:n ja TeX-annotaation.
+
+KaTeX-fontit emittoidaan saman originin tiedostoiksi. `vite.build.assetsInlineLimit` palauttaa niille `false`, jotta fontteja ei siirretä CSP:n kieltämiin data-URL:eihin. Tätä ei korjata löysentämällä `font-src`-politiikkaa.
+
+Näkyvä lähdeluettelo kirjoitetaan Markdown-runkoon. Nykyinen muoto sisältää lähteen nimen, näkyvän linkin ja tarvittaessa numeroidun viiteavaimen määrittelyn. `researchSources` ei renderöi tai päivitä näitä automaattisesti.
+
+### 10.5 Artikkelin lisääminen tai päivittäminen
+
+1. Valitse oikea kokoelma, locale, pysyvä `translationKey` ja tuettu klusteri.
+2. Kirjoita sisältö paikalliseen Markdown-hakemistoon ja täytä kaikki skeeman kentät. Uusi keskeneräinen teksti merkitään `draft: true`; puuttuva draft-kenttä tarkoittaa julkaistavaa.
+3. Tarkista lähde suoraan: tukeeko se juuri väitettä, lukua, mittaria ja kohderyhmää? Publisherin auktoriteetti tai HTTP 200 ei yksin riitä.
+4. Pidä lähteet ja viittaukset runkotekstissä ajan tasalla; päivitä `researchSources` erikseen.
+5. Käytä saksassa paikallisia sisältösegmenttejä ja paikallista sääntelykontekstia. Englannin etusivulle johtavat logo/Home-linkit ovat tarkoituksellinen poikkeus.
+6. Lisää todellinen julkaistava kielipari `contentTranslations`-rekisteriin. Älä luo olemattoman käännöksen hreflangia.
+7. Jos kyse on sound-oppaasta, tarkista myös tekninen tietue, tekstipaketit, `publishedKeys` ja slug-haku.
+8. Tarkista mahdolliset runkoon kirjoitetut taulukot, kuvat ja vertailuluvut erikseen. Ne eivät automaattisesti päivity `sounds.ts`-datan mukana.
+9. Jos slug vaihtuu, päivitä sisälinkit ja reittiparit sekä harkitse nykyisen redirect-mallin mukaista ohjausta. Pelkkä tiedoston uudelleennimeäminen ei muuta frontmatter-slugia.
+10. Aja build ja relevantit testit. Tarkista renderöity H1, kuvaus, lähdelinkit, matemaattiset esitykset, CTA, mobiilirivitys ja molemmat kielet.
+11. Päivitä testien lukumäärä-/kaavabaselinet vain, kun muutos on tarkoituksellinen ja nykyinen sisältö vahvistaa uuden määrän.
+
+Artikkeli-indeksin intro sanoo tällä hetkellä kummallakin kielellä 20 opasta tekstivakiona. Ryhmäkohtaiset lukumäärät lasketaan datasta. Uusi artikkeli ei päivitä introa automaattisesti.
+
+### 10.6 Tuote-, terveys- ja mittausväitteet
+
+Säilytä seuraavat rajaukset:
+
+- dBcheckiä ei nimetä sertifioiduksi Class 1-/Class 2 -mittariksi.
+- Puhelinmittaukseen vaikuttavat mikrofoni, käsittely, asento, ympäristö ja kalibrointi.
+- Kuulotesti ja recovery-check ovat omaan baselineen suhteutettua seurantaa, eivät kliininen testi tai diagnoosi.
+- Sleep Monitor näyttää melutapahtumia, ei varmista heräämisen syytä.
+- Äänialueet ovat kontekstisidonnaisia. Erota dB, dBA, dB(A), LAeq, LCpeak, Fast-lukema, todellinen huippu ja LWA.
+- NIOSH-/OSHA-/EU-malleja ei sekoiteta keskenään eikä työperäistä vertailua kuvata yleiseksi vapaa-ajan turvarajaksi.
+- dBcheckin valinnainen Health Connect estää ehdottoman cloud-free-/ei-koskaan-jakoa-väitteen.
+- Valinnainen Pro WAV -tallennus ja äänenluokittelijan syötteen käsittely ovat eri asioita.
+- Tekninen sisältö- tai lähdetarkistus ei ole juridinen tai kliininen hyväksyntä.
+
+## 11. Metadata, structured data ja resurssit
+
+### 11.1 Base-propsit ja oletukset
+
+`Base.astro`-propsit:
+
+| Prop | Oletus / merkitys |
+| --- | --- |
+| `title` | Pakollinen. |
+| `description` | Oletuskuvaus olemassa, mutta julkisilla sisältösivuilla tulee olla oma kuvaus. |
+| `ogType` | `website`; editorial-sivut käyttävät `article`. |
+| `jsonLd` | Tyhjä taulukko. |
+| `socialImage` | Sovelluksen oletuskuva `socialImages.app`. |
+| `locale` | Props -> Astro.currentLocale -> en. |
+| `alternates` | Muuten reittirekisteristä; `errorDocument` poistaa head-alternatesit. |
+| `errorDocument` | false; true kytkee virhedokumentin indeksointi-/jakometadatan rajoitukset. |
+| `readingProgress` | false; editorial-sivuilla true. |
+| `stylesheet` | Valinnainen saman originin sivukohtainen CSS. |
+
+Canonical muodostetaan `new URL(Astro.url.pathname, Astro.site)`-kutsulla ilman hakukyselyä. Tavalliset sivut saavat title/description-, canonical-, OG- ja Twitter-metatiedot. OG-kuvan tiedot sisältävät tyypin image/webp, koon 1200×630 ja alt-tekstin.
+
+Headin vastinkielet ovat `en-GB`, `de-DE` ja todellisen englannin vastineen tapauksessa `x-default`. Sitemap käyttää samoja rekisteröityjä URL-pareja, mutta kielikoodeja `en`, `de` ja `x-default`.
+
+JSON-LD serialisoidaan `JSON.stringify`-kutsulla ja kaikki `<`-merkit muutetaan `\u003c`-esitykseksi ennen `set:html`-kirjoitusta.
+
+### 11.2 Structured data
+
+- Etusivu: yksi `WebSite`.
+- Jokainen 40 sisältösivusta: yksi `Article` ja yksi `BreadcrumbList`.
+- Article-author on Organization `dBcheck`, URL `/`.
+- `datePublished` tulee frontmatterista.
+- `dateModified` on myöhempi arvoista `publishedAt` ja `lastReviewed`, jotta se ei edellä julkaisua.
+- `mainEntityOfPage` käyttää sisältösivun URL:ia ja `inLanguage` localeTags-arvoa.
+- Työkaluille ei nykyisin generoida SoftwareApplication-, Product-, Offer- tai FAQ-schemaa.
+
+404 on tarkoituksellinen poikkeus normaaliin metadatasopimukseen: title ja description ovat olemassa, mutta headissa ei ole canonicalia, hreflang-linkkejä, OG/Twitter-jakometadataa tai JSON-LD:tä. Se saa `noindex`-merkinnän. Näkyvän kielivalitsimen linkit eivät ole head-hreflangeja.
+
+### 11.3 Kuva- ja mediatiedostot
+
+`src/data/social.ts` valitsee viidestä `public/images/og/`-WebP-kuvasta:
+
+- `dbcheck-app.webp`: oletus ja sovellusesittely.
+- `decibel-guides.webp`: fundamentals.
+- `phone-measurement.webp`: smartphone.
+- `noise-exposure.webp`: exposure.
+- `common-sounds.webp`: sound-sivut.
+
+`socialImageForEditorial(kind, clusterKey)` tekee valinnan. Nämä OG-kuvat eivät automaattisesti ole artikkelin runkokuva. Rekisteri sisältää locale-kohtaiset englannin- ja saksankieliset alt-tekstit, joista `Base.astro` valitsee sivun localen mukaisen arvon.
+
+Artikkelien kuvat ovat `src/assets/articles/`-hakemistossa. Sound-indeksi käyttää `astro:assets`-Image-komponenttia, widths-arvoja `720, 1120, 1672` ja locale-kohtaista overview-kuvaa. Pro-esittelykuvat tuodaan `src/assets/features/`-hakemistosta ja renderöidään img-elementteinä lazy/async-asetuksilla.
+
+Juurihakemiston alkuperäisiä PNG-kuvia ja `dBcheck-hero.mp4`-tiedostoa ei pidä sekoittaa selaimelle tarjoiltaviin `src/assets`-/`public`-versioihin. `dist/_astro/`-tiedostojen hash-nimiä ei kovakoodata sisältöön.
+
+Favicon on `/dbcheck-logo.svg?v=2`; logoa käytetään myös headerissa/footerissa. `robots.txt` sallii crawlauksen ja viittaa `https://dbcheck.app/sitemap-index.xml`-osoitteeseen.
+
+## 12. Verkkopyynnöt, tietosuoja ja julkaisu
+
+### 12.1 Sovelluskoodin verkkopinta
+
+| Pyyntö/toiminto | Käyttö |
+| --- | --- |
+| Oman originin HTML, CSS, JavaScript, kuvat ja videot | Sivuston toimitus. |
+| `/search.json`, `/de/search.json` | Koko paikallinen hakuindeksi; hakusana käsitellään selaimessa. |
+| `/cdn-cgi/trace` | Etusivun hintojen maatunnus. |
+| `fonts.googleapis.com`, `fonts.gstatic.com` | Ulkoiset Google Fonts -tyylit/fontit. |
+| `mailto:contact@finnvek.com` | Avaa käyttäjän sähköpostisovelluksen; ei sivuston lomakelähetystä. |
+| Ulkoiset lähde- ja Finnvek-linkit | Tavallisia käyttäjän avaamia navigaatioita. |
+
+Sivuston omassa koodissa ei ole evästeiden, localStoragen tai sessionStoragen kirjoitusta, mikrofonilupapyyntöä, `getUserMedia`-kutsua, palvelimelle lähetettävää yhteydenottolomaketta tai käyttäjätilin rekisteröintiä.
+
+Tämä ei ole lupaus siitä, ettei hosting/CDN käsittele IP-osoitetta, lokita pyyntöjä tai käytä omia suojaustoimintojaan. Cloudflare-asetukset, säilytysajat, sopimukset ja ulkoisten fonttipyyntöjen oikeudellinen kuvaus tarvitsevat erillisen vahvistuksen.
+
+### 12.2 HTTP-suojaus
+
+`public/_headers` asettaa kaikille reiteille:
+
+- CSP:n oletuksen `default-src 'self'`.
+- `base-uri 'self'`, `object-src 'none'`, `frame-ancestors 'none'`, `form-action 'self'`.
+- `script-src 'self' 'unsafe-inline'` ja `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`.
+- `font-src 'self' https://fonts.gstatic.com`, ei fonttien data-URL-lupaa.
+- `img-src 'self'`, `media-src 'self'`, `connect-src 'self'`, `worker-src 'self'`.
+- `upgrade-insecure-requests`.
+- `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`.
+- Permissions-Policy estää accelerometer/camera/geolocation/gyroscope/magnetometer/microphone/payment/usb-ominaisuudet.
+
+CSP ei ole nonce-/hash-pohjainen strict CSP, koska inline-script/style sallitaan. Tätä ei pidä raportoida vahvempana suojauksena kuin se on.
+
+HSTS ei ole tämän tiedoston asetus; kommentti viittaa Cloudflaren Edge Certificates -asetuksiin. Niiden nykytilaa ei vahvisteta lähdekoodista. Mikrofonin estävä Permissions-Policy sopii hero-videodemoon, koska se ei käytä käyttäjän mikrofonia.
+
+### 12.3 Cloudflare ja 404
+
+`wrangler.jsonc` määrittelee:
+
+- Worker-nimen `dbcheck-website`.
+- `compatibility_date: 2026-07-12`.
+- `workers_dev: false`.
+- Staattiset assetit `./dist`-hakemistosta.
+- `assets.not_found_handling: '404-page'`.
+- Custom domain -reitin `dbcheck.app`.
+
+Omaa Worker-entrypointia tai backend-handleria ei ole. Astro tuottaa englannin `404.html`- ja saksan `de/404.html` -dokumentit. Virheellisen polun tulee hostingissa saada oikea HTTP 404 ja localeen sopiva palautumissivu, ei etusivun 200-fallback.
+
+Julkaisupolku tarvittaessa ja erikseen valtuutettuna:
+
+```powershell
+npm test
+npm run deploy:dry-run
+npm run deploy
 ```
 
-Vaatii JDK 21:n ja Android SDK:n API 36 -tuen.
+Molemmat deploy-scriptit tekevät puhtaan buildin juuri ennen Wrangler-vaihetta ja käyttävät eksplisiittisesti repositorion `wrangler.jsonc`-tiedostoa. `deploy` on tuotantoa muuttava komento. Sitä ei ajeta pelkän dokumentointi-, tarkistus- tai Git-push-pyynnön perusteella. Dry run ei julkaise eikä todista live-HTTP-otsakkeita.
 
----
+Julkaisun jälkeen erikseen tarkistettavia asioita ovat oikea asset-versio, HTTP-otsakkeet, 404-status, 301-ohjaukset, sitemap, hakudata, latautuvat fontit ja mahdollinen hostingin injektoima analytiikka. Tässä repositoriossa ei ole omaa rollback-automaatioscriptiä.
 
-## Toteutusvaiheet nykykoodin perusteella
+### 12.4 Omistajan hyväksyntää vaativat tiedot
 
-### Phase 1 - MVP
+Sivuston reiteissä ei ole toteutettua privacy-/Impressum-/provider-information-sivua. `docs/owner-input/` sisältää näiden valmisteluun tarvittavia tietoja ja avoimia hyväksyntöjä.
 
-Toteutettu paaosin:
+Omistajan henkilöllisyyttä, osoitetta, oikeushenkilömuotoa, rekisteritunnuksia, oikeusperusteita tai säilytysaikoja ei saa keksiä eikä julkaista muista lähteistä ilman hyväksyntää. Tiedostojen vanhat live- ja analytiikkahavainnot on luettava päivämäärän kanssa; ne eivät ole tämänhetkisen tuotantojulkaisun lausuntoja.
 
-- Projektirakenne, Hilt, Room v3, DataStore.
-- Design system ja komponenttikirjasto.
-- Meter, Analytics, History ja Settings.
-- AudioRecord-pohjainen live-mittaus.
-- Foreground service mikrofonityypilla.
-- Google Play Billing -backend, Settingsin ostovirta ja Pro-gating.
-- Debug-only Force Free -toggle Pro-gatejen testaamiseen.
+## 13. Testit ja todentamisen rajat
 
-### Phase 2 - Enhancement
+### 13.1 Node-testikokonaisuus
 
-Toteutettu tai kytketty merkittavilta osin:
+Node-testit sijaitsevat `test/*.test.mjs`-tiedostoissa ja käyttävät `node:test`- sekä `node:assert/strict`-rajapintoja. Ei Vitest-/Jest-konfiguraatiota eikä asetettua coverage-prosenttirajaa. Alla on keskeiset testiryhmät, ei hauras lukumääräbaseline.
 
-- Kuulotesti-flow ja tulosten tallennus Pro-kayttajalle.
-- Hearing recovery -short check baselineen verrattuna.
-- FFTProcessor ja SpectralAnalyzer Pro-gatettuun live-spektrikorttiin.
-- SessionNamingSheet Historyssa ja Session Detailissa.
-- CSV-export Settingsissa.
-- Glance-widget Pro-gatella.
-- Hearing Results -jakaminen PNG-share-polulla.
-- Laaja strings.xml-resursointi default English -kielella ja rajattu
-  `values-fi` launch-baseline.
+| Tiedosto | Mitä se tarkistaa |
+| --- | --- |
+| `test/exposure-time.test.mjs` | Saksan energiapohjaiset ajat, englannin NIOSH-mallin säilyminen ja aikamuotoilu. |
+| `test/daily-noise-exposure.test.mjs` | Edustavat L_EX,8h-tulokset, pyöristysrajojen luokat, järjestysriippumattomuus ja virheelliset kestot. |
+| `test/i18n-build.test.mjs` | Sisältömäärät, kieliparit, saksan sisälinkit, yhtäläinen sound-data, reitit, jaettu sivurakenne, header, kielivalitsin ja sitemap. |
+| `test/conditional-katex-css.test.mjs` | Kaavamäärät, ehdollinen KaTeX-CSS, MathML/TeX, fonttipolut, head-metatiedot, skeemat sekä sivumäärät. |
+| `test/katex-font-assets.test.mjs` | KaTeX-fonttien same-origin-tiedostot, ei data-fontteja, valitun fontin tavut ja CSP-yhteensopivuus. |
+| `test/cloudflare-404.test.mjs` | Wrangler-fallback, generoitu 404-rakenne/metat, ei 404:ää indeksissä sekä 8 legacy-ohjausta. |
+| `test/analytics-removal.test.mjs` | Ei GA-lataajaa määritellyissä lähteissä eikä vanhaa suostumus-UI:ta Basessa. |
+| `test/accessibility-responsive-p1.test.mjs` | Valittujen muted-tekstien kontrastilaskenta, focus-säännöt, shrink-ehdot ja raw-URL-merkintä lähteessä/buildissa. |
+| `test/semantic-accessibility-navigation.test.mjs` | Etusivun välilyönnit, Explorerin otsikkotasot, aktiivinen nav, haun sivurajaus ja forced-colors-sääntö. |
+| `test/p2-content-calculator-corrections.test.mjs` | Kaikkien neljän monikenttäperheen validity-portti lähteessä, määrätyt sisältölinkit, saksan CTA ja lähdeotsikot. |
+| `test/sound-explorer-range-sources.test.mjs` | Neljän lähteen metadata, alueet, en/de-yhtäläisyys, crawlattava lähde-HTML sekä oppaattomien äänten reittirajat. |
+| `test/build-asset-validation.test.mjs`, `test/build-output-cleanup.test.mjs`, `test/content-route-collision-validation.test.mjs` | Build-assetit, pakotettu content-sync, tuoreusmarkkeri, epäonnistuneen buildin puhdistus sekä sisältöreittien, käännösavainten ja julkaisulinkkien eheys. |
+| `test/editorial-markdown-safety.test.mjs`, `test/editorial-date.test.mjs` | Markdown-rakenteen turvallisuus, related-linkkimetadata ja toimituksellisten päivämäärien normalisointi. |
+| `test/noise-dose.test.mjs`, `test/prices.test.mjs`, `test/tool-calculator-formatting.test.mjs`, `test/tools-data-safety.test.mjs` | Puhtaat laskenta-, hinta-, muotoilu- ja työkaludatasopimukset. |
+| `test/google-font-loading.test.mjs` | Lähdemerkinnän ja tuoreen buildin Google Fonts -latausmalli sekä paikalliset fallbackit. |
 
-### Phase 3 - Polish
+Generoitua `dist/`-tuotosta lukevat testit kutsuvat ensin yhteistä `assertFreshBuild`-vartijaa. Se vertaa nykyisten build-syötteiden ja koko `dist`-puun SHA-256-hasheja onnistuneen buildin markkeriin. Suora yksittäinen testi keskeytyy selkeään build-pyyntöön, jos markkeri puuttuu tai lähde/tuotos on muuttunut; se ei rakenna sivustoa itse. `npm test` rakentaa edelleen kerran ennen testikokonaisuutta.
 
-Osittain toteutettu:
+Osassa testeistä on tarkoituksellisesti täsmällisiä HTML-/CSS-tekstivertailuja. Niiden läpäisy todistaa kyseisen sopimuksen, ei kaikkia käyttäjän klikkauspolkuja tai kaikkien värien saavutettavuutta.
 
-- LocalBackupManager paikallisiin backup/restore-toimintoihin.
-- ShareResultsGenerator tekstille, hearing-test PNG:lle ja Session Detail PNG:lle.
-- MonthlyTrendChart ja YearlyReportCard Pro-gatettuun analytics-dataflow'hun.
-- PDF-reportti Session Detailista.
-- Screenshot baseline -testit kriittisille Compose-komponenteille.
-- Passive monitoring 5 minuutin aggregate sample -polkuna.
-- Audible alarm, voice baseline / warning ja spoken risk prompt rajattuina
-  Pro-opt-in -polkuina.
-- Ambient sound playback erillisessä mediaPlayback foreground servicessä.
+### 13.2 Selaimen responsiivisuus- ja vuorovaikutustesti
 
-Puute: pilvi-/Google Drive -backupia ei ole.
+`npm run test:browser` (`npm run test:text-wrapping` on alias):
 
-### Phase 12 - kilpailukykyominaisuudet
+- löytää asennetun Chrome/Chromium-yhteensopivan selaimen; `CHROME_BIN` ohittaa löydön;
+- Windowsissa etsii mm. Chromea, Edgeä ja Bravea tavallisista asennuspaikoista;
+- ei lataa omaa selainta eikä edellytä erillistä Playwright-riippuvuutta;
+- tarvitsee verkon Google Fontsille ja selaimen allekirjoitetuille en/de-tavutussanakirjoille;
+- käynnistää oman Astro-previewn satunnaisporttiin ja oman tilapäisen selainprofiilin;
+- ajaa reduced motion -tilassa 22 kohdistettua rivitystapausta;
+- tarkistaa 58 ei-redirect-sivua leveyksillä 320/360/375/393/412/768/1440: yhteensä 406 yhdistelmää;
+- tarkistaa lisäksi 6 navigaatio-/hakutilaa;
+- vaihtaa vuorovaikutusosioon normaalin motion-asetuksen ja ajaa 6 ryhmää: kielivalikko, haku, Pro-välilehdet, Sound Explorer, laskurit ja hero Listen/Mute; haku-, rail- ja scramble-ryhmissä asetusta vaihdetaan myös ajonaikaisesti ja hero-ryhmä tarkistaa responsiivisen lähteenvaihdon sekä `pagehide`-/`resume()`-/`play()`-/autoplay-kilpatilanteet;
+- siivoaa oman selaimen, previewn ja tilapäisprofiilin `finally`-polussa.
 
-Osittain toteutettu:
+Tarkistus käsittelee oikeita fontteja, otsikoiden laatikoita ja tekstialueita, rivityssemantiikkaa, irrallista loppupistettä, `L_EX,8h`-tunnisteen katkeamattomuutta, linkkejä, taulukoiden/kaavojen paikallista vieritystä sekä tarkoituksellista ellipsiä.
 
-- Health Connect -melusessiosynkkaus ja sykeoverlay.
-- B-painotus ja ITU-R 468 -painotus A/C/Z:n lisaksi.
-- Lock-screen live meter custom notificationina.
-- Session Detail -nakymä.
-- PDF-raportti ja Session Detail PNG-jako.
-- LCpeak ja `measurements.peakDb` schema v3:ssa.
-- Camera Overlay photo/video share -perusta.
-- Sleep Monitor schema, setup, active recording, results, insights ja export.
-- Live sound detection YAMNet/TFLite-polulla ja optional aggregate event
-  -persistoinnilla.
-- Tinnitus pitch profile rajattuna personal tracking -ominaisuutena.
+DOM-rivit ja computed `hyphens` eivät todista näkyvän tavutusmerkin maalausta. Typografiamuutoksissa splitWords-havainnot pitää tarkistaa myös kuvasta. Selainajo kattaa nimetyt pääpolut, ei kaikkia media- tai laskurirajatilanteita, screen reader -käyttöä eikä tuotantohostingia.
 
-Puute: Health Connectissa ei ole natiivia melu- tai audiometriatietuetta, joten
-melu mallinnetaan exercise sessionina ja kuulotestin synkkaus skipataan.
+### 13.3 Mitä tarkistusten läpäisy ei tarkoita
 
----
+- Build sisältää Astro-tyyppi-/diagnostiikkatarkistuksen, mutta ei selaintestiä tai sisältöväitteiden faktantarkistusta.
+- Node-testit eivät tee ammattimaista akustista kalibrointia.
+- Lähdetekstin `checkValidity`-vertailu ei suorita kaikkia syöttö-/poistorivipolkuja selaimessa.
+- Kaava-/fonttiassetin olemassaolo ei yksin todista, että fontti latautuu tuotannon CSP:n läpi.
+- Hreflang-/canonical-testi ei todista hakukoneen indeksointia.
+- 404-konfiguraatiotesti ei yksin todista tuotannon HTTP-statusta.
+- GA4:n poissaolo lähteestä ei todista hosting-tilin nykyisiä asetuksia.
+- Vanha Lighthouse-raportti tai kuvakaappaus ei ole nykyversion suorituskyky- tai UI-hyväksyntä.
+- Tässä dokumentissa ei vahvisteta erillisen Android-sovelluksen käyttöoikeuksia, tietomallia, Google Play -julkaisua tai maksamista.
 
-## Koodintarkistuksen kannalta kriittiset sopimukset
+## 14. Muutoskohtaiset tarkistuslistat
 
-Nama ovat hyvia kysymysaiheita tuleviin code review -kierroksiin:
+### 14.1 Yhteinen UI tai header
 
-- Foreground service: kutsutaanko `startForeground()` ennen AudioRecord-session
-  aloitusta, ja kasitellaanko Android 14+ microphone/while-in-use-rajoitus
-  oikein?
-- Pro gates: onko gate UI:n lisaksi execution/data-polussa? Erityisesti
-  hearing test, hearing recovery, CSV, PDF, metadata, Pro-audioasetukset,
-  sound detection, WAV, ambient playback, tinnitus pitch, voice baseline/TTS ja
-  history direct-open.
-- Audio math: erotetaanko raw RMS, weighted RMS ja C-painotettu LCpeak?
-  Eivatko raportit kayta raw RMS:aa LCpeak- tai A-weighted event -laskentaan?
-- Refresh rate: vaikuttaako muutos vain UI-paivitykseen, ei AudioRecordiin,
-  filter-stateen tai Room-persistointiin?
-- Room consistency: kirjoitetaanko measurement-rivit ja session summary samassa
-  transactionissa completion/flush-polussa?
-- Recovery: suljetaanko edellisen prosessin aktiivinen sessio hiljaisesti
-  ilman valheellista completion-navigointia?
-- File sharing: jaetaanko PNG/PDF/CSV/Camera-exportit vain `cache/exports/`
-  FileProvider-URIlla, ja annetaanko lukuoikeus seka `EXTRA_STREAM`in etta
-  `ClipData`n kautta? WAV-jakoon saa kayttaa vain app-private
-  `files/wav_recordings/` FileProvider-rootia.
-- Backup/restore: validoidaanko backup ennen korvausta, tehdaanko safety backup
-  ja poistetaanko WAL/SHM-sidecarit?
-- Health Connect: pysyyko noise sync `ExerciseSessionRecord`-mallissa ja
-  hearing test no-opina, ellei Android tarjoa oikeaa datatyyppia?
-- Passive monitoring: pysyyko polku käyttäjän käynnistämänä foreground sample
-  -toimintona, joka tallentaa vain aggregate-arvot eikä luo sessioita,
-  measurements-riveja, raw-audiota tai taustatriggereita?
-- Ambient playback: pysyyko se erillisessä `mediaPlayback`-servicessä ilman
-  mikrofonilupaa, Room-dataa, terapia-/health-väitteitä tai automaattisia
-  triggereitä?
-- Voice/TTS: vaatiiko voice baseline aktiivisen Pro + Sound Detection
-  -mittauksen, triggeröityykö TTS vain dosimeter dose/projected-dose
-  -riskistä, ja pysyvätkö hearing baseline / sound detection -guardit mukana?
-- Hearing recovery: käytetäänkö latest full hearing-test baselinea, rajataanko
-  taajuudet 1/4/8 kHz:iin ja tallennetaanko vain aggregate-shiftit
-  `hearing_recovery_results`-tauluun?
-- Tinnitus pitch: pysyykö scope personal tracking -profiilina ilman
-  diagnoosi-, terapia-, oireiden vähentämis-, background playback-,
-  Health Connect- tai automaattitriggeriväitteitä?
-- Localization: jos uusi UI-teksti lisätään, päivittyvätkö default
-  `values/strings.xml` ja tarkoituksella rajattu `values-fi`-baseline tai
-  dokumentoidaanko, miksi fi-teksti ei kuulu nykyiseen launch-baselineen?
-- User-facing errors: kayttavatko uudet virhepolut resursoituja fallback-
-  viesteja `toUserFacingMessage(...)`-polun kautta, eivat raakaa exception-
-  tekstia?
-- Localization/accessibility: ovatko uudet user-facing tekstit resursoituja ja
-  onko kaavioille/ikonitoiminnoille semanttinen kuvaus?
-- CI/security: paivitetaanko dependency verification / lockfile / SARIF-polut,
-  jos build- tai scanner-riippuvuuksia muutetaan?
+- Tarkista `Base.astro` sekä muokattavan komponentin paikallinen CSS.
+- Säilytä en/de-rakenne, navigaation aktiivisuus ja tarkoituksellinen haun sivurajaus.
+- Testaa desktop ja mobiili, näppäimistö, dialogin sulkeminen ja fokuksen palautus.
+- Tarkista kielivalitsimen aito vastine ja parittoman sivun indeksifallback.
+- Otsikko-/korttiluokan muuttuessa tarkista `revealSelectors` ja heading-transitionin korttivalitsin.
+- Älä korvaa reveal-siirtymää vahingossa omalla `transition`-säännöllä.
+- Tarkista tavutus, pitkät saksan sanat, fonttien lataus, forced colors ja reduced motion.
+- Erota tietoa kantava väri yleisestä koristelusta; älä lisää koristeellisia värireunoja.
 
----
+### 14.2 Laskurin logiikka tai lomake
 
-## Tunnetut rajoitukset ja riskit
+- Nimeä muutettava malli: NIOSH-aika, NIOSH-annos, EU-aika, EU L_EX,8h, etäisyys tai logaritminen summa.
+- Tarkista kaava, yksikkö, rajat, tarkkuus ja näkyvä pyöristys.
+- Testaa tyhjä, nolla, negatiivinen, rajan ylittävä ja desimaalinen arvo sekä natiivi stepMismatch.
+- Jaksolaskureissa testaa tunti/minuutti, 24 tunnin kokonaisraja, minimi-/maksimirivit, lisäys/poisto ja stepperien ID/label-yhteys.
+- Säilytä viimeisen kelvollisen tuloksen sijasta näkyvä virhetila, kun nykyinen syöte on epäkelpo.
+- Tarkista en/de-formaatit ja status-alueen ilmoitus; älä lisää scramblea joka input-eventiin.
+- Pidä oletus-HTML, noscript-esimerkki ja laskettu oletustulos yhtäpitävinä.
+- Aja puhtaat laskentatestit ja tarvittaessa oikea selaimen syöttöpolku.
 
-- dB-laskenta perustuu laitteen mikrofoniin ja sovelluksen laskennalliseen
-  kalibrointiin. Ilman laitekohtaista kalibrointia tuloksia ei pideta
-  mittalaitetasoisina SPL-arvoina.
-- Kuulotestin kynnykset ovat suhteellisia appin tone-output / dBFS -arvoja,
-  eivat kalibroitua dB HL -audiometriaa. Tulokset sopivat korkeintaan
-  henkilokohtaiseen seurantaan, eivat kliiniseen diagnoosiin.
-- `speechClarity` ja `highFreqLimit` ovat sovelluksen arvioita/simplifikaatioita.
-- A/B/C/ITU-R-painotusten kertoimet ovat koodissa ja niille on unit-testeja,
-  mutta kattava mittalaitereferenssi- tai scipy/MATLAB-verifiointi puuttuu.
-- Health Connect -melu tallennetaan exercise sessionina, koska natiivia
-  melualtistusrecordia ei ole. Kuulotestin Health Connect -kirjoitus on no-op.
-- Camera Overlay -reitti, permission UI, CameraX preview/ImageCapture/VideoCapture
-  binding, live dB readout, photo share burned-in overlay ja silent video capture
-  ovat paikallaan. Live readout lukee `AudioEngine.decibelFlow`sta vain aktiivisen
-  mittauksen aikana eika ohjaa mittaussession kaynnistysta tai pysaytysta. Photo
-  share kirjoittaa valiaikaisen raw JPG:n export-cacheen, polttaa readoutin
-  jaettavaan PNG:hen ja julkaisee sen FileProviderin `content://`-URIlla. Silent
-  video kirjoittaa MP4:n export-cacheen ilman CameraX `withAudioEnabled()`-polkua;
-  Compose-overlayn burned-in-renderointi videoon vaatii erillisen renderöinti- tai
-  post-processing-polun.
-- WAV-raakaaudion tallennusta varten on Pro-gatettu Settings-oletus
-  `wav_recording_default`, joka on default OFF ja näyttää privacy-warningin.
-  `AudioSessionManager` kaynnistaa streamaavan PCM16 WAV -writerin vain, kun
-  effective-ehto `isProUser && wavRecordingDefaultEnabled` toteutuu. WAV:t
-  kirjoitetaan app-private `filesDir/wav_recordings` -hakemistoon, normaali stop
-  paivittaa RIFF/data-headerit ja failure/cleanup poistaa partial-tiedoston.
-  Session Detail näyttää WAV-kortin, jos avattavalla sessiolla on WAV-tiedosto.
-  Pro-käyttäjän share muodostaa FileProviderin `content://`-URIin perustuvan
-  `audio/wav` Sharesheet-intentin `ClipData`lla ja väliaikaisella read grantilla;
-  delete poistaa session WAV-tiedoston app-private storage -polusta. WAV-tiedostoa
-  ei kopioida MediaStoreen. Manual share smoke ajettiin `Pixel_9_Pro`-emulaattorilla:
-  Sharesheet avautui WAV-tiedostolle ja delete tyhjensi app-private
-  `files/wav_recordings` -hakemiston.
-- Session location on approximate-only foreground -metadataa: ei precise
-  locationia, ei background locationia, ei jatkuvaa seurantaa, eikä sijainti saa
-  rikkoa mittauksen start/stop-flow'ta. Room v6 sisältää nullable
-  `sessions.locationLatitude`, `locationLongitude`, `locationAccuracyMeters` ja
-  `locationCapturedAt` -sarakkeet. `AudioSessionManager` kytkee one-shot
-  last-known capture -polun startiin ja stop-fallbackiin, mutta UI/runtime
-  permission -pyyntö ei ole vielä näkyvissä käyttäjälle.
-- Google Drive -backupia ei ole; nykyinen backup on paikallinen
-  `filesDir/backups`-ratkaisu.
-- `androidTest`-instrumentaatiotesteja ei ole nykyisessa checkoutissa.
-- Screenshot-testit ovat olemassa, mutta ne eivat korvaa laitetason
-  navigation/permission/share/billing-testausta.
-- Default-English-tekstit on laajasti resursoitu, ja Osa94 lisasi ensimmaisen
-  rajatun Finnish launch -baselinen `values-fi/strings.xml`-tiedostoon. Koko
-  sovelluksen lokalisointi, Play-copyt ja kaikki maat/kielet eivät ole valmiita.
-- Osa93 teki kriittisille uusille pinnoille source-/preview-tason accessibility-
-  auditin ja guardit, mutta täysi manuaalinen TalkBack- ja laitetason sign-off
-  pitää tehdä erikseen ennen releasea.
-- Qodana workflow on `continue-on-error`, vaikka AGP 9.2.1 -PR:ssa saatiin CI-pass.
-  CI-status tekee ei-blokkaavan tilan nakyvaksi nimella
-  `Qodana Analysis (non-blocking AGP 9.2 risk)` ja workflow summarylla.
-- Release signing on konfiguroitu, mutta Play Store -julkaisua varten
-  tarvittavat salaisuudet, tuoteasetukset, policy-tekstit ja laitetason
-  regressioverifiointi tulee tarkistaa erikseen.
-- Osa95-98 QA-dokumentit kirjaavat release-riskit: device smoke, Play Console
-  `dbcheck_pro` -todennus, signed Play-ready AAB, Play upload ja Qodana-run ovat
-  erillisiä release sign-off -todisteita, eivät paikallisen unit-testauksen
-  korvikkeita.
-- Osa99 final reports pass oli vihreä failure-tasolla: `ktlintCheck`, `detekt`
-  ja Android lint olivat `BUILD SUCCESSFUL`, Android lintissa oli 0 erroria ja
-  36 ei-blokkaavaa warningia, ja `sc`-raportit näyttivät 0 dependency-, OSV-,
-  Semgrep-, Gitleaks- ja TruffleHog-löydöstä.
+### 14.3 Sound-alue tai opaslinkitys
 
----
+- Muuta tekninen arvo yhteisessä datassa, älä kopioi eri numeroita kielipaketteihin.
+- Tarkista lähteen tarkka luku, painotus, mittaustapa, etäisyys ja ajan määritelmä.
+- Päivitä tarvittaessa raportoitu arvo, näytön pyöristys ja lähdekonteksti yhdessä.
+- Tarkista Explorerin palkki/markkeri, mobiilirivi, search.json, sound-summary, runkoteksti ja mahdollinen kuva.
+- `publishedKeys`, Markdownin draft ja reittipari ovat erillisiä tarkistuspisteitä.
+- Säilytä oppaattomien äänten käyttökelpoiset Explorer-/hakukohteet ilman olemattomia opasreittejä.
 
-## Referenssitiedostot
+### 14.4 Artikkeli, käännös tai metadata
 
-| Tiedosto | Tarkoitus |
-|---|---|
-| `AGENTS.md` | Paikalliset tyoskentely-, lint- ja memory-ohjeet |
-| `STATUS.md` | Projektin tilanne-/jatkomuisti |
-| `dBcheck_design_spec.md` | Designin nykyinen referenssi |
-| `dBcheck_complete_spec_v2.md` | Laajempi tuotemaarittely |
-| `dBcheck_competitive_features_addendum.md` | Kilpailukykyominaisuuksien lisamaarittely |
-| `design_evolution_spec.md` | Design-kehityksen lisamuistiinpanot |
-| `dbcheck-privacy-policy.md` | Privacy policy -luonnos |
-| `pro-kytkentä.md` | Pro-kytkennan muistiinpano |
-| `memory/MEMORY.md` | Projektin arkkitehtuuri- ja sessionmuisti |
-| `images/*.png` | Visuaaliset referenssit |
+- Tarkista schema, slug, translationKey, clusterKey, description ja päiväykset.
+- Varmista väite suoraan lähteestä; erota nykyfakta aiemmasta auditointiväitteestä.
+- Tarkista näkyvä lähdeluettelo ja viiteavaimet, ei pelkkä researchSources.
+- Säilytä paikalliset sisälinkit ja aluekohtainen sääntely.
+- Tarkista CTA:n todellinen valintaehto ja related-poiminnan nykyiset rajoitukset.
+- Tarkista yksi H1, otsikon rivitys, taulukot, kuvat, lähde-URL:t ja kaavat oikeasta HTML:stä.
+- Tarkista canonical, vastavuoroiset hreflangit, sitemap ja paikallinen hakuindeksi.
+- Sisältömäärän/kaavojen muuttuessa päivitä vain tarkoituksellisesti muuttuneet testibaselinet ja mahdolliset copy-vakiot.
 
----
+### 14.5 Julkaisu tai riippuvuuspäivitys
 
-## Project management
+- Paikallinen lähde on lähtökohta; älä korvaa käyttäjän työtä etärepositorion versiolla.
+- Tarkista diff ja salaisuudet sekä tarvittaessa odottamaton remote-ahead-ero ennen pushia.
+- Riippuvuuspäivityksessä tarkista ratkaistu lockfile ja build-putken API-yhteensopivuus.
+- Aja check, build ja relevantit testit; build- ja hosting-ongelmia ei pidä nimetä toistensa todisteiksi.
+- Git-push ei ole lupa Cloudflare-deployhin.
+- Älä luo, avaa, lähetä tai yhdistä pull requestia; käyttäjä tekee sen itse.
+- Älä force-pushaa ilman erillistä pyyntöä.
+- Pysäytä vain tätä tehtävää varten käynnistetyt tilapäisprosessit.
+- Dokumentoi lopuksi erikseen paikallinen tarkistus, mahdollinen push ja mahdollinen tuotantojulkaisu.
 
-- GitHub: https://github.com/Insaner1980/dBcheck
-- Linear project: https://linear.app/loikka1/project/dbcheck-0336faa49e71
-- Milestone: v1.0 - Play Store Release
+## 15. Nykyiset poikkeukset ja dokumenttien asema
+
+| Asia | Nykyinen tulkinta |
+| --- | --- |
+| Vanhan PROJECT.md:n Android-arkkitehtuuri | Ei kuvaa tätä repositoriota. Tämän tiedoston tarkoitus on verkkosivuston toteutusviite. |
+| `UI-SPEC.md` | Kuvaa Compose-sovellusta, Manrope/Space Grotesk -fontteja ja Android-teemoja. Verkkosivun CSS/fontit tarkistetaan lähteestä. |
+| AGENTS-maininta näkymättömästä kielivalitsimesta | Eri asia kuin nykyinen toteutus: valitsin näkyy etusivun ulkopuolella, ja testit vaativat sen. |
+| Draft-suojaus | Kokoelmasuodatus on olemassa; reittiparit ja publishedKeys ovat erillisiä käsin ylläpidettäviä rekistereitä. |
+| Uuden kielen lisääminen | En/de-kovakoodauksia on konfiguraation lisäksi route-generoinnissa, komponenteissa ja testeissä. |
+| Kaikille sivuille canonical | Ei koske todellista 404-dokumenttia eikä samoin käsiteltäviä legacy-redirect-HTML:iä. |
+| Täysi JS-riippumattomuus | Artikkelit ja mobiilin details-toiminnot toimivat HTML:nä; mobiilivalikko, haku, live-laskenta ja Pro-tab-vaihto vaativat scriptin. |
+| Selainkäyttöinen anime.js | Hero ja kisko tuovat nimetyt osansa suoraan; scramble-polku lataa moottorin dynaamisesti. Artikkelin sisältötemplate ei tuo anime.js:ää. |
+| Tietosuoja-/provider-sivut | Eivät ole nykyisiä reittejä; omistajan hyväksyntää vaativat tiedot ovat erillisissä muistioissa. |
+| Sovellusjulkaisu ja hinnat | Sivuston copy/config, ei tässä vahvistettu Google Play -tilanne. |
+| Historiallinen tuotantotodiste | Pätee dokumentoituun versioon ja päivään, ei automaattisesti nykyiseen lähteeseen tai live-julkaisuun. |
+
+Muiden dokumenttien käyttötarkoitukset:
+
+- `AGENTS.md`: työskentelyn ja sivuston rajaukset; ristiriita nykyiseen toteutukseen tehdään näkyväksi.
+- `dbcheck-content-plan.md`: sisältöstrategia ja suunniteltuja aiheita. Sen laajempi artikkelimäärä ei ole julkaistun sisältökannan määrä.
+- `dbcheck-saksa-i18n.md`: lokalisoinnin suunnittelu-/toteutusviite; nykyiset reitit tarkistetaan koodista.
+- `dbcheck-article-audit.md`: aikaisempi sisältöauditointi.
+- `DBCHECK_SITE_IMPROVEMENT_AUDIT_2026-08-21.md`: päivätty sivustoauditointi.
+- `docs/audits/`: päivättyjä linkki-, fakta-, käyttöliittymä-, fontti-, 404- ja julkaisutarkistuksia.
+- `docs/owner-input/`: julkaistavaksi hyväksyttäviä omistaja-/tietosuojatietoja, ei automaattisesti julkaistava sivuteksti.
+- `url-osoitteet.md` ja `dBcheck-url-osoitteet.md`: apuluetteloita; `src/pages`, sisältö ja reittirekisteri ratkaisevat todelliset reitit.
+- `memory/MEMORY.md`: projektihistoriaa, ei tuotannon ajantasaisuustodiste.
+
+Tässä dokumentointitehtävässä yllä mainittuja lähdekoodin poikkeuksia ei korjata eikä muita dokumentteja päivitetä.
+
+## 16. Tämän dokumentin ylläpito
+
+Päivitä tätä tiedostoa, kun arkkitehtuuri, sisältöskeema, reittiparit, näkyvyysportit, laskentamalli, UI-tokenit, verkkopyynnöt tai testien suorituspolku muuttuvat.
+
+Pidä ylläpidossa kolme asiaa erillään:
+
+1. **Toteutus:** mitä nykyinen lähde oikeasti tekee ja missä vastuu sijaitsee.
+2. **Sopimus:** mitä pitää säilyttää tai todentaa muutoksessa.
+3. **Todiste:** mikä komento, selainpolku tai julkaisu tarkistettiin ja milloin.
+
+Älä lisää dokumenttiin oletettuja tiedostoja, automaattisesti toimimattomia komentoja, tekemättömiä testiajoja tai hyväksymättömiä tuote-/oikeudellisia lupauksia. Uusi build tai dokumenttipäivä ei yksin päivitä artikkelien reviewed-päivämääriä eikä todista tuotannon tilaa.

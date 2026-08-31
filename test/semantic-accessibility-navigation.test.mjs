@@ -3,8 +3,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { assertFreshBuild } from '../scripts/build-freshness.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+await assertFreshBuild({ root });
 const readPage = (...parts) => readFileSync(join(root, 'dist', ...parts), 'utf8');
 const readLayout = (...parts) => readFileSync(join(root, 'src', 'layouts', ...parts), 'utf8');
 

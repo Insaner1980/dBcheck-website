@@ -2,7 +2,7 @@ import type { Locale } from './config';
 
 const en = {
   skip: 'Skip to content', mainNav: 'Main', menu: 'Explore', tools: 'Tools', pricing: 'Pricing', articles: 'Articles', sounds: 'Sound Library', app: 'App', contact: 'Contact', search: 'Search', closeSearch: 'Close search',
-  searchTitle: 'Search sounds, tools & pages', searchLabel: 'Search the dBcheck website', searchPlaceholder: 'Try “concert” or “calculator”…', searchEmpty: 'No matching sounds or pages yet. Try another term.',
+  searchTitle: 'Search sounds, tools & pages', searchLabel: 'Search the dBcheck website', searchPlaceholder: 'Try “concert” or “calculator”…', searchResult: '1 search result.', searchResults: 'search results.', searchEmpty: 'No matching sounds or pages yet. Try another term.', searchError: 'Search is unavailable right now.', retrySearch: 'Try again',
   footerTagline: 'A quiet instrument for a loud world.\nSound awareness and personal hearing-result tracking for Android.', footerExplore: 'Explore', comingSoon: 'Coming soon to Google Play', listen: 'Listen to the page', disclaimer: 'dBcheck supports education, awareness and personal relative tracking.\nIt is not a certified sound level meter or a clinical diagnostic tool.',
   allTools: 'All tools', reviewed: 'Reviewed', guides: 'guides',
   indexTitle: 'Articles and sound guides', indexDescription: 'Sourced dBcheck guides about decibels, phone sound measurement, noise exposure and common sound levels.', indexIntro: 'Twenty evidence-aware guides organized around the concepts, measurement limits and everyday contexts needed to interpret a sound level responsibly.',
@@ -11,7 +11,7 @@ const en = {
 
 const de = {
   skip: 'Zum Inhalt springen', mainNav: 'Hauptnavigation', menu: 'Menü', tools: 'Rechner und Werkzeuge', pricing: 'Preise auf Englisch', articles: 'Artikel', sounds: 'Alltagsgeräusche', contact: 'Kontakt', search: 'Suchen', closeSearch: 'Suche schließen',
-  searchTitle: 'Geräusche, Rechner und Artikel durchsuchen', searchLabel: 'dBcheck-Website durchsuchen', searchPlaceholder: 'Zum Beispiel „Konzert“ oder „Rechner“…', searchEmpty: 'Keine passenden Ergebnisse. Versuchen Sie einen anderen Begriff.',
+  searchTitle: 'Geräusche, Rechner und Artikel durchsuchen', searchLabel: 'dBcheck-Website durchsuchen', searchPlaceholder: 'Zum Beispiel „Konzert“ oder „Rechner“…', searchResult: '1 Suchergebnis.', searchResults: 'Suchergebnisse.', searchEmpty: 'Keine passenden Ergebnisse. Versuchen Sie einen anderen Begriff.', searchError: 'Die Suche ist gerade nicht verfügbar.', retrySearch: 'Erneut versuchen',
   footerTagline: 'Ein ruhiges Instrument für eine laute Welt.\nSchallbewusstsein und verständliche Rechner für Android.', footerExplore: 'Entdecken', disclaimer: 'dBcheck unterstützt Bildung, Aufmerksamkeit und persönliche relative Verlaufskontrolle.\nEs ist weder ein zertifizierter Schallpegelmesser noch ein klinisches Diagnoseinstrument.',
   allTools: 'Alle Werkzeuge', reviewed: 'Geprüft', guides: 'Ratgeber',
   indexTitle: 'Artikel und Geräusch-Ratgeber', indexDescription: 'Quellenbasierte dBcheck-Ratgeber zu Dezibel, Smartphone-Messungen, Lärmexposition und Alltagsgeräuschen.', indexIntro: 'Zwanzig quellenbasierte Ratgeber helfen, Schallpegel, Messgrenzen und Alltagssituationen verantwortlich einzuordnen.',

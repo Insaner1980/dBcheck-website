@@ -195,12 +195,12 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
             <span class="gauge-pill" id="level-pill">STANDBY</span>
           </div>
           <canvas id="spectrum" class="spectrum" height="36" aria-hidden="true"></canvas>
-          <div class="hud-stats" aria-label="Live session statistics">
-            <span class="hud-stat">min&nbsp;<b id="stat-min">–</b></span>
-            <span class="hud-stat">avg&nbsp;<b id="stat-avg">–</b></span>
-            <span class="hud-stat">max&nbsp;<b id="stat-max">–</b></span>
+          <div class="hud-stats" id="session-stats" role="group" aria-label="Demo session statistics">
+            <span class="hud-stat"><span id="stat-min-label">min</span>&nbsp;<b id="stat-min">–</b></span>
+            <span class="hud-stat"><span id="stat-avg-label">avg</span>&nbsp;<b id="stat-avg">–</b></span>
+            <span class="hud-stat"><span id="stat-max-label">max</span>&nbsp;<b id="stat-max">–</b></span>
           </div>
-          <button class="btn btn-primary listen-btn" id="listen-btn">
+          <button class="btn btn-primary listen-btn" id="listen-btn" aria-pressed="false">
             <svg id="listen-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
             <span id="listen-text">Listen to the film</span>
           </button>
@@ -491,7 +491,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     }
     .section-head-row { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
     .section-head-row > div { display: grid; gap: 12px; }
-    .sounds-preview { scroll-margin-top: 84px; }
+    section[id] { scroll-margin-top: 84px; }
 
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 10px;
@@ -566,7 +566,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       padding: 18px 20px;
       background: rgba(8, 8, 8, 0.55);
       border: 1px solid var(--ghost);
-      border-radius: 24px;
+      border-radius: var(--radius-card);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
     }
@@ -825,6 +825,10 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       opacity: 1;
       pointer-events: auto;
     }
+    .pro-feature-panel:focus-visible {
+      outline: 2px solid var(--on-surface);
+      outline-offset: -2px;
+    }
     .pro-feature-panel.is-active .pro-feature-index-heading {
       animation: pro-feature-item-enter 360ms cubic-bezier(.2, .7, .2, 1) 60ms both;
     }
@@ -883,7 +887,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       outline-offset: 2px;
     }
     .pro-feature-number {
-      color: var(--outline);
+      color: var(--outline-v);
       font-family: var(--font-data);
       font-size: 11px;
       letter-spacing: 0.08em;
@@ -1070,9 +1074,11 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     @media (prefers-reduced-motion: reduce) {
       .ghost-word { animation: none; }
       :global(body.is-listening) .hud-gauge { animation: none; }
+      .rec-dot.live { animation: none; }
       .cta-wave { transition: none; }
       .plan.reveal.in :is(.plan-head, li, .plan-btn) { animation: none; }
       .why-card details::details-content { transition: none; }
+      .why-card summary::before { transition: none; }
       .pro-feature-category,
       .pro-feature-category::after,
       .pro-feature-button,
@@ -1083,6 +1089,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
         .pro-feature-visual img,
         .pro-feature-detail
       ) { animation: none; }
+      .pro-feature-panel.is-active .pro-feature-detail.is-changing { animation: none; }
       .pro-feature-panel.is-active .pro-feature-visual::before { animation: none; }
     }
 
@@ -1145,9 +1152,9 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
 
   <script>
     import { createAnimatable, createTimeline, spring, svg } from 'animejs';
-    import { DISPLAY_MAX_DB, levelForDb } from '../lib/display-scale';
+    import { DISPLAY_MAX_DB, levelForDb, scalePercent } from '../lib/display-scale';
     import {
-      prefersReducedMotion,
+      cancelScramble,
       scrambleValue,
       SCRAMBLE_CALIBRATION,
       SCRAMBLE_LABEL,
@@ -1217,8 +1224,8 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     // ================= The page that listens =================
     // Browser demo: hero-film audio → Web Audio RMS → display dB scale (0–130).
     const video = document.getElementById('hero-video') as HTMLVideoElement;
-    const reducedMotion = prefersReducedMotion();
-    const mobileVideo = matchMedia('(max-width: 700px)').matches;
+    const reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+    const mobileVideoQuery = matchMedia('(max-width: 700px)');
     const saveData = Boolean((navigator as Navigator & {
       connection?: { saveData?: boolean };
     }).connection?.saveData);
@@ -1230,6 +1237,10 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     const sweep = document.getElementById('gauge-sweep') as unknown as SVGCircleElement;
     const recDot = document.getElementById('rec-dot')!;
     const statusEl = document.getElementById('instrument-status')!;
+    const sessionStats = document.getElementById('session-stats')!;
+    const statMinLabel = document.getElementById('stat-min-label')!;
+    const statAvgLabel = document.getElementById('stat-avg-label')!;
+    const statMaxLabel = document.getElementById('stat-max-label')!;
     const statMin = document.getElementById('stat-min')!;
     const statAvg = document.getElementById('stat-avg')!;
     const statMax = document.getElementById('stat-max')!;
@@ -1244,6 +1255,14 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
 
     let audioCtx: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
+    let audioSuspendPromise: Promise<void> | null = null;
+    let audioSetupAttempted = false;
+    let audioRoutedThroughContext = false;
+    let controlRevision = 0;
+    let lifecycleRevision = 0;
+    let lifecycleExitControlRevision = -1;
+    let videoSourceRevision = 0;
+    let videoSourceChanging = false;
     let timeData: Float32Array;
     let freqData: Uint8Array;
     let listening = false;
@@ -1255,16 +1274,148 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     let minDb = Infinity, maxDb = -Infinity, energySum = 0, sampleCount = 0;
 
     function ensureVideoSource() {
-      if (video.getAttribute('src')) return;
-      const source = mobileVideo ? video.dataset.mobileSrc : video.dataset.desktopSrc;
-      if (!source) return;
+      const source = mobileVideoQuery.matches ? video.dataset.mobileSrc : video.dataset.desktopSrc;
+      const currentSource = video.getAttribute('src');
+      if (!source || currentSource === source) return;
+
+      if (!currentSource) {
+        video.src = source;
+        video.load();
+        return;
+      }
+
+      const revision = ++videoSourceRevision;
+      const controlStateRevision = controlRevision;
+      const lifecycleStateRevision = lifecycleRevision;
+      const previousTime = video.currentTime;
+      const wasMuted = video.muted;
+      const shouldResume = !video.paused || (!reducedMotionQuery.matches && !saveData);
+      videoSourceChanging = true;
+
+      let terminationTimer = 0;
+      const stopWatchingSourceTermination = () => {
+        if (terminationTimer) window.clearTimeout(terminationTimer);
+        terminationTimer = 0;
+        video.removeEventListener('abort', handleSourceTermination);
+        video.removeEventListener('emptied', handleSourceTermination);
+        video.removeEventListener('error', stopWatchingSourceTermination);
+      };
+      const handleSourceTermination = () => {
+        stopWatchingSourceTermination();
+        if (revision !== videoSourceRevision) return;
+        videoSourceChanging = false;
+        syncListenControl();
+      };
+
+      video.addEventListener('loadedmetadata', async () => {
+        stopWatchingSourceTermination();
+        if (revision !== videoSourceRevision) return;
+        if (controlStateRevision !== controlRevision) {
+          videoSourceChanging = false;
+          syncListenControl();
+          return;
+        }
+        if (previousTime > 0 && Number.isFinite(video.duration)) {
+          video.currentTime = Math.min(previousTime, Math.max(0, video.duration - 0.05));
+        }
+        video.muted = wasMuted;
+        if (shouldResume) {
+          try { await video.play(); } catch { /* syncListenControl restores the paused state. */ }
+        }
+        if (revision !== videoSourceRevision) return;
+        if (controlStateRevision !== controlRevision) {
+          videoSourceChanging = false;
+          if (!teardownIfLifecycleStale(lifecycleStateRevision)) syncListenControl();
+          return;
+        }
+        videoSourceChanging = false;
+        syncListenControl();
+      }, { once: true });
+
       video.src = source;
       video.load();
+      video.addEventListener('error', stopWatchingSourceTermination, { once: true });
+      terminationTimer = window.setTimeout(() => {
+        if (revision !== videoSourceRevision || !videoSourceChanging) return;
+        video.addEventListener('abort', handleSourceTermination, { once: true });
+        video.addEventListener('emptied', handleSourceTermination, { once: true });
+      });
     }
 
-    if (!reducedMotion && !saveData) {
+    function mediaIsAudible() {
+      const audioGraphRunning = !audioRoutedThroughContext || audioCtx?.state === 'running';
+      return audioGraphRunning && !video.paused && !video.muted && video.volume > 0 && !video.ended;
+    }
+
+    function suspendAudioContext() {
+      if (!audioRoutedThroughContext || audioCtx?.state !== 'running') return;
+      const pending = audioCtx.suspend().catch(() => {}).finally(() => {
+        if (audioSuspendPromise === pending) audioSuspendPromise = null;
+      });
+      audioSuspendPromise = pending;
+    }
+
+    function renderListenControl(audible: boolean) {
+      listenBtn.setAttribute('aria-pressed', String(audible));
+      listenText.textContent = audible ? 'Mute the film' : 'Listen to the film';
+      listenIcon.innerHTML = audible
+        ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
+        : '<path d="M8 5v14l11-7z"/>';
+    }
+
+    function syncListenControl() {
+      if (video.error) {
+        listenBtn.setAttribute('aria-pressed', 'false');
+        return;
+      }
+      if (videoSourceChanging) return;
+      if (listenBtn.disabled) return;
+
+      const audible = mediaIsAudible();
+      if (!audible && listening) {
+        setListening(false);
+        suspendAudioContext();
+        return;
+      }
+
+      renderListenControl(audible);
+    }
+
+    function disableUnavailableMedia() {
+      setListening(false);
+      suspendAudioContext();
+      listenText.textContent = 'Film audio unavailable';
+      listenBtn.disabled = true;
+      listenBtn.setAttribute('aria-pressed', 'false');
+    }
+
+    video.addEventListener('error', () => {
+      if (video.error) {
+        videoSourceChanging = false;
+        disableUnavailableMedia();
+      }
+    });
+    for (const event of ['pause', 'ended', 'volumechange', 'playing'] as const) {
+      video.addEventListener(event, syncListenControl);
+    }
+    document.addEventListener('visibilitychange', syncListenControl);
+    window.addEventListener('pagehide', (event) => {
+      if (event.persisted) return;
+      lifecycleRevision += 1;
+      controlRevision += 1;
+      lifecycleExitControlRevision = controlRevision;
+      teardownMedia();
+    });
+    mobileVideoQuery.addEventListener('change', () => {
+      if (video.hasAttribute('src')) ensureVideoSource();
+    });
+
+    if (!reducedMotionQuery.matches && !saveData) {
       ensureVideoSource();
-      void video.play().catch(() => {});
+      const autoplayLifecycleRevision = lifecycleRevision;
+      void video.play().then(() => {
+        teardownIfLifecycleStale(autoplayLifecycleRevision);
+      }).catch(() => {});
     }
 
     const css = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -1281,10 +1432,12 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
 
     function renderMeter() {
       const db = meter.db() as number;
-      sweep.style.setProperty('--sweep', String((db / DISPLAY_MAX_DB) * ARC_SWEEP));
-      if (showDigits) dbValue.textContent = String(Math.round(db));
+      const position = scalePercent(db);
+      const displayDb = Math.floor((position / 100) * DISPLAY_MAX_DB);
+      sweep.style.setProperty('--sweep', String((position / 100) * ARC_SWEEP));
+      if (showDigits) dbValue.textContent = String(displayDb);
 
-      const level = levelForDb(db);
+      const level = levelForDb(displayDb);
       if (level === renderedLevel) return;
       renderedLevel = level;
       // Kaaren väri elää vain kalibroinnin ja mittauksen aikana; valmiustilassa se on neutraali.
@@ -1295,16 +1448,54 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       }
     }
 
+    function syncAudioContextState() {
+      if (!audioCtx || !audioRoutedThroughContext) return;
+      if (audioCtx.state === 'closed') {
+        disableUnavailableMedia();
+        return;
+      }
+      if (audioCtx.state !== 'running') {
+        setListening(false);
+        return;
+      }
+      syncListenControl();
+    }
+
     function setupAudio() {
-      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const src = audioCtx.createMediaElementSource(video);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 4096;           // matches the app's FFT size
-      analyser.smoothingTimeConstant = 0.6;
-      src.connect(analyser);
-      analyser.connect(audioCtx.destination);
-      timeData = new Float32Array(analyser.fftSize);
-      freqData = new Uint8Array(analyser.frequencyBinCount);
+      const nextAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      let source: MediaElementAudioSourceNode;
+      try {
+        source = nextAudioCtx.createMediaElementSource(video);
+      } catch (error) {
+        void nextAudioCtx.close().catch(() => {});
+        audioCtx = null;
+        audioRoutedThroughContext = false;
+        throw error;
+      }
+
+      audioCtx = nextAudioCtx;
+      try {
+        source.connect(nextAudioCtx.destination);
+      } catch {
+        void nextAudioCtx.close().catch(() => {});
+        disableUnavailableMedia();
+        return false;
+      }
+
+      audioRoutedThroughContext = true;
+      nextAudioCtx.addEventListener('statechange', syncAudioContextState);
+      try {
+        const nextAnalyser = nextAudioCtx.createAnalyser();
+        nextAnalyser.fftSize = 4096;           // matches the app's FFT size
+        nextAnalyser.smoothingTimeConstant = 0.6;
+        timeData = new Float32Array(nextAnalyser.fftSize);
+        freqData = new Uint8Array(nextAnalyser.frequencyBinCount);
+        source.connect(nextAnalyser);
+        analyser = nextAnalyser;
+      } catch {
+        analyser = null;
+      }
+      return true;
     }
 
     /**
@@ -1321,17 +1512,22 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       if (live) analyser!.getByteFrequencyData(freqData as any);
       const barW = w / BANDS;
       const nyquist = live ? audioCtx!.sampleRate / 2 : 0;
+      const binHz = live ? nyquist / freqData.length : 0;
 
       for (let i = 0; i < BANDS; i++) {
         let v = 0;
         if (live) {
           const f0 = 20 * Math.pow(1000, i / BANDS);
           const f1 = 20 * Math.pow(1000, (i + 1) / BANDS);
-          const b0 = Math.min(freqData.length - 1, Math.round((f0 / nyquist) * freqData.length));
-          const b1 = Math.min(freqData.length, Math.max(b0 + 1, Math.round((f1 / nyquist) * freqData.length)));
-          let sum = 0;
-          for (let b = b0; b < b1; b++) sum += freqData[b];
-          v = sum / (b1 - b0) / 255;
+          if (f0 < nyquist) {
+            const b0 = Math.min(freqData.length, Math.ceil(f0 / binHz));
+            const b1 = Math.min(freqData.length, Math.ceil(Math.min(f1, nyquist) / binHz));
+            if (b1 > b0) {
+              let sum = 0;
+              for (let b = b0; b < b1; b++) sum += freqData[b];
+              v = sum / (b1 - b0) / 255;
+            }
+          }
         }
         const barH = Math.max(2 * devicePixelRatio, v * h * 0.92);
         cctx.fillStyle = COLORS.bar;
@@ -1347,9 +1543,14 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
 
     function readAudio() {
       analyser!.getFloatTimeDomainData(timeData as any);
-      let sq = 0;
-      for (let i = 0; i < timeData.length; i++) sq += timeData[i] * timeData[i];
-      const rms = Math.sqrt(sq / timeData.length);
+      let sq = 0, finiteSamples = 0;
+      for (let i = 0; i < timeData.length; i++) {
+        const sample = timeData[i];
+        if (!Number.isFinite(sample)) continue;
+        sq += sample * sample;
+        finiteSamples++;
+      }
+      const rms = finiteSamples > 0 ? Math.sqrt(sq / finiteSamples) : 0;
       const dbfs = 20 * Math.log10(Math.max(rms, 1e-7));
       const db = Math.min(DISPLAY_MAX_DB, Math.max(0, dbfs + 90)); // the app's +90 offset & clamp
 
@@ -1379,8 +1580,23 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     // Ruutusilmukka pyörii vain kun jokin todella muuttuu: mittauksen,
     // käynnistyssekvenssin ja neulan pysähtymisen ajan.
     function frame() {
-      if (listening && analyser) readAudio();
-      drawSpectrum();
+      try {
+        if (listening && analyser) readAudio();
+        drawSpectrum();
+      } catch {
+        const keepAudio = mediaIsAudible();
+        frameId = 0;
+        analyser = null;
+        minDb = Infinity; maxDb = -Infinity; energySum = 0; sampleCount = 0;
+        statMin.textContent = statAvg.textContent = statMax.textContent = '–';
+        setListening(false);
+        video.muted = !keepAudio;
+        meter.db(0, 0);
+        renderMeter();
+        drawSpectrum();
+        syncListenControl();
+        return;
+      }
       renderMeter();
       if (meterAtRest()) {
         frameId = 0;
@@ -1396,7 +1612,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     // ---- Käynnistyssekvenssi: kalibrointiviiva, täysi asteikkopyyhkäisy, lukeman asettuminen ----
     let bootTimeline: ReturnType<typeof createTimeline> | null = null;
 
-    if (reducedMotion) {
+    if (reducedMotionQuery.matches) {
       renderMeter();
       drawSpectrum();
     } else {
@@ -1423,6 +1639,8 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     }
 
     function setListening(on: boolean) {
+      cancelScramble(dbValue);
+      cancelScramble(pill);
       bootTimeline?.revert();
       bootTimeline = null;
       booting = false;
@@ -1434,21 +1652,28 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       document.body.classList.toggle('is-listening', on);
       recDot.classList.toggle('live', on);
       statusEl.textContent = on ? 'Measuring' : 'Standby';
-      listenText.textContent = on ? 'Mute the film' : 'Listen to the film';
-      listenIcon.innerHTML = on
-        ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
-        : '<path d="M8 5v14l11-7z"/>';
+      const previousSession = !on && sampleCount > 0;
+      sessionStats.setAttribute(
+        'aria-label',
+        on ? 'Current demo session statistics' : previousSession ? 'Previous demo session statistics' : 'Demo session statistics',
+      );
+      statMinLabel.textContent = previousSession ? 'last min' : 'min';
+      statAvgLabel.textContent = previousSession ? 'last avg' : 'avg';
+      statMaxLabel.textContent = previousSession ? 'last max' : 'max';
+      if (on) syncListenControl();
+      else renderListenControl(false);
 
       if (on) {
+        renderMeter();
         startFrames();
         return;
       }
 
       pill.className = 'gauge-pill';
       sweep.style.removeProperty('stroke');
-      scrambleValue(dbValue, '--');
-      scrambleValue(pill, 'STANDBY', SCRAMBLE_LABEL);
-      if (reducedMotion) {
+      dbValue.textContent = '--';
+      pill.textContent = 'STANDBY';
+      if (reducedMotionQuery.matches) {
         meter.db(0, 0);
         renderMeter();
         drawSpectrum();
@@ -1457,27 +1682,109 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       }
     }
 
+    function teardownMedia() {
+      videoSourceChanging = false;
+      video.pause();
+      setListening(false);
+      suspendAudioContext();
+      if (frameId) cancelAnimationFrame(frameId);
+      frameId = 0;
+      meter.db(0, 0);
+      renderMeter();
+      drawSpectrum();
+    }
+
+    function teardownIfLifecycleStale(startRevision: number) {
+      const stale = startRevision !== lifecycleRevision && controlRevision === lifecycleExitControlRevision;
+      if (stale) teardownMedia();
+      return stale;
+    }
+
     listenBtn.addEventListener('click', async () => {
+      const muteRequested = listenBtn.getAttribute('aria-pressed') === 'true';
+      const revision = ++controlRevision;
+      const clickLifecycleRevision = lifecycleRevision;
       try {
         ensureVideoSource();
-        if (!audioCtx) setupAudio();
-        if (audioCtx!.state === 'suspended') await audioCtx!.resume();
-        if (listening) { setListening(false); return; }
-        if (!analyser) throw new Error('Web Audio analyser unavailable');
-        await video.play().catch(() => {});
+        if (muteRequested) {
+          setListening(false);
+          suspendAudioContext();
+          return;
+        }
+        if (!audioSetupAttempted) {
+          audioSetupAttempted = true;
+          if (!setupAudio()) return;
+        }
+        if (audioCtx) {
+          if (audioSuspendPromise) await audioSuspendPromise;
+          if (revision !== controlRevision) return;
+          if (audioCtx.state === 'closed') {
+            disableUnavailableMedia();
+            return;
+          }
+          if (audioCtx.state !== 'running') await audioCtx.resume();
+          if (revision !== controlRevision) {
+            teardownIfLifecycleStale(clickLifecycleRevision);
+            return;
+          }
+          if (audioCtx.state !== 'running') {
+            setListening(false);
+            return;
+          }
+        }
+        await video.play();
+        if (revision !== controlRevision) {
+          teardownIfLifecycleStale(clickLifecycleRevision);
+          return;
+        }
+        if (!analyser) {
+          setListening(false);
+          video.muted = false;
+          syncListenControl();
+          return;
+        }
         // reset session stats for a fresh "measurement session"
         minDb = Infinity; maxDb = -Infinity; energySum = 0; sampleCount = 0;
+        statMin.textContent = statAvg.textContent = statMax.textContent = '–';
+        meter.db(0, 0);
+        drawSpectrum();
         setListening(true);
       } catch {
-        // Web Audio unavailable — degrade gracefully to plain unmute
+        if (revision !== controlRevision) return;
+        if (video.error) {
+          disableUnavailableMedia();
+          return;
+        }
+        if (audioCtx?.state === 'closed') {
+          disableUnavailableMedia();
+          return;
+        }
+        if (audioRoutedThroughContext && audioCtx?.state !== 'running') {
+          setListening(false);
+          return;
+        }
+
+        // Web Audio or measured playback unavailable — degrade gracefully to plain unmute
         const unmute = video.muted;
         setListening(false);
-        video.muted = !unmute;
-        listenText.textContent = unmute ? 'Mute the film' : 'Listen to the film';
-        listenIcon.innerHTML = unmute
-          ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
-          : '<path d="M8 5v14l11-7z"/>';
-        if (unmute) await video.play().catch(() => {});
+        if (!unmute) return;
+
+        video.muted = false;
+        try {
+          await video.play();
+          if (revision !== controlRevision) {
+            teardownIfLifecycleStale(clickLifecycleRevision);
+            return;
+          }
+          syncListenControl();
+        } catch {
+          if (revision !== controlRevision) return;
+          if (video.error) disableUnavailableMedia();
+          else {
+            setListening(false);
+            suspendAudioContext();
+          }
+        }
       }
     });
 
@@ -1485,22 +1792,52 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     const ctaWave = document.querySelector<SVGSVGElement>('.cta-wave');
     const ctaPath = document.querySelector<SVGPathElement>('#cta-wave-path');
     const ctaGroup = document.querySelector<SVGGElement>('#cta-wave-group');
+    let ctaObserver: IntersectionObserver | null = null;
+    let ctaTimeline: ReturnType<typeof createTimeline> | null = null;
+
+    const settleCta = () => ctaWave?.classList.add('is-visible', 'is-settled');
 
     if (ctaWave && ctaPath && ctaGroup) {
-      if (reducedMotion) {
-        ctaWave.classList.add('is-visible', 'is-settled');
+      if (reducedMotionQuery.matches) {
+        settleCta();
       } else {
         const [drawable] = svg.createDrawable(ctaPath);
-        const ctaObserver = new IntersectionObserver((entries) => {
+        ctaObserver = new IntersectionObserver((entries) => {
           if (!entries.some((entry) => entry.isIntersecting)) return;
-          ctaObserver.disconnect();
+          ctaObserver?.disconnect();
+          ctaObserver = null;
+          if (reducedMotionQuery.matches) {
+            settleCta();
+            return;
+          }
           ctaWave.classList.add('is-visible');
-          createTimeline()
+          ctaTimeline = createTimeline()
             .add(drawable, { draw: ['0 0', '0 1'], duration: 1100, ease: 'inOut(2)' }, 0)
             .add(ctaGroup, { scaleY: [1, 0.015], duration: 1500, ease: 'out(4)' }, 950);
         }, { threshold: 0.35 });
         ctaObserver.observe(ctaWave);
       }
     }
+
+    reducedMotionQuery.addEventListener('change', ({ matches }) => {
+      if (!matches) return;
+
+      if (!listening) {
+        if (booting) setListening(false);
+        else {
+          meter.db(0, 0);
+          if (frameId) cancelAnimationFrame(frameId);
+          frameId = 0;
+          renderMeter();
+          drawSpectrum();
+        }
+      }
+
+      ctaObserver?.disconnect();
+      ctaObserver = null;
+      ctaTimeline?.complete();
+      ctaTimeline = null;
+      settleCta();
+    });
   </script>
 </Base>

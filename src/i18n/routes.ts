@@ -40,9 +40,21 @@ export const contentTranslations: ContentTranslation[] = [
   ['vacuum-cleaner', 'sounds', 'vacuum-cleaner', 'staubsauger'],
 ].map(([translationKey, collection, en, de]) => ({ translationKey, collection, en, de })) as ContentTranslation[];
 
+const translationsByKey = new Map<string, ContentTranslation>();
+
+for (const translation of contentTranslations) {
+  if (translationsByKey.has(translation.translationKey)) {
+    throw new Error(`Duplicate content translation key: ${translation.translationKey}`);
+  }
+
+  translationsByKey.set(translation.translationKey, translation);
+}
+
+const soundsIndexRoutePair = { en: '/sounds/', de: '/de/alltagsgeraeusche/' };
+
 const staticPairs = [
   { en: '/articles/', de: '/de/artikel/' },
-  { en: '/sounds/', de: '/de/alltagsgeraeusche/' },
+  soundsIndexRoutePair,
   { en: '/tools/', de: '/de/werkzeuge/' },
   { en: '/tools/safe-listening-time-calculator/', de: '/de/werkzeuge/expositionsdauer-rechner/' },
   { en: '/tools/add-decibels/', de: '/de/werkzeuge/dezibel-addieren/' },
@@ -73,5 +85,8 @@ export const alternatesForPath = (path: string): AlternateLink[] => {
   return pair ? [{ locale: 'en', href: pair.en }, { locale: 'de', href: pair.de }] : [];
 };
 
+export const soundExplorerId = 'library-explorer';
+export const soundExplorerFallbackUrl = (locale: Locale) => `${soundsIndexRoutePair[locale]}#${soundExplorerId}`;
+
 export const translationFor = (translationKey: string) =>
-  contentTranslations.find((item) => item.translationKey === translationKey);
+  translationsByKey.get(translationKey);

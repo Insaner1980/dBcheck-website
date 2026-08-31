@@ -93,9 +93,9 @@ Für Alltagsvergleiche ist ein dokumentierter Bereich meist sinnvoller als eine 
 
 ## Gesprächslautstärke mit anderen Geräuschen vergleichen
 
-dBcheck kann einen geschätzten LAeq und einen getrennten Maximalwert für die tatsächliche Gesprächsposition speichern. Notieren Sie Abstand, Raum, Zahl der Sprechenden und Messdauer zusammen mit dem Ergebnis. Im Common Sounds Explorer lässt sich der Wert anschließend mit Staubsaugern, Straßenverkehr und anderen Alltagsgeräuschen vergleichen.
+dBcheck kann einen geschätzten LAeq und einen getrennten Maximalwert für die tatsächliche Gesprächsposition speichern. Notieren Sie Abstand, Raum, Zahl der Sprechenden und Messdauer zusammen mit dem Ergebnis. Im Alltagsgeräusche-Explorer lässt sich der Wert anschließend mit Staubsaugern, Straßenverkehr und anderen Alltagsgeräuschen vergleichen.
 
-[Common Sounds Explorer](/de/alltagsgeraeusche/)
+[Alltagsgeräusche-Explorer](/de/alltagsgeraeusche/)
 
 ## Quellen
 

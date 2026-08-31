@@ -1,7 +1,7 @@
 # dBcheck Batch 1 analytics removal report
 
 Date: 2026-08-21  
-Repository: `C:\Dev\dBcheck-website`  
+Repository: website checkout
 State: local checkout only; not committed, pushed, deployed, or published
 
 ## Final owner decision

@@ -1,5 +1,6 @@
 import type { Locale } from '../i18n/config.ts';
 import { translationFor, routeForContent } from '../i18n/routes.ts';
+import { DISPLAY_MAX_DB } from '../lib/display-scale.ts';
 
 export type SoundRiskLevel = 'everyday' | 'warning' | 'danger';
 export type SoundMarkerLane = 'low' | 'middle' | 'top';
@@ -104,7 +105,7 @@ export type CommonSound = LocalizedCommonSound;
 
 type TechnicalSound = readonly [string, number, number, SoundRiskLevel, SoundMarkerLane, SoundRangeSourceId?];
 
-const technical: readonly TechnicalSound[] = [
+const technical = [
   ['whisper-decibels', soundRangeSources.whisperUsGs.displayMinDb, soundRangeSources.whisperUsGs.displayMaxDb, 'everyday', 'low', 'whisperUsGs'],
   ['normal-conversation', 55, 75, 'everyday', 'top'],
   ['vacuum-cleaner', 65, 85, 'everyday', 'low'],
@@ -114,11 +115,13 @@ const technical: readonly TechnicalSound[] = [
   ['baby-crying', 75, 100, 'warning', 'top'],
   ['siren-decibels', soundRangeSources.emergencySirenNidcd.displayMinDb, soundRangeSources.emergencySirenNidcd.displayMaxDb, 'danger', 'middle', 'emergencySirenNidcd'],
   ['fireworks-decibels', soundRangeSources.aerialFireworksTanaka.displayMinDb, soundRangeSources.aerialFireworksTanaka.displayMaxDb, 'danger', 'low', 'aerialFireworksTanaka'],
-];
+] as const satisfies readonly TechnicalSound[];
+
+type SoundKey = (typeof technical)[number][0];
 
 type SoundText = { slug: string; name: string; category: string; measurementDistance: string; soundType: string; shortDescription: string; exposureNote: string; referenceContext?: string };
 
-const text: Record<Locale, Record<string, SoundText>> = {
+const text = {
   en: {
     'whisper-decibels': { slug: 'whisper-decibels', name: 'Whisper', category: 'Voices', measurementDistance: '1.5–5 metres in the cited reference', soundType: 'Variable speech sound', shortDescription: 'A whisper is quiet at close range. Distance and room reflections can change the reading substantially.', exposureNote: 'Usually well below occupational exposure limits.', referenceContext: 'Active-source averages compiled from measurements at 1.5–5 metres.' },
     'normal-conversation': { slug: 'normal-conversation', name: 'Normal conversation', category: 'Voices', measurementDistance: 'About 1 metre', soundType: 'Variable and intermittent speech', shortDescription: 'Normal conversation varies with vocal effort, distance, background noise and room acoustics.', exposureNote: 'Ordinary one-to-one conversation is generally not treated as a hearing hazard.' },
@@ -141,12 +144,12 @@ const text: Record<Locale, Record<string, SoundText>> = {
     'siren-decibels': { slug: 'sirene', name: 'Sirene', category: 'Warnsignale', measurementDistance: 'In der zitierten Quelle nicht angegeben', soundType: 'Veränderliches Warnsignal', shortDescription: 'Sirenen sollen andere Geräusche übertönen und können aus kurzer Entfernung sehr intensiv sein.', exposureNote: 'Vergrößern Sie wenn möglich den Abstand; er beeinflusst den Pegel stark.', referenceContext: 'Allgemeiner Mittelwertbereich für Einsatzfahrzeugsirenen; die Quelle nennt weder Abstand noch Mittelungsdauer.' },
     'fireworks-decibels': { slug: 'feuerwerk', name: 'Feuerwerk', category: 'Impulsschall', measurementDistance: 'Etwa 100 Meter in der zitierten Veranstaltungsstudie', soundType: 'Impulsschall', shortDescription: 'Feuerwerk erzeugt kurze Impulsspitzen; dieser Referenzbereich ist jedoch ein A-bewerteter Fast-Messwert aus einer Veranstaltung. Echte Spitzen können höher liegen.', exposureNote: 'Impulsschall lässt sich mit einer einfachen Dauerexpositionsschätzung nicht angemessen darstellen.', referenceContext: 'A-bewertete Fast-Messung (125 ms) in etwa 100 Meter Abstand bei einem nächtlichen Feuerwerk; kein Bereich echter Impulsspitzen.' },
   },
-};
+} satisfies Record<Locale, Record<SoundKey, SoundText>>;
 
 const publishedKeys = new Set(['normal-conversation', 'vacuum-cleaner', 'lawn-mower', 'concert', 'baby-crying']);
 
 export const getCommonSounds = (locale: Locale): LocalizedCommonSound[] => technical.map(([translationKey, typicalMinDb, typicalMaxDb, riskLevel, markerLane, rangeSourceId]) => {
-  const localized = text[locale][translationKey];
+  const localized: SoundText = text[locale][translationKey];
   const { referenceContext, ...localizedSound } = localized;
   const translation = translationFor(translationKey);
   const articleSlug = translation?.[locale];
@@ -159,6 +162,112 @@ export const getCommonSounds = (locale: Locale): LocalizedCommonSound[] => techn
     articleRoute: publishedKeys.has(translationKey) && articleSlug ? routeForContent(locale, 'sounds', articleSlug) : undefined,
   };
 });
+
+type SoundIdentity = Pick<LocalizedCommonSound, 'translationKey' | 'slug' | 'articleRoute'>;
+type SoundRange = Pick<LocalizedCommonSound, 'translationKey' | 'typicalMinDb' | 'typicalMaxDb'>;
+type ReferencedSoundRange = Pick<LocalizedCommonSound, 'translationKey' | 'typicalMinDb' | 'typicalMaxDb' | 'rangeReference'>;
+
+export const validateSoundIdentityUniqueness = (locale: Locale, sounds: readonly SoundIdentity[]) => {
+  const identities = [
+    ['translationKey', sounds.map((sound) => sound.translationKey)],
+    ['slug', sounds.map((sound) => sound.slug)],
+    ['articleRoute', sounds.flatMap((sound) => sound.articleRoute ? [sound.articleRoute] : [])],
+  ] as const;
+
+  for (const [identity, values] of identities) {
+    const seen = new Set<string>();
+    for (const value of values) {
+      if (seen.has(value)) throw new Error(`Duplicate ${locale} sound ${identity}: ${value}`);
+      seen.add(value);
+    }
+  }
+};
+
+export const validateSoundRanges = (locale: Locale, sounds: readonly SoundRange[]) => {
+  for (const { translationKey, typicalMinDb, typicalMaxDb } of sounds) {
+    if (!Number.isFinite(typicalMinDb) || !Number.isFinite(typicalMaxDb)) {
+      throw new Error(`Non-finite ${locale} sound range: ${translationKey}`);
+    }
+    if (typicalMinDb > typicalMaxDb) {
+      throw new Error(`Reversed ${locale} sound range: ${translationKey}`);
+    }
+    if (typicalMinDb < 0 || typicalMaxDb > DISPLAY_MAX_DB) {
+      throw new Error(`Out-of-scale ${locale} sound range: ${translationKey}`);
+    }
+  }
+};
+
+const sourceDate = (value: string) => {
+  const match = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(value);
+  if (!match) return Number.NaN;
+  const [, year, month, day = '01'] = match;
+  const timestamp = Date.UTC(Number(year), Number(month) - 1, Number(day));
+  const parsed = new Date(timestamp);
+  return parsed.getUTCFullYear() === Number(year)
+    && parsed.getUTCMonth() === Number(month) - 1
+    && parsed.getUTCDate() === Number(day)
+    ? timestamp
+    : Number.NaN;
+};
+
+export const validateSoundRangeReferences = (
+  locale: Locale,
+  sounds: readonly ReferencedSoundRange[],
+  sources: Record<string, SoundRangeSource> = soundRangeSources,
+) => {
+  const soundsByKey = new Map(sounds.map((sound) => [sound.translationKey, sound]));
+
+  for (const [sourceId, source] of Object.entries(sources)) {
+    const values = [source.reportedMinDb, source.reportedMaxDb, source.displayMinDb, source.displayMaxDb];
+    if (!values.every(Number.isFinite) || source.reportedMinDb > source.reportedMaxDb || source.displayMinDb > source.displayMaxDb) {
+      throw new Error(`Invalid sound range source bounds: ${sourceId}`);
+    }
+    if (Math.round(source.reportedMinDb) !== source.displayMinDb || Math.round(source.reportedMaxDb) !== source.displayMaxDb) {
+      throw new Error(`Inconsistent reported and display bounds: ${sourceId}`);
+    }
+    if (source.metric !== 'dBA') throw new Error(`Unsupported sound range source metric: ${sourceId}`);
+
+    const publishedAt = sourceDate(source.publicationDate);
+    const revisedAt = source.revisionDate ? sourceDate(source.revisionDate) : publishedAt;
+    if (!Number.isFinite(publishedAt) || !Number.isFinite(revisedAt) || revisedAt < publishedAt) {
+      throw new Error(`Invalid sound range source dates: ${sourceId}`);
+    }
+
+    let url: URL;
+    try {
+      url = new URL(source.url);
+    } catch {
+      throw new Error(`Invalid sound range source URL: ${sourceId}`);
+    }
+    if (url.protocol !== 'https:') throw new Error(`Invalid sound range source URL: ${sourceId}`);
+
+    for (const translationKey of source.supports) {
+      const sound = soundsByKey.get(translationKey);
+      if (!sound || sound.rangeReference?.sourceId !== sourceId) {
+        throw new Error(`Unsupported ${locale} sound range source relationship: ${sourceId}/${translationKey}`);
+      }
+    }
+  }
+
+  for (const sound of sounds) {
+    const reference = sound.rangeReference;
+    if (!reference) continue;
+    const source = sources[reference.sourceId];
+    if (source !== reference.source || !source.supports.includes(sound.translationKey)) {
+      throw new Error(`Unsupported ${locale} sound range reference: ${sound.translationKey}`);
+    }
+    if (sound.typicalMinDb !== source.displayMinDb || sound.typicalMaxDb !== source.displayMaxDb) {
+      throw new Error(`Mismatched ${locale} sound display bounds: ${sound.translationKey}`);
+    }
+  }
+};
+
+for (const locale of Object.keys(text) as Locale[]) {
+  const sounds = getCommonSounds(locale);
+  validateSoundIdentityUniqueness(locale, sounds);
+  validateSoundRanges(locale, sounds);
+  validateSoundRangeReferences(locale, sounds);
+}
 
 export const commonSounds = getCommonSounds('en');
 export const findCommonSound = (slug: string, locale: Locale = 'en') => getCommonSounds(locale).find((sound) => sound.slug === slug);

@@ -5,13 +5,13 @@ import { DISPLAY_TICKS, EXPOSURE_LIMIT_DB, scalePercent } from '../lib/display-s
 
 interface Props {
   sounds: CommonSound[];
-  id?: string;
+  id: string;
   compact?: boolean;
   locale?: Locale;
   detailHeadingLevel?: 2 | 3;
 }
 
-const { sounds, id = 'sound-explorer', compact = false, locale = 'en', detailHeadingLevel = 3 } = Astro.props;
+const { sounds, id, compact = false, locale = 'en', detailHeadingLevel = 3 } = Astro.props;
 const initial = sounds[0];
 const isGerman = locale === 'de';
 
@@ -20,7 +20,7 @@ const bandFor = (sound: CommonSound) => {
   const start = scalePercent(sound.typicalMinDb);
   return { start, span: scalePercent(sound.typicalMaxDb) - start };
 };
-const initialBand = bandFor(initial);
+const initialBand = initial ? bandFor(initial) : { start: 0, span: 0 };
 const exposureLimitAt = scalePercent(EXPOSURE_LIMIT_DB);
 const sourcedSounds = sounds.flatMap((sound) => sound.rangeReference ? [{ sound, reference: sound.rangeReference }] : []);
 
@@ -31,6 +31,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
 }));
 ---
 
+{initial ? (
 <div id={id} class:list={['sound-explorer', { compact }]} data-sound-explorer>
   <div class="sound-scale" aria-label={isGerman ? 'Alltagsgeräusche auf einer Skala von 0 bis 130 Dezibel' : 'Common sound examples on a 0 to 130 decibel display scale'}>
     <div class="sound-markers" style={`--band-start:${initialBand.start};--band-span:${initialBand.span};--exposure-limit-at:${exposureLimitAt}%`}>
@@ -54,6 +55,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
           data-risk={sound.riskLevel}
           data-band-start={bandFor(sound).start}
           data-band-span={bandFor(sound).span}
+          data-sound-index={index}
         >
           <span class="marker-dot" aria-hidden="true"></span>
           <span>{sound.name}</span>
@@ -62,7 +64,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     </div>
   </div>
 
-  <article class="sound-detail" id={`${id}-detail`} aria-live="polite">
+  <article class="sound-detail" id={`${id}-detail`}>
     <div>
       <span class="detail-category">{isGerman ? 'Typisches Beispiel' : 'Typical example'}</span>
       {detailHeadingLevel === 2
@@ -73,16 +75,17 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     </div>
     <div class="detail-reading">
       <strong data-sound-range>{initial.typicalMinDb}–{initial.typicalMaxDb} dB</strong>
-      <a data-sound-route href={initial.articleRoute ?? (isGerman ? '/de/alltagsgeraeusche/' : '/sounds/')} hidden={!initial.articleRoute}>{isGerman ? 'Ratgeber lesen' : 'Read sound guide'} <span aria-hidden="true">→</span></a>
+      <a data-sound-route data-sound-index="0" href={initial.articleRoute ?? (isGerman ? '/de/alltagsgeraeusche/' : '/sounds/')} hidden={!initial.articleRoute}>{isGerman ? 'Ratgeber lesen' : 'Read sound guide'} <span aria-hidden="true">→</span></a>
     </div>
   </article>
+  <span class="sound-announcement" data-sound-announcement aria-live="polite" aria-atomic="true"></span>
 
   <div class="mobile-sound-view">
     <div class="mobile-scale-key" aria-hidden="true"><span>0</span><span>130 dB</span></div>
     <ul class="mobile-sound-list" aria-label={isGerman ? 'Alltagsgeräusche nach typischem Dezibelbereich' : 'Common sound examples by typical decibel range'}>
       {sounds.map((sound, index) => (
         <li style={`--sound-index:${index}`}>
-          <details name={`${id}-mobile-sounds`}>
+          <details name={`${id}-mobile-sounds`} data-sound-index={index}>
             <summary>
               <span class:list={['mobile-risk-dot', sound.riskLevel]} aria-hidden="true"></span>
               <span class="mobile-sound-name">{sound.name}</span>
@@ -90,7 +93,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
               <span class="mobile-disclosure" aria-hidden="true"></span>
               <span class="mobile-range-track" aria-hidden="true">
                 <span
-                  class:list={['mobile-range-fill', sound.riskLevel]}
+                  class:list={['mobile-range-fill', sound.riskLevel, { 'is-point': sound.typicalMinDb === sound.typicalMaxDb }]}
                   style={`--range-start:${scalePercent(sound.typicalMinDb)}%;--range-end:${scalePercent(sound.typicalMaxDb)}%`}
                 ></span>
               </span>
@@ -129,9 +132,16 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     </details>
   )}
 </div>
+) : (
+  <div id={id} class:list={['sound-explorer', { compact }]}>
+    <p class="sound-disclaimer" role="status">
+      {isGerman ? 'Derzeit sind keine Geräuschbeispiele verfügbar.' : 'No sound examples are currently available.'}
+    </p>
+  </div>
+)}
 
 <script>
-  import { scrambleReading } from '../scripts/motion';
+  import { scrambleReading, setReadingValue } from '../scripts/motion';
 
   document.querySelectorAll<HTMLElement>('[data-sound-explorer]').forEach((explorer) => {
     const markers = Array.from(explorer.querySelectorAll<HTMLButtonElement>('.sound-marker'));
@@ -140,22 +150,27 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     const description = explorer.querySelector<HTMLElement>('[data-sound-description]');
     const note = explorer.querySelector<HTMLElement>('[data-sound-note]');
     const route = explorer.querySelector<HTMLAnchorElement>('[data-sound-route]');
+    const announcement = explorer.querySelector<HTMLElement>('[data-sound-announcement]');
     const scale = explorer.querySelector<HTMLElement>('.sound-scale');
     const markerHost = explorer.querySelector<HTMLElement>('.sound-markers');
     const band = explorer.querySelector<HTMLElement>('[data-range-band]');
+    let selectionRevision = 0;
 
     const select = (marker: HTMLButtonElement, animate = false) => {
+      const revision = ++selectionRevision;
       markers.forEach((item) => {
         const active = item === marker;
         item.classList.toggle('active', active);
         item.setAttribute('aria-pressed', String(active));
+        item.classList.remove('is-pulsing');
       });
+      scale?.classList.remove('is-scanning');
       if (name) name.textContent = marker.dataset.name ?? '';
       if (range) {
         // Lukema asettuu scramblella vain valinnasta, ei hiiren ohituksesta.
         const value = marker.dataset.range ?? '';
         if (animate) scrambleReading(range, value);
-        else range.textContent = value;
+        else setReadingValue(range, value);
       }
       if (description) description.textContent = marker.dataset.description ?? '';
       if (note) note.textContent = marker.dataset.note ?? '';
@@ -163,6 +178,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
         const target = marker.dataset.route ?? '';
         route.hidden = !target;
         route.href = target || '/sounds/';
+        route.dataset.soundIndex = marker.dataset.soundIndex ?? '0';
       }
       if (markerHost && band) {
         // Vaihteluvälipalkki liukuu ja venyy asteikolla valitun äänen mukaan.
@@ -170,11 +186,14 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
         markerHost.style.setProperty('--band-span', marker.dataset.bandSpan ?? '0');
         band.className = `range-band ${marker.dataset.risk ?? ''}`;
       }
+      if (animate && announcement) {
+        const message = `${marker.dataset.name ?? ''}: ${marker.dataset.range ?? ''}`;
+        if (announcement.textContent !== message) announcement.textContent = message;
+      }
       if (animate) {
-        marker.classList.remove('is-pulsing');
-        scale?.classList.remove('is-scanning');
         scale?.style.setProperty('--active-position', marker.style.getPropertyValue('--position'));
         requestAnimationFrame(() => {
+          if (revision !== selectionRevision) return;
           marker.classList.add('is-pulsing');
           scale?.classList.add('is-scanning');
         });
@@ -187,6 +206,54 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
         if ((event as PointerEvent).pointerType !== 'touch') select(marker);
       });
     });
+
+    if (!explorer.classList.contains('compact')) {
+      const mobileQuery = matchMedia('(max-width: 700px)');
+      const summaries = Array.from(explorer.querySelectorAll<HTMLElement>('.mobile-sound-list summary'));
+      const libraryLinks = Array.from(
+        explorer.closest('.sounds-page')?.querySelectorAll<HTMLAnchorElement>('a.sound-row[data-sound-index]') ?? [],
+      );
+      let lastResponsiveFocus: { index: number; articleLink: boolean } | null = null;
+      let responsiveFocusRevision = 0;
+
+      const focusContext = (target: EventTarget | null) => {
+        if (!(target instanceof Element)) return null;
+        const indexed = target.closest<HTMLElement>('[data-sound-index]');
+        if (!indexed || (!explorer.contains(indexed) && !libraryLinks.includes(indexed as HTMLAnchorElement))) return null;
+        const index = Number(indexed.dataset.soundIndex);
+        if (!Number.isInteger(index) || index < 0 || index >= markers.length) return null;
+        return { index, articleLink: target instanceof HTMLAnchorElement };
+      };
+
+      document.addEventListener('focusin', (event) => {
+        const context = focusContext(event.target);
+        if (context) lastResponsiveFocus = context;
+        else if (event.target !== document.body) {
+          lastResponsiveFocus = null;
+          responsiveFocusRevision++;
+        }
+      });
+
+      document.addEventListener('pointerdown', (event) => {
+        lastResponsiveFocus = focusContext(event.target);
+        if (!lastResponsiveFocus) responsiveFocusRevision++;
+      });
+
+      mobileQuery.addEventListener('change', (event) => {
+        const activeContext = focusContext(document.activeElement);
+        const context = activeContext && lastResponsiveFocus ? activeContext : lastResponsiveFocus;
+        if (!context) return;
+        const desktopArticle = libraryLinks.find((link) => Number(link.dataset.soundIndex) === context.index);
+        const target = event.matches
+          ? summaries[context.index]
+          : context.articleLink ? desktopArticle ?? markers[context.index] : markers[context.index];
+        if (!target) return;
+        const revision = ++responsiveFocusRevision;
+        requestAnimationFrame(() => {
+          if (revision === responsiveFocusRevision) target.focus();
+        });
+      });
+    }
   });
 </script>
 
@@ -242,7 +309,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
   .range-band {
     position: absolute; bottom: 21px;
     left: calc(var(--band-start) * 1%);
-    width: max(6px, calc(var(--band-span) * 1%));
+    width: calc(var(--band-span) * 1%);
     height: 3px; border-radius: 999px;
     background: var(--secondary);
     transition: left 520ms var(--sound-selection-ease), width 520ms var(--sound-selection-ease), background 300ms ease;
@@ -309,6 +376,10 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
   .detail-reading strong { font: 600 24px/1 var(--font-data); white-space: nowrap; }
   .detail-reading a { color: var(--on-surface-v); font-size: 14px; text-underline-offset: 4px; }
   .sound-disclaimer { margin: 0; color: var(--muted-text); font-size: 12px; }
+  .sound-announcement {
+    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
   .sound-sources { color: var(--on-surface-v); font-size: 13px; }
   .sound-sources summary {
     width: fit-content; color: var(--on-surface); font-weight: 600; cursor: pointer; text-underline-offset: 4px;
@@ -330,6 +401,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     .detail-reading { justify-items: start; }
     .sound-explorer:not(.compact) .sound-scale,
     .sound-explorer:not(.compact) .sound-detail { display: none; }
+    .sound-explorer:not(.compact) .sound-announcement { display: none; }
     .sound-explorer:not(.compact) .mobile-sound-view {
       display: grid; margin-inline: -20px; border-block: 1px solid var(--ghost); background: var(--surface);
     }
@@ -350,7 +422,7 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     .mobile-risk-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--secondary); }
     .mobile-risk-dot.warning { background: var(--warning); }
     .mobile-risk-dot.danger { background: var(--error); }
-    .mobile-sound-name { overflow: hidden; color: var(--on-surface); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .mobile-sound-name { color: var(--on-surface); font-weight: 600; overflow-wrap: break-word; }
     .mobile-sound-list summary strong { font: 500 12px/1 var(--font-data); white-space: nowrap; }
     .mobile-disclosure {
       width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
@@ -363,7 +435,10 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     }
     .mobile-range-fill {
       position: absolute; inset-block: 0; left: var(--range-start); width: calc(var(--range-end) - var(--range-start));
-      min-width: 5px; border-radius: inherit; background: var(--secondary);
+      border-radius: inherit; background: var(--secondary);
+    }
+    .mobile-range-fill.is-point {
+      left: clamp(0px, calc(var(--range-start) - 2.5px), calc(100% - 5px)); width: 5px;
     }
     .sound-explorer.reveal.in .mobile-range-fill {
       animation: mobile-range-enter 420ms cubic-bezier(.2,.7,.2,1) both;
@@ -372,8 +447,10 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     @keyframes mobile-range-enter { from { opacity: 0; transform: scaleX(0); } }
     .mobile-range-fill.warning { background: var(--warning); }
     .mobile-range-fill.danger { background: var(--error); }
-    .mobile-sound-detail { display: grid; gap: 8px; padding: 0 20px 16px 42px; }
-    details[open] .mobile-sound-detail { animation: mobile-detail-enter 180ms ease-out; }
+    .mobile-sound-detail { display: none; gap: 8px; padding: 0 20px 16px 42px; }
+    .mobile-sound-list details[open] > .mobile-sound-detail {
+      display: grid; animation: mobile-detail-enter 180ms ease-out;
+    }
     @keyframes mobile-detail-enter { from { opacity: 0; transform: translateY(-5px); } }
     .mobile-sound-detail p { margin: 0; color: var(--on-surface-v); font-size: 14px; }
     .mobile-sound-detail .mobile-exposure-note { color: var(--secondary); font-size: 13px; }
@@ -386,7 +463,8 @@ const scaleTicks = DISPLAY_TICKS.map((db, index) => ({
     .sound-explorer.reveal.in .scale-track::before,
     .sound-explorer.reveal.in .scale-track > span,
     .sound-explorer.reveal.in .mobile-range-fill,
-    details[open] .mobile-sound-detail { animation: none; }
+    .mobile-sound-list details[open] > .mobile-sound-detail { animation: none; }
+    .mobile-disclosure { transition: none; }
     .range-band { animation: none; transition: none; }
   }
 </style>

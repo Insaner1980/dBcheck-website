@@ -7,6 +7,7 @@ import SoundExplorer from './SoundExplorer.astro';
 import { getCommonSounds } from '../data/sounds';
 import { socialImages } from '../data/social';
 import type { Locale } from '../i18n/config';
+import { soundExplorerId } from '../i18n/routes';
 interface Props { locale: Locale }
 const { locale } = Astro.props; const de = locale === 'de'; const sounds = getCommonSounds(locale); const publishedCount = sounds.filter((sound) => sound.articleRoute).length;
 ---
@@ -20,13 +21,15 @@ const { locale } = Astro.props; const de = locale === 'de'; const sounds = getCo
           alt={de ? 'Typische Bereiche für normales Gespräch, Staubsauger, Babygeschrei, Rasenmäher und Konzert auf einer gemeinsamen Skala von 50 bis 110 dB.' : 'Typical ranges for normal conversation, a vacuum cleaner, baby crying, a lawn mower and a concert on a shared scale from 50 to 110 dB.'}
           widths={[720, 1120, 1672]}
           sizes="(max-width: 700px) 720px, min(1120px, calc(100vw - 40px))"
+          loading="eager"
+          fetchpriority="high"
         />
       </div>
       <figcaption>{de ? 'Typische Bereiche überlappen. Abstand, Umgebung, Quelle und Messmethode können den tatsächlichen Wert verändern.' : 'Typical ranges overlap. Distance, environment, source and measurement method can change the actual reading.'}</figcaption>
     </figure>
-    <SoundExplorer sounds={sounds} id="library-explorer" locale={locale} detailHeadingLevel={2} />
+    <SoundExplorer sounds={sounds} id={soundExplorerId} locale={locale} detailHeadingLevel={2} />
     <div class="library-head"><div><span class="kicker">{de ? 'Erste Sammlung' : 'Initial collection'}</span><h2>{publishedCount} {de ? 'vollständige Ratgeber' : 'complete guides'}, {sounds.length} {de ? 'Vergleiche' : 'comparisons'}</h2></div><p>{de ? 'Geräusche ohne vollständigen Artikel bleiben im Explorer sichtbar, ohne auf unfertige Seiten zu verlinken.' : 'Sounds without a full article remain available in the Explorer without linking to unfinished pages.'}</p></div>
-    <ul class="sound-list">{sounds.map((sound) => <li>{sound.articleRoute ? <a class="sound-row" href={sound.articleRoute}><span class="sound-category">{sound.category}</span><strong>{sound.name}</strong><span>{sound.typicalMinDb}–{sound.typicalMaxDb} dB</span><span class="sound-status">{de ? 'Ratgeber lesen' : 'Read guide'} <span aria-hidden="true">→</span></span></a> : <div class="sound-row"><span class="sound-category">{sound.category}</span><strong>{sound.name}</strong><span>{sound.typicalMinDb}–{sound.typicalMaxDb} dB</span><span class="sound-status">{de ? 'Nur Explorer' : 'Explorer only'}</span></div>}</li>)}</ul>
+    <ul class="sound-list">{sounds.map((sound, index) => <li>{sound.articleRoute ? <a class="sound-row" data-sound-index={index} href={sound.articleRoute}><span class="sound-category">{sound.category}</span><strong>{sound.name}</strong><span>{sound.typicalMinDb}–{sound.typicalMaxDb} dB</span><span class="sound-status">{de ? 'Ratgeber lesen' : 'Read guide'} <span aria-hidden="true">→</span></span></a> : <div class="sound-row"><span class="sound-category">{sound.category}</span><strong>{sound.name}</strong><span>{sound.typicalMinDb}–{sound.typicalMaxDb} dB</span><span class="sound-status">{de ? 'Nur Explorer' : 'Explorer only'}</span></div>}</li>)}</ul>
     <aside class="measurement-note"><h2>{de ? 'Zu Smartphone-Messungen' : 'About phone measurements'}</h2><p>{de ? 'Smartphone-Messwerte hängen von Mikrofon, Audioverarbeitung und Kalibrierung ab. dBcheck ist kein zertifizierter Schallpegelmesser der Klasse 1 oder 2. Verwenden Sie diese Bereiche zur Bildung und persönlichen Orientierung, nicht für den Nachweis gesetzlicher Anforderungen.' : 'Smartphone readings depend on the device microphone, audio processing and calibration. dBcheck is not a certified Class 1 or Class 2 sound level meter. Use these ranges and phone readings for education and personal awareness, not regulatory compliance.'}</p></aside>
   </section>
   <style>

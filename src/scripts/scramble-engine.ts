@@ -13,6 +13,10 @@ export function runScramble(
   profile: ScrambleProfile,
   onComplete: () => void,
 ): void {
-  utils.remove(element);
+  stopScramble(element);
   animate(element, { innerHTML: scrambleText({ text, ...profile }), onComplete });
+}
+
+export function stopScramble(element: HTMLElement): void {
+  utils.remove(element);
 }

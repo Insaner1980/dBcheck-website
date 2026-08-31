@@ -1,0 +1,127 @@
+---
+import Base from '../layouts/Base.astro';
+import type { Locale } from '../i18n/config';
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = 'en' } = Astro.props;
+const isGerman = locale === 'de';
+const title = isGerman ? 'Seite nicht gefunden | dBcheck' : 'Page not found | dBcheck';
+const description = isGerman
+  ? 'Die angeforderte dBcheck-Seite wurde nicht gefunden. Weiter zu Artikeln, Alltagsgeräuschen oder Werkzeugen.'
+  : 'The requested dBcheck page could not be found. Continue to the homepage, articles, common sounds or tools.';
+---
+
+<Base {title} {description} {locale} errorDocument>
+  <section class="not-found" aria-labelledby="not-found-title">
+    <div class="not-found-copy">
+      {isGerman ? <>
+        <h1 id="not-found-title">Seite nicht gefunden</h1>
+        <div class="explanation">
+          <p>Die Adresse ist möglicherweise falsch, oder die Seite wurde verschoben. Über die Navigation oder die folgenden Links können Sie fortfahren.</p>
+        </div>
+        <nav class="recovery" aria-label="Weiter zu">
+          <ul>
+            <li><a class="recovery-primary" href="/">Startseite</a></li>
+            <li><a href="/de/artikel/">Artikel</a></li>
+            <li><a href="/de/alltagsgeraeusche/">Alltagsgeräusche</a></li>
+            <li><a href="/de/werkzeuge/">Werkzeuge</a></li>
+          </ul>
+        </nav>
+      </> : <>
+        <h1 id="not-found-title">Page not found <span aria-hidden="true">/</span> <span lang="de">Seite nicht gefunden</span></h1>
+        <div class="explanation">
+          <p>The address may be incorrect, or the page may have moved. Use the site navigation or one of the links below to continue.</p>
+          <p lang="de">Die Adresse ist möglicherweise falsch, oder die Seite wurde verschoben. Über die Navigation oder die folgenden Links können Sie fortfahren.</p>
+        </div>
+        <nav class="recovery" aria-label="Page recovery">
+          <ul>
+            <li><a class="recovery-primary" href="/">Home <span lang="de">/ Startseite</span></a></li>
+            <li><a href="/articles/">Articles</a></li>
+            <li><a href="/sounds/">Common sounds</a></li>
+            <li><a href="/tools/">Tools</a></li>
+          </ul>
+        </nav>
+
+        <p class="german-recovery" lang="de">
+          Auf Deutsch: <a href="/de/artikel/">Artikel</a>, <a href="/de/alltagsgeraeusche/">Alltagsgeräusche</a> und <a href="/de/werkzeuge/">Werkzeuge</a>.
+        </p>
+      </>}
+    </div>
+  </section>
+</Base>
+
+<style>
+  .not-found {
+    display: grid;
+    align-items: center;
+    min-height: min(680px, calc(100svh - 76px));
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: clamp(72px, 12vw, 144px) 20px;
+  }
+  .not-found-copy {
+    display: grid;
+    gap: 32px;
+    max-width: 840px;
+    min-width: 0;
+  }
+  h1 {
+    margin: 0;
+    font: 700 var(--font-size-page-title)/1.05 var(--font-data);
+    letter-spacing: -.035em;
+  }
+  .explanation {
+    display: grid;
+    gap: 12px;
+    max-width: 700px;
+    color: var(--on-surface-v);
+    font-size: 18px;
+  }
+  .explanation p,
+  .german-recovery { margin: 0; }
+  .recovery ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .recovery a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: var(--surface-ch);
+    color: var(--on-surface);
+    text-decoration: none;
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .recovery a:hover { background: var(--surface-chh); }
+  .recovery .recovery-primary {
+    background: var(--primary);
+    color: var(--bg);
+  }
+  .recovery .recovery-primary:hover { background: var(--primary-dim); }
+  .german-recovery {
+    color: var(--muted-text);
+    font-size: 14px;
+  }
+  .german-recovery a { text-underline-offset: 4px; }
+  @media (max-width: 520px) {
+    .not-found { min-height: auto; padding-block: 64px; }
+    .not-found-copy { gap: 28px; }
+    .recovery ul { display: grid; }
+    .recovery a { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .recovery a { transition: none; }
+  }
+  @media (forced-colors: active) {
+    .recovery a { border: 1px solid LinkText; }
+  }
+</style>

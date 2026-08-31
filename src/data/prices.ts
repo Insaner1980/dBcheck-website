@@ -23,7 +23,22 @@ export const PRO_PRICE_BY_COUNTRY: Readonly<Record<string, string>> = {
 };
 
 export function parseCloudflareTraceCountry(trace: string): string | undefined {
-  return trace.match(/^loc=([a-z]{2})\r?$/im)?.[1].toUpperCase();
+  let countryCode: string | undefined;
+
+  for (const line of trace.split(/\r?\n/)) {
+    if (line.length === 0) continue;
+
+    const field = line.match(/^([a-z][a-z0-9_]*)=([^\r\n]*)$/i);
+    if (!field) return undefined;
+
+    const [, key, value] = field;
+    if (key.toLowerCase() !== 'loc') continue;
+    if (countryCode || !/^[a-z]{2}$/i.test(value)) return undefined;
+
+    countryCode = value.toUpperCase();
+  }
+
+  return countryCode;
 }
 
 export function getProPriceForCountry(countryCode: string | undefined): string {

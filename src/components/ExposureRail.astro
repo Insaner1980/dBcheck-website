@@ -91,15 +91,17 @@ const limitAt = scalePercent(EXPOSURE_LIMIT_DB);
 <script>
   import { animate, onScroll } from 'animejs';
   import { DISPLAY_MAX_DB, levelForDb, scalePercent } from '../lib/display-scale';
-  import { prefersReducedMotion } from '../scripts/motion';
 
   const rail = document.querySelector<HTMLElement>('[data-exposure-rail]');
   const section = rail?.closest<HTMLElement>('[data-exposure-rail-section]');
   const valueElement = rail?.querySelector<HTMLElement>('[data-rail-value]');
 
-  if (rail && section && valueElement && !prefersReducedMotion()) {
+  if (rail && section && valueElement) {
+    const reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
     const reading = { db: 0 };
     let level = '';
+    let railObserver: ReturnType<typeof onScroll> | null = null;
+    let railAnimation: ReturnType<typeof animate> | null = null;
 
     const render = () => {
       rail.style.setProperty('--rail-progress', `${scalePercent(reading.db)}%`);
@@ -110,13 +112,35 @@ const limitAt = scalePercent(EXPOSURE_LIMIT_DB);
       level = nextLevel;
     };
 
-    render();
+    const stop = () => {
+      railAnimation?.revert();
+      railAnimation = null;
+      railObserver?.revert();
+      railObserver = null;
+      reading.db = 0;
+      render();
+    };
 
-    animate(reading, {
-      db: DISPLAY_MAX_DB,
-      ease: 'linear',
-      onUpdate: render,
-      autoplay: onScroll({ target: section, enter: 'bottom top', leave: 'top bottom', sync: 0.35 }),
-    });
+    const start = () => {
+      if (reducedMotionQuery.matches || railObserver) return;
+      railObserver = onScroll({
+        target: section,
+        enter: 'bottom top',
+        leave: 'top bottom',
+        sync: 1,
+        // The rail never reads velocity; stop anime.js's unbounded velocity timer after each update.
+        onUpdate: (observer) => observer.container.dataTimer.pause(),
+      });
+      railAnimation = animate(reading, {
+        db: DISPLAY_MAX_DB,
+        ease: 'linear',
+        onUpdate: render,
+        autoplay: railObserver,
+      });
+    };
+
+    render();
+    if (!reducedMotionQuery.matches) start();
+    reducedMotionQuery.addEventListener('change', ({ matches }) => matches ? stop() : start());
   }
 </script>

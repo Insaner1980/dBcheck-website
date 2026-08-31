@@ -23,15 +23,16 @@ const defaultDb = 94;
   <div class="calculator-panel">
     <div class="selected-level">
       <span>{de ? 'Gewählter Schallpegel' : 'Selected sound level'}</span>
-      <output for={`${id}-slider`} data-db-output>{defaultDb} dBA</output>
+      <output for={`${id}-slider`} data-db-output aria-live="off">{defaultDb} dBA</output>
     </div>
     <label for={`${id}-slider`}>{de ? 'Schallpegel in A-bewerteten Dezibel' : 'Sound level in A-weighted decibels'}</label>
     <input id={`${id}-slider`} data-db-slider type="range" min="70" max="115" value={defaultDb} step="1" aria-describedby={`${id}-model`} />
     <div class="range-labels" aria-hidden="true"><span>70</span><span>85</span><span>100</span><span>115 dBA</span></div>
-    <div class="calculator-result" role="status" aria-live="polite">
+    <div class="calculator-result">
       <span>{de ? 'Dauer bis L_EX,8h = 85 dB(A)' : 'Estimated time to 100% NIOSH daily occupational dose'}</span>
       <strong data-time-output>{de ? '1 Stunde' : '1 hour'}</strong>
     </div>
+    <span class="exposure-announcement" data-exposure-announcement aria-live="polite" aria-atomic="true"></span>
     <p id={`${id}-model`} class="model-note">{de ? 'Modell: L_EX,8h = L_Aeq,T + 10 lg(T / 8 h). Konstanter A-bewerteter Mittelungspegel ohne Impulsbewertung.' : 'Model: 85 dBA = 8 hours, with a 3 dB exchange rate. Assumes a constant level.'}</p>
     <noscript><p class="noscript-note">{de ? 'JavaScript ist deaktiviert. Richtwerte: 85 dB(A) = 8 h, 88 dB(A) ≈ 4 h, 91 dB(A) ≈ 2 h, 94 dB(A) ≈ 1 h.' : 'JavaScript is off. Reference points: 85 dBA = 8 h, 88 dBA = 4 h, 91 dBA = 2 h, 94 dBA = 1 h, 100 dBA = 15 min.'}</p></noscript>
   </div>
@@ -45,16 +46,27 @@ const defaultDb = 94;
     const slider = calculator.querySelector<HTMLInputElement>('[data-db-slider]');
     const dbOutput = calculator.querySelector<HTMLOutputElement>('[data-db-output]');
     const timeOutput = calculator.querySelector<HTMLElement>('[data-time-output]');
-    if (!slider || !dbOutput || !timeOutput) return;
-    const update = () => {
+    const announcement = calculator.querySelector<HTMLElement>('[data-exposure-announcement]');
+    if (!slider || !dbOutput || !timeOutput || !announcement) return;
+    let announcementTimer: ReturnType<typeof setTimeout> | undefined;
+    const update = (announce = false) => {
       const db = Number(slider.value);
       const hours = calculateExposureHours(db, locale === 'de' ? 'eu-upper-action' : 'niosh');
+      const formattedTime = formatExposureTime(hours, locale);
       dbOutput.value = `${db} dBA`;
-      timeOutput.textContent = formatExposureTime(hours, locale);
+      timeOutput.textContent = formattedTime;
       slider.style.setProperty('--range-progress', `${(db - 70) / 45 * 100}%`);
+      if (announce) {
+        if (announcementTimer !== undefined) clearTimeout(announcementTimer);
+        announcementTimer = setTimeout(() => {
+          const message = locale === 'de' ? `${db} dBA. Dauer: ${formattedTime}.` : `${db} dBA. Estimated time: ${formattedTime}.`;
+          if (announcement.textContent !== message) announcement.textContent = message;
+          announcementTimer = undefined;
+        }, 250);
+      }
     };
 
-    slider.addEventListener('input', update);
+    slider.addEventListener('input', () => update(true));
     update();
   });
 </script>
@@ -83,6 +95,10 @@ const defaultDb = 94;
   .calculator-result { display: grid; gap: 8px; padding: 20px; border: 1px solid var(--result-border-color); border-radius: var(--radius-tile); background: var(--surface-c); }
   .calculator-result span { color: var(--secondary); font-size: 12px; }
   .calculator-result strong { font: 600 clamp(27px, 4vw, 38px)/1.1 var(--font-data); }
+  .exposure-announcement {
+    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
   .model-note, .noscript-note { margin: 0; color: var(--muted-text); font-size: 12px; }
   .compact { padding: 40px; }
   @media (max-width: 850px) {

@@ -29,8 +29,9 @@ const [articles, sounds] = await Promise.all([
 const routeFor = (item: EditorialEntry) => routeForContent(item.data.locale, item.collection, item.data.slug);
 const allEntries = [...articles, ...sounds];
 const entriesByRoute = new Map(allEntries.map((item) => [routeFor(item), item]));
-const linkedRoutes = Array.from(entry.body?.matchAll(/\]\((\/(?:de\/)?(?:articles|sounds)\/[^)#?]+\/)\)/g) ?? [])
-  .map((match) => match[1]);
+const linkedRoutes = Array.isArray(remarkPluginFrontmatter.linkedRoutes)
+  ? remarkPluginFrontmatter.linkedRoutes.filter((route): route is string => typeof route === 'string')
+  : [];
 const related = Array.from(new Set(linkedRoutes))
   .map((route) => ({ route, entry: entriesByRoute.get(route) }))
   .filter((item): item is { route: string; entry: EditorialEntry } => item.entry !== undefined && item.entry.id !== entry.id)
@@ -41,7 +42,7 @@ const pageUrl = new URL(pagePath, Astro.site).href;
 const indexPath = routeForContent(locale, kind === 'sound' ? 'sounds' : 'articles', '').replace(/\/\/$/, '/');
 const indexLabel = kind === 'sound' ? (isGerman ? 'Alltagsgeräusche' : 'Common sounds') : (isGerman ? 'Artikel' : 'Articles');
 const published = entry.data.publishedAt.toLocaleDateString(localeTags[locale], {
-  year: 'numeric', month: 'long', day: 'numeric',
+  year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
 });
 const publishedIso = entry.data.publishedAt.toISOString();
 const modifiedIso = new Date(Math.max(
@@ -92,7 +93,7 @@ const cta = isGerman ? (kind === 'sound'
       label: 'Compare more common sounds',
       href: '/sounds/',
     }
-  : entry.data.contentCluster === 'Noise exposure and hearing risk'
+  : entry.data.clusterKey === 'exposure'
     ? {
         kicker: 'Calculate',
         title: 'Compare level and time under a named model.',
@@ -100,7 +101,7 @@ const cta = isGerman ? (kind === 'sound'
         label: 'Open the Safe Exposure Time Calculator',
         href: '/tools/safe-listening-time-calculator/',
       }
-    : entry.data.contentCluster === 'Smartphone sound measurement'
+    : entry.data.clusterKey === 'smartphone'
       ? {
           kicker: 'Measure',
           title: 'Build a repeatable phone measurement.',
@@ -128,7 +129,7 @@ const cta = isGerman ? (kind === 'sound'
   stylesheet={stylesheet}
 >
   <article class="editorial">
-    <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <nav class="breadcrumbs" aria-label={isGerman ? 'Brotkrümelnavigation' : 'Breadcrumb'}>
       <ol>
         <li><a href="/">{isGerman ? 'Startseite' : 'Home'}</a></li>
         <li><a href={indexPath}>{indexLabel}</a></li>
@@ -200,11 +201,13 @@ const cta = isGerman ? (kind === 'sound'
     .prose :global(p), .prose :global(ul), .prose :global(ol) { margin-block: 0 20px; }
     .prose :global(li + li) { margin-top: 7px; }
     .prose :global(strong) { color: var(--on-surface); }
-    .prose :global(a) { color: var(--on-surface); text-underline-offset: 4px; }
+    .prose :global(a) { color: var(--on-surface); overflow-wrap: break-word; text-underline-offset: 4px; }
     .prose :global(a[data-raw-url]) { overflow-wrap: anywhere; hyphens: none; }
     .prose :global(img) { display: block; width: 100%; height: auto; margin: 32px 0 12px; border: 1px solid var(--ghost); border-radius: var(--radius-card); background: var(--surface); }
     .prose :global(blockquote) { margin: 28px 0; padding: 4px 0 4px 20px; border-left: 2px solid var(--outline-v); color: var(--on-surface); }
     .prose :global(code) { font-family: var(--font-data); font-size: .9em; background: var(--surface-ch); border-radius: 6px; padding: 2px 6px; }
+    .prose :global(:not(pre) > code) { overflow-wrap: anywhere; word-break: normal; hyphens: none; }
+    .prose :global(pre) { max-width: 100%; overflow-x: auto; }
     .prose :global(hr) { border: 0; border-top: 1px solid var(--ghost); margin: 44px 0; }
     .prose :global(table) { display: block; width: 100%; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: 24px 0 32px; }
     .prose :global(th), .prose :global(td) { min-width: 130px; border: 1px solid var(--ghost); padding: 10px 12px; text-align: left; vertical-align: top; }
