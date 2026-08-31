@@ -42,6 +42,45 @@ const routePairForUrl = (url) => {
   return routePairs.find((pair) => pair.en === path || pair.de === path);
 };
 
+/**
+ * @param {import('@astrojs/markdown-remark').Node} node
+ * @param {string} source
+ */
+const positionedNodeSource = (node, source) => {
+  const position = /** @type {{ position?: { start?: { offset?: number }, end?: { offset?: number } } }} */ (node).position;
+  const startOffset = position?.start?.offset;
+  const endOffset = position?.end?.offset;
+  return typeof startOffset === 'number' && typeof endOffset === 'number'
+    ? source.slice(startOffset, endOffset)
+    : '';
+};
+
+/**
+ * @param {import('@astrojs/markdown-remark').Node} node
+ * @param {import('vfile').VFile} file
+ * @param {string} source
+ */
+const validateMathNode = (node, file, source) => {
+  const positionedSource = positionedNodeSource(node, source);
+  if (node.type === 'math' && positionedSource && !positionedSource.trimEnd().endsWith('$$')) {
+    file.fail('Unclosed $$ math block; add a closing $$ delimiter', node);
+  }
+  if (node.type !== 'inlineMath' || !('value' in node) || typeof node.value !== 'string') return;
+
+  const value = node.value.trim();
+  const proseWords = value.match(/[A-Za-zÀ-ÖØ-öø-ÿ]{2,}/g) ?? [];
+  const hasMathSyntax = /\\[A-Za-z]+|[=+*/^_{}()[\]-]/.test(value);
+  if (!value.includes('\n') && proseWords.length >= 2 && !hasMathSyntax) {
+    file.fail(String.raw`Prose-like dollar-delimited text was parsed as math; escape ordinary dollar signs as \$`, node);
+  }
+};
+
+/** @param {import('@astrojs/markdown-remark').Node} node */
+const isMathNode = (node) =>
+  node.type === 'inlineMath'
+  || node.type === 'math'
+  || (node.type === 'code' && 'lang' in node && node.lang === 'math');
+
 /** @type {import('@astrojs/markdown-remark').RemarkPlugin} */
 const remarkMathPresence = () => (tree, file) => {
   /** @type {import('@astrojs/markdown-remark').Node[]} */
@@ -51,26 +90,8 @@ const remarkMathPresence = () => (tree, file) => {
   while (nodes.length > 0) {
     const node = nodes.pop();
     if (!node) continue;
-    const position = /** @type {{ position?: { start?: { offset?: number }, end?: { offset?: number } } }} */ (node).position;
-    const startOffset = position?.start?.offset;
-    const endOffset = position?.end?.offset;
-    const positionedSource = typeof startOffset === 'number' && typeof endOffset === 'number'
-      ? source.slice(startOffset, endOffset)
-      : '';
-    if (node.type === 'math' && positionedSource && !positionedSource.trimEnd().endsWith('$$')) {
-      file.fail('Unclosed $$ math block; add a closing $$ delimiter', node);
-    }
-    if (node.type === 'inlineMath' && 'value' in node && typeof node.value === 'string') {
-      const value = node.value.trim();
-      const proseWords = value.match(/[A-Za-zÀ-ÖØ-öø-ÿ]{2,}/g) ?? [];
-      const hasMathSyntax = /\\[A-Za-z]+|[=+*/^_{}()[\]-]/.test(value);
-      if (!value.includes('\n') && proseWords.length >= 2 && !hasMathSyntax) {
-        file.fail('Prose-like dollar-delimited text was parsed as math; escape ordinary dollar signs as \\$', node);
-      }
-    }
-    if (node.type === 'inlineMath' || node.type === 'math' || (node.type === 'code' && 'lang' in node && node.lang === 'math')) {
-      hasMath = true;
-    }
+    validateMathNode(node, file, source);
+    if (isMathNode(node)) hasMath = true;
     if ('children' in node && Array.isArray(node.children)) nodes.push(...node.children);
   }
   file.data.astro ??= {};

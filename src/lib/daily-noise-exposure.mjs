@@ -31,5 +31,9 @@ export function calculateDailyNoiseExposure(periods) {
   const lex8h = 10 * Math.log10(exposure);
   if (!Number.isFinite(lex8h)) throw new RangeError('unrepresentable-exposure');
   const displayedLex8h = Math.round(lex8h * 10) / 10;
-  return { lex8h, totalHours, category: displayedLex8h < 80 ? 'below-lower' : displayedLex8h < 85 ? 'lower' : 'upper' };
+  /** @type {DailyNoiseExposureCategory} */
+  let category = 'upper';
+  if (displayedLex8h < 80) category = 'below-lower';
+  else if (displayedLex8h < 85) category = 'lower';
+  return { lex8h, totalHours, category };
 }

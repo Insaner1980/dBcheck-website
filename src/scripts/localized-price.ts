@@ -40,4 +40,6 @@ async function localizePrices() {
   }
 }
 
-void localizePrices();
+queueMicrotask(() => {
+  void localizePrices();
+});

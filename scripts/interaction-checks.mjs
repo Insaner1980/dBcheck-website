@@ -530,11 +530,10 @@ export async function runInteractionChecks(adapter) {
   const proTabs = await adapter.evaluate(() => {
     const tabs = [...document.querySelectorAll('[data-pro-category]')];
     const panels = [...document.querySelectorAll('[data-pro-feature-panel]')];
-    const press = (target, key) => target.dispatchEvent(new KeyboardEvent('keydown', {
-      key,
-      bubbles: true,
-      cancelable: true,
-    }));
+    const press = (target, key) => {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      return target.dispatchEvent(event);
+    };
     const first = tabs[0];
     if (!(first instanceof HTMLElement)) throw new Error('Pro tab not found');
     first.focus();
@@ -741,7 +740,7 @@ export async function runInteractionChecks(adapter) {
   );
   const mobileSoundFocus = await adapter.evaluate(() => ({
     width: innerWidth,
-    index: Number(document.activeElement?.closest('[data-sound-index]')?.getAttribute('data-sound-index')),
+    index: Number(document.activeElement?.closest('[data-sound-index]')?.dataset.soundIndex),
     summary: document.activeElement?.matches('.mobile-sound-list summary') === true,
   }));
   assert.equal(mobileSoundFocus.width, 700);
@@ -754,7 +753,7 @@ export async function runInteractionChecks(adapter) {
   );
   const desktopSoundFocus = await adapter.evaluate(() => ({
     width: innerWidth,
-    index: Number(document.activeElement?.getAttribute('data-sound-index')),
+    index: Number(document.activeElement?.dataset.soundIndex),
     marker: document.activeElement?.matches('.sound-marker') === true,
   }));
   assert.equal(desktopSoundFocus.width, 701);
@@ -852,7 +851,7 @@ export async function runInteractionChecks(adapter) {
       const duration = row.querySelector('[data-exposure-duration]');
       const unit = row.querySelector('[data-exposure-unit]');
       if (!(level instanceof HTMLInputElement) || !(duration instanceof HTMLInputElement) || !(unit instanceof HTMLSelectElement)) {
-        throw new Error('noise-dose row is incomplete');
+        throw new TypeError('noise-dose row is incomplete');
       }
       level.value = '85';
       unit.value = 'minutes';

@@ -23,10 +23,10 @@ const publicRouteSlug = (slug) => withoutOuterSlashes(slug)
   .replaceAll('#', '%23')
   .replaceAll('?', '%3F');
 
+const germanEditorialSegment = (collection) => collection === 'articles' ? 'artikel' : 'alltagsgeraeusche';
+
 const editorialRoute = (collection, locale, slug) => {
-  const segment = locale === 'de'
-    ? collection === 'articles' ? 'artikel' : 'alltagsgeraeusche'
-    : collection;
+  const segment = locale === 'de' ? germanEditorialSegment(collection) : collection;
   return `${locale === 'de' ? '/de' : ''}/${segment}/${publicRouteSlug(slug)}/`;
 };
 
@@ -177,22 +177,14 @@ export const validateEditorialTranslationKeyCollisions = ({
   throw new Error(`[editorial-translation-key-collision] Editorial translation keys must be unique per collection and locale, and cannot span collections:\n${details}`);
 };
 
-/**
- * Rejects public references to an editorial entry that is intentionally not
- * generated because its frontmatter marks it as a draft.
- *
- * @param {{ contentDir?: string, entries?: ReturnType<typeof readEditorialEntries>, contentTranslations?: Array<{ collection: string, en: string, de: string }>, soundEntries?: Array<{ locale?: string, translationKey?: string, slug?: string, articleRoute?: string }>, registrySource?: string, soundDataSource?: string }} [options]
- */
-export const validateEditorialPublicationIntegrity = async ({
-  contentDir = defaultContentDir,
-  entries = readEditorialEntries({ contentDir }),
-  contentTranslations = [],
-  soundEntries = [],
-  registrySource = 'src/i18n/routes.ts',
-  soundDataSource = 'src/data/sounds.ts',
-} = {}) => {
+const collectDraftReferences = async ({
+  entries,
+  contentTranslations,
+  soundEntries,
+  registrySource,
+  soundDataSource,
+}) => {
   const draftsByRoute = new Map(entries.filter((entry) => entry.draft).map((entry) => [entry.route, entry]));
-
   const references = [];
   const addReference = (sourcePath, route) => {
     const draft = draftsByRoute.get(normalizedRoute(route));
@@ -210,6 +202,74 @@ export const validateEditorialPublicationIntegrity = async ({
     if (entry.draft) continue;
     for (const route of await linkedEditorialRoutes(entry.content)) addReference(entry.sourcePath, route);
   }
+  return references;
+};
+
+const soundGuideIssue = (sound, guide, soundDataSource) => {
+  if (!guide) {
+    return `- ${soundDataSource} links ${sound.locale}/${sound.translationKey} to ${sound.articleRoute}, but no published sound Markdown exists`;
+  }
+  if (normalizedRoute(sound.articleRoute) !== guide.route) {
+    return `- ${soundDataSource} links ${sound.locale}/${sound.translationKey} to ${sound.articleRoute}, but its published route is ${guide.route}`;
+  }
+  if (sound.slug !== guide.sourceSlug) {
+    return `- ${soundDataSource} exposes ${sound.locale}/${sound.translationKey} with slug ${sound.slug ?? '(missing)'}, but its published slug is ${guide.sourceSlug}`;
+  }
+  return undefined;
+};
+
+const collectSoundGuideIssues = (liveGuides, soundEntries, soundDataSource) => {
+  const identityFor = (entry) => `${entry.locale}\u0000${entry.translationKey}`;
+  const guidesByIdentity = new Map(liveGuides.map((entry) => [identityFor(entry), entry]));
+  const issues = [];
+  const soundDataByIdentity = new Map();
+
+  for (const sound of soundEntries.filter((entry) =>
+    typeof entry.locale === 'string' && typeof entry.translationKey === 'string')) {
+    const identity = identityFor(sound);
+    if (soundDataByIdentity.has(identity)) {
+      issues.push(`- ${soundDataSource} has duplicate identity ${sound.locale}/${sound.translationKey}`);
+      continue;
+    }
+    soundDataByIdentity.set(identity, sound);
+  }
+
+  for (const sound of soundDataByIdentity.values()) {
+    if (typeof sound.articleRoute !== 'string') continue;
+    const issue = soundGuideIssue(sound, guidesByIdentity.get(identityFor(sound)), soundDataSource);
+    if (issue) issues.push(issue);
+  }
+
+  for (const guide of liveGuides) {
+    const sound = soundDataByIdentity.get(identityFor(guide));
+    if (!sound || typeof sound.articleRoute !== 'string') {
+      issues.push(`- ${guide.sourcePath} is published at ${guide.route}, but ${soundDataSource} does not expose its guide link`);
+    }
+  }
+  return issues;
+};
+
+/**
+ * Rejects public references to an editorial entry that is intentionally not
+ * generated because its frontmatter marks it as a draft.
+ *
+ * @param {{ contentDir?: string, entries?: ReturnType<typeof readEditorialEntries>, contentTranslations?: Array<{ collection: string, en: string, de: string }>, soundEntries?: Array<{ locale?: string, translationKey?: string, slug?: string, articleRoute?: string }>, registrySource?: string, soundDataSource?: string }} [options]
+ */
+export const validateEditorialPublicationIntegrity = async ({
+  contentDir = defaultContentDir,
+  entries = readEditorialEntries({ contentDir }),
+  contentTranslations = [],
+  soundEntries = [],
+  registrySource = 'src/i18n/routes.ts',
+  soundDataSource = 'src/data/sounds.ts',
+} = {}) => {
+  const references = await collectDraftReferences({
+    entries,
+    contentTranslations,
+    soundEntries,
+    registrySource,
+    soundDataSource,
+  });
 
   if (references.length > 0) {
     const details = references.map(({ sourcePath, route, draftSource }) =>
@@ -225,38 +285,7 @@ export const validateEditorialPublicationIntegrity = async ({
       `- ${entry.sourcePath} is published at ${entry.route} without a translationKey`).join('\n');
     throw new Error(`[sound-guide-publication-integrity] Published sound Markdown must declare a translationKey:\n${details}`);
   }
-  const identityFor = (entry) => `${entry.locale}\u0000${entry.translationKey}`;
-  const guidesByIdentity = new Map(liveGuides.map((entry) => [identityFor(entry), entry]));
-  const guideGateIssues = [];
-  const soundDataByIdentity = new Map();
-  for (const sound of soundEntries.filter((entry) =>
-    typeof entry.locale === 'string' && typeof entry.translationKey === 'string')) {
-    const identity = identityFor(sound);
-    if (soundDataByIdentity.has(identity)) {
-      guideGateIssues.push(`- ${soundDataSource} has duplicate identity ${sound.locale}/${sound.translationKey}`);
-      continue;
-    }
-    soundDataByIdentity.set(identity, sound);
-  }
-
-  for (const sound of soundDataByIdentity.values()) {
-    if (typeof sound.articleRoute !== 'string') continue;
-    const guide = guidesByIdentity.get(identityFor(sound));
-    if (!guide) {
-      guideGateIssues.push(`- ${soundDataSource} links ${sound.locale}/${sound.translationKey} to ${sound.articleRoute}, but no published sound Markdown exists`);
-    } else if (normalizedRoute(sound.articleRoute) !== guide.route) {
-      guideGateIssues.push(`- ${soundDataSource} links ${sound.locale}/${sound.translationKey} to ${sound.articleRoute}, but its published route is ${guide.route}`);
-    } else if (sound.slug !== guide.sourceSlug) {
-      guideGateIssues.push(`- ${soundDataSource} exposes ${sound.locale}/${sound.translationKey} with slug ${sound.slug ?? '(missing)'}, but its published slug is ${guide.sourceSlug}`);
-    }
-  }
-
-  for (const guide of liveGuides) {
-    const sound = soundDataByIdentity.get(identityFor(guide));
-    if (!sound || typeof sound.articleRoute !== 'string') {
-      guideGateIssues.push(`- ${guide.sourcePath} is published at ${guide.route}, but ${soundDataSource} does not expose its guide link`);
-    }
-  }
+  const guideGateIssues = collectSoundGuideIssues(liveGuides, soundEntries, soundDataSource);
 
   if (guideGateIssues.length > 0) {
     throw new Error(`[sound-guide-publication-integrity] Published sound Markdown and Explorer guide links must agree:\n${guideGateIssues.join('\n')}`);

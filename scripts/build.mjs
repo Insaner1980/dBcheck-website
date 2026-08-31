@@ -18,7 +18,10 @@ const runAstro = (command, cwd, flags = []) => new Promise((resolveStep, rejectS
   child.once('error', rejectStep);
   child.once('exit', (code, signal) => {
     if (code === 0) resolveStep();
-    else rejectStep(new Error(`astro ${command} failed${signal ? ` with signal ${signal}` : ` with exit code ${code}`}`));
+    else {
+      const failureDetail = signal ? ` with signal ${signal}` : ` with exit code ${code}`;
+      rejectStep(new Error(`astro ${command} failed${failureDetail}`));
+    }
   });
 });
 
@@ -53,8 +56,10 @@ export const runBuild = async ({ root = projectRoot, runStep = runAstro, current
 };
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
-  runBuild().catch((error) => {
+  try {
+    await runBuild();
+  } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
-  });
+  }
 }

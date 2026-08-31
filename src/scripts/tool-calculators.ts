@@ -20,7 +20,10 @@ export const formatPercentage = (value: number, digits = 1, locale = 'en') => {
 
 export const formatSigned = (value: number, locale = 'en') => {
   const displayValue = normalizeRoundedZero(value, 1);
-  return `${displayValue < 0 ? '−' : displayValue > 0 ? '+' : ''}${formatDecimal(Math.abs(displayValue), 1, locale)}`;
+  let sign = '';
+  if (displayValue < 0) sign = '−';
+  else if (displayValue > 0) sign = '+';
+  return `${sign}${formatDecimal(Math.abs(displayValue), 1, locale)}`;
 };
 
 const normalizeGermanNumberText = (text: string) => {
@@ -337,7 +340,10 @@ const initializeDailyExposureCalculator = (calculator: HTMLElement) => {
     try {
       const result = calculateDailyNoiseExposure(periods);
       output.textContent = `${formatDecimal(result.lex8h, 1, locale)} dB(A)`;
-      category.textContent = calculator.dataset[result.category === 'below-lower' ? 'categoryBelow' : result.category === 'lower' ? 'categoryLower' : 'categoryUpper'] ?? '';
+      let categoryKey: 'categoryBelow' | 'categoryLower' | 'categoryUpper' = 'categoryUpper';
+      if (result.category === 'below-lower') categoryKey = 'categoryBelow';
+      else if (result.category === 'lower') categoryKey = 'categoryLower';
+      category.textContent = calculator.dataset[categoryKey] ?? '';
       hoursOutput.textContent = `${calculator.dataset.hoursLabel}: ${formatDecimal(result.totalHours, 1, locale)} h`;
     } catch (error) {
       output.textContent = '—';
@@ -348,7 +354,14 @@ const initializeDailyExposureCalculator = (calculator: HTMLElement) => {
   form.addEventListener('submit', (event) => event.preventDefault());
   form.addEventListener('input', update);
   form.addEventListener('change', () => { updateControls(); update(); });
-  addButton.addEventListener('click', () => { if (rows().length >= MAX_ROWS) return; list.append(template.content.cloneNode(true)); initializeNumberSteppers(rows().at(-1) ?? list); updateControls(); update(); rows().at(-1)?.querySelector<HTMLInputElement>('input')?.focus(); });
+  addButton.addEventListener('click', () => {
+    if (rows().length >= MAX_ROWS) return;
+    list.append(template.content.cloneNode(true));
+    initializeNumberSteppers(rows().at(-1) ?? list);
+    updateControls();
+    update();
+    rows().at(-1)?.querySelector<HTMLInputElement>('input')?.focus();
+  });
   list.addEventListener('click', (event) => {
     const button = (event.target as Element).closest<HTMLButtonElement>('[data-remove-daily]');
     if (!button || rows().length === 1) return;

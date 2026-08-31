@@ -62,8 +62,10 @@ const staticPairs = [
   { en: '/tools/daily-noise-exposure-level-calculator/', de: '/de/werkzeuge/laermexpositionsrechner/' },
 ];
 
-export const routeForContent = (locale: Locale, collection: 'articles' | 'sounds', slug: string) =>
-  `${locale === 'en' ? '' : `/${locale}`}/${contentSegments[locale][collection]}/${slug}/`;
+export const routeForContent = (locale: Locale, collection: 'articles' | 'sounds', slug: string) => {
+  const localePrefix = locale === 'en' ? '' : `/${locale}`;
+  return `${localePrefix}/${contentSegments[locale][collection]}/${slug}/`;
+};
 
 export const routePairs = [
   ...staticPairs,

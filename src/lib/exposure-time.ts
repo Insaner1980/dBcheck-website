@@ -1,5 +1,25 @@
 export type ExposureTimeModel = 'niosh' | 'eu-upper-action';
 
+type ExposureTimeUnit = 'day' | 'hour' | 'minute' | 'second';
+
+const unitLabels: Record<'en' | 'de', Record<ExposureTimeUnit, readonly [string, string]>> = {
+  en: {
+    day: ['day', 'days'],
+    hour: ['hour', 'hours'],
+    minute: ['minute', 'minutes'],
+    second: ['second', 'seconds'],
+  },
+  de: {
+    day: ['Tag', 'Tage'],
+    hour: ['Stunde', 'Stunden'],
+    minute: ['Minute', 'Minuten'],
+    second: ['Sekunde', 'Sekunden'],
+  },
+};
+
+const unitLabel = (locale: 'en' | 'de', unit: ExposureTimeUnit, singular: boolean) =>
+  unitLabels[locale][unit][singular ? 0 : 1];
+
 export const calculateExposureHours = (levelDb: number, model: ExposureTimeModel) => {
   if (!Number.isFinite(levelDb)) throw new RangeError('invalid-level');
   const hours = model === 'niosh'
@@ -13,7 +33,8 @@ export const formatExposureTime = (hours: number, locale: 'en' | 'de') => {
   if (!Number.isFinite(hours) || hours <= 0) throw new RangeError('invalid-duration');
   const totalSeconds = hours * 3600;
   if (!Number.isFinite(totalSeconds)) throw new RangeError('unrepresentable-duration');
-  const number = (value: number, digits = 0) => value.toLocaleString(locale === 'de' ? 'de-DE' : 'en-GB', {
+  const numberLocale = locale === 'de' ? 'de-DE' : 'en-GB';
+  const number = (value: number, digits = 0) => value.toLocaleString(numberLocale, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
@@ -21,16 +42,16 @@ export const formatExposureTime = (hours: number, locale: 'en' | 'de') => {
   if (totalSeconds >= 86400) {
     const days = totalSeconds / 86400;
     const digits = Number.isInteger(days) ? 0 : 1;
-    return `${number(days, digits)} ${locale === 'de' ? (Math.abs(days - 1) < 0.05 ? 'Tag' : 'Tage') : (Math.abs(days - 1) < 0.05 ? 'day' : 'days')}`;
+    return `${number(days, digits)} ${unitLabel(locale, 'day', Math.abs(days - 1) < 0.05)}`;
   }
-  if (totalSeconds >= 7200) return `${number(Math.round(hours))} ${locale === 'de' ? 'Stunden' : 'hours'}`;
+  if (totalSeconds >= 7200) return `${number(Math.round(hours))} ${unitLabel(locale, 'hour', false)}`;
   if (totalSeconds >= 3600) {
     const roundedHours = Math.abs(hours - 1) < 0.05 ? 1 : hours;
-    return `${number(roundedHours, roundedHours === 1 ? 0 : 1)} ${locale === 'de' ? (roundedHours === 1 ? 'Stunde' : 'Stunden') : (roundedHours === 1 ? 'hour' : 'hours')}`;
+    return `${number(roundedHours, roundedHours === 1 ? 0 : 1)} ${unitLabel(locale, 'hour', roundedHours === 1)}`;
   }
-  if (totalSeconds >= 120) return `${number(Math.round(totalSeconds / 60))} ${locale === 'de' ? 'Minuten' : 'minutes'}`;
-  if (totalSeconds >= 60) return `1 ${locale === 'de' ? 'Minute' : 'minute'}`;
+  if (totalSeconds >= 120) return `${number(Math.round(totalSeconds / 60))} ${unitLabel(locale, 'minute', false)}`;
+  if (totalSeconds >= 60) return `1 ${unitLabel(locale, 'minute', true)}`;
   if (totalSeconds < 1) return locale === 'de' ? '< 1 Sekunde' : '< 1 second';
   const seconds = Math.round(totalSeconds);
-  return `${number(seconds)} ${locale === 'de' ? (seconds === 1 ? 'Sekunde' : 'Sekunden') : (seconds === 1 ? 'second' : 'seconds')}`;
+  return `${number(seconds)} ${unitLabel(locale, 'second', seconds === 1)}`;
 };

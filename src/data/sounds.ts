@@ -186,7 +186,7 @@ export const validateSoundIdentityUniqueness = (locale: Locale, sounds: readonly
 export const validateSoundRanges = (locale: Locale, sounds: readonly SoundRange[]) => {
   for (const { translationKey, typicalMinDb, typicalMaxDb } of sounds) {
     if (!Number.isFinite(typicalMinDb) || !Number.isFinite(typicalMaxDb)) {
-      throw new Error(`Non-finite ${locale} sound range: ${translationKey}`);
+      throw new TypeError(`Non-finite ${locale} sound range: ${translationKey}`);
     }
     if (typicalMinDb > typicalMaxDb) {
       throw new Error(`Reversed ${locale} sound range: ${translationKey}`);
@@ -210,6 +210,61 @@ const sourceDate = (value: string) => {
     : Number.NaN;
 };
 
+const validateSoundSourceDefinition = (sourceId: string, source: SoundRangeSource) => {
+  const values = [source.reportedMinDb, source.reportedMaxDb, source.displayMinDb, source.displayMaxDb];
+  if (!values.every(Number.isFinite) || source.reportedMinDb > source.reportedMaxDb || source.displayMinDb > source.displayMaxDb) {
+    throw new Error(`Invalid sound range source bounds: ${sourceId}`);
+  }
+  if (Math.round(source.reportedMinDb) !== source.displayMinDb || Math.round(source.reportedMaxDb) !== source.displayMaxDb) {
+    throw new Error(`Inconsistent reported and display bounds: ${sourceId}`);
+  }
+  if (source.metric !== 'dBA') throw new Error(`Unsupported sound range source metric: ${sourceId}`);
+
+  const publishedAt = sourceDate(source.publicationDate);
+  const revisedAt = source.revisionDate ? sourceDate(source.revisionDate) : publishedAt;
+  if (!Number.isFinite(publishedAt) || !Number.isFinite(revisedAt) || revisedAt < publishedAt) {
+    throw new Error(`Invalid sound range source dates: ${sourceId}`);
+  }
+
+  let url: URL;
+  try {
+    url = new URL(source.url);
+  } catch {
+    throw new Error(`Invalid sound range source URL: ${sourceId}`);
+  }
+  if (url.protocol !== 'https:') throw new Error(`Invalid sound range source URL: ${sourceId}`);
+};
+
+const validateSupportedSounds = (
+  locale: Locale,
+  sourceId: string,
+  source: SoundRangeSource,
+  soundsByKey: ReadonlyMap<string, ReferencedSoundRange>,
+) => {
+  for (const translationKey of source.supports) {
+    const sound = soundsByKey.get(translationKey);
+    if (!sound || sound.rangeReference?.sourceId !== sourceId) {
+      throw new Error(`Unsupported ${locale} sound range source relationship: ${sourceId}/${translationKey}`);
+    }
+  }
+};
+
+const validateReferencedSound = (
+  locale: Locale,
+  sound: ReferencedSoundRange,
+  sources: Record<string, SoundRangeSource>,
+) => {
+  const reference = sound.rangeReference;
+  if (!reference) return;
+  const source = sources[reference.sourceId];
+  if (source !== reference.source || !source.supports.includes(sound.translationKey)) {
+    throw new Error(`Unsupported ${locale} sound range reference: ${sound.translationKey}`);
+  }
+  if (sound.typicalMinDb !== source.displayMinDb || sound.typicalMaxDb !== source.displayMaxDb) {
+    throw new Error(`Mismatched ${locale} sound display bounds: ${sound.translationKey}`);
+  }
+};
+
 export const validateSoundRangeReferences = (
   locale: Locale,
   sounds: readonly ReferencedSoundRange[],
@@ -218,48 +273,11 @@ export const validateSoundRangeReferences = (
   const soundsByKey = new Map(sounds.map((sound) => [sound.translationKey, sound]));
 
   for (const [sourceId, source] of Object.entries(sources)) {
-    const values = [source.reportedMinDb, source.reportedMaxDb, source.displayMinDb, source.displayMaxDb];
-    if (!values.every(Number.isFinite) || source.reportedMinDb > source.reportedMaxDb || source.displayMinDb > source.displayMaxDb) {
-      throw new Error(`Invalid sound range source bounds: ${sourceId}`);
-    }
-    if (Math.round(source.reportedMinDb) !== source.displayMinDb || Math.round(source.reportedMaxDb) !== source.displayMaxDb) {
-      throw new Error(`Inconsistent reported and display bounds: ${sourceId}`);
-    }
-    if (source.metric !== 'dBA') throw new Error(`Unsupported sound range source metric: ${sourceId}`);
-
-    const publishedAt = sourceDate(source.publicationDate);
-    const revisedAt = source.revisionDate ? sourceDate(source.revisionDate) : publishedAt;
-    if (!Number.isFinite(publishedAt) || !Number.isFinite(revisedAt) || revisedAt < publishedAt) {
-      throw new Error(`Invalid sound range source dates: ${sourceId}`);
-    }
-
-    let url: URL;
-    try {
-      url = new URL(source.url);
-    } catch {
-      throw new Error(`Invalid sound range source URL: ${sourceId}`);
-    }
-    if (url.protocol !== 'https:') throw new Error(`Invalid sound range source URL: ${sourceId}`);
-
-    for (const translationKey of source.supports) {
-      const sound = soundsByKey.get(translationKey);
-      if (!sound || sound.rangeReference?.sourceId !== sourceId) {
-        throw new Error(`Unsupported ${locale} sound range source relationship: ${sourceId}/${translationKey}`);
-      }
-    }
+    validateSoundSourceDefinition(sourceId, source);
+    validateSupportedSounds(locale, sourceId, source, soundsByKey);
   }
 
-  for (const sound of sounds) {
-    const reference = sound.rangeReference;
-    if (!reference) continue;
-    const source = sources[reference.sourceId];
-    if (source !== reference.source || !source.supports.includes(sound.translationKey)) {
-      throw new Error(`Unsupported ${locale} sound range reference: ${sound.translationKey}`);
-    }
-    if (sound.typicalMinDb !== source.displayMinDb || sound.typicalMaxDb !== source.displayMaxDb) {
-      throw new Error(`Mismatched ${locale} sound display bounds: ${sound.translationKey}`);
-    }
-  }
+  for (const sound of sounds) validateReferencedSound(locale, sound, sources);
 };
 
 for (const locale of Object.keys(text) as Locale[]) {
