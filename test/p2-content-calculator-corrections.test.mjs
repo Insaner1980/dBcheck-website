@@ -34,7 +34,7 @@ test('source contract debounces a dedicated exposure-slider announcement', () =>
 });
 
 test('source template initializes the noise-dose SSR result with formatter-compatible text', () => {
-  assert.match(noiseDoseCalculator, /<strong data-dose-output>100\.0%<\/strong>/);
+  assert.match(noiseDoseCalculator, /<strong data-dose-output>100%<\/strong>/);
 });
 
 test('source contract gates all four calculator families through native form validity', () => {

@@ -417,6 +417,53 @@ export async function runInteractionChecks(adapter) {
   assert.equal(malformedIndex.resultCount, 0);
 
   await adapter.navigate('/articles/what-is-a-decibel/');
+  await adapter.until(() => Boolean(document.querySelector('#search-open')), waitOptions('timed search trigger'));
+  await adapter.evaluate(() => {
+    const realFetch = window.fetch.bind(window);
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    window.__interactionNativeSetTimeout = nativeSetTimeout;
+    window.__interactionSearchTimeoutDelay = undefined;
+    window.__interactionSearchTimeoutSignal = false;
+    window.setTimeout = (handler, delay, ...args) => {
+      if (delay === 8000) {
+        window.__interactionSearchTimeoutDelay = delay;
+        return nativeSetTimeout(handler, 0, ...args);
+      }
+      return nativeSetTimeout(handler, delay, ...args);
+    };
+    window.fetch = (input, init) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (!url.includes('search.json')) return realFetch(input, init);
+      const signal = init?.signal;
+      window.__interactionSearchTimeoutSignal = signal instanceof AbortSignal;
+      if (!(signal instanceof AbortSignal)) return Promise.reject(new Error('Search request has no timeout signal'));
+      return new Promise((_resolve, reject) => {
+        const rejectAbort = () => reject(signal.reason ?? new DOMException('Search timed out', 'AbortError'));
+        if (signal.aborted) rejectAbort();
+        else signal.addEventListener('abort', rejectAbort, { once: true });
+      });
+    };
+    document.querySelector('#search-open')?.click();
+  });
+  await adapter.until(
+    () => !document.querySelector('#search-error')?.hasAttribute('hidden'),
+    waitOptions('timed-out search error state'),
+  );
+  const searchTimeout = await adapter.evaluate(() => {
+    const result = {
+      timeoutDelay: window.__interactionSearchTimeoutDelay,
+      signalAttached: window.__interactionSearchTimeoutSignal,
+      errorVisible: !document.querySelector('#search-error')?.hasAttribute('hidden'),
+    };
+    window.setTimeout = window.__interactionNativeSetTimeout;
+    delete window.__interactionNativeSetTimeout;
+    return result;
+  });
+  assert.equal(searchTimeout.timeoutDelay, 8000, 'search requests must abort after the bounded timeout');
+  assert.equal(searchTimeout.signalAttached, true, 'search requests must receive an abort signal');
+  assert.equal(searchTimeout.errorVisible, true);
+
+  await adapter.navigate('/articles/what-is-a-decibel/');
   await adapter.until(() => Boolean(document.querySelector('#search-open')), waitOptions('fresh search trigger'));
   await adapter.evaluate(() => {
     const realFetch = window.fetch.bind(window);
@@ -465,7 +512,7 @@ export async function runInteractionChecks(adapter) {
   assert.equal(staleSearch.announcement, '', 'a closed search session must not announce a late result');
   assert.equal(staleSearch.openedFromBody, true, 'the fallback-focus regression must open search from the document body');
   assert.equal(staleSearch.focusRestoredToTrigger, true, 'closing search from the document body must focus the search button');
-  results.search = { trap: searchTrap, retry: searchRetry, reducedMotionClose, staleSession: staleSearch };
+  results.search = { trap: searchTrap, retry: searchRetry, reducedMotionClose, timeout: searchTimeout, staleSession: staleSearch };
 
   await adapter.setReducedMotion(true);
   await adapter.resize(1100, 800);
@@ -826,7 +873,7 @@ export async function runInteractionChecks(adapter) {
     levels: [...document.querySelectorAll('[data-exposure-level]')].map((input) => Number(input.value)),
     units: [...document.querySelectorAll('[data-exposure-unit]')].map((input) => input.value),
   }));
-  assert.equal(noiseDose.dose, '100.0%');
+  assert.equal(noiseDose.dose, '100%');
   assert.equal(noiseDose.totalMinutes, 480);
   assert.deepEqual(noiseDose.levels, [85, 85]);
   assert.deepEqual(noiseDose.units, ['minutes', 'minutes']);
@@ -1160,6 +1207,66 @@ export async function runInteractionChecks(adapter) {
   assert.equal(staleAutoplay.status, 'Standby');
   assert.equal(Number(staleAutoplay.sweep), 0);
   assert.equal(staleAutoplay.listening, false);
+
+  await adapter.resize(1100, 800);
+  await adapter.navigate('/');
+  await adapter.until(
+    () => {
+      const video = document.querySelector('#hero-video');
+      const button = document.querySelector('#listen-btn');
+      return video instanceof HTMLVideoElement && video.readyState >= 1 && button instanceof HTMLButtonElement && !button.disabled;
+    },
+    waitOptions('stalled hero source-switch setup'),
+  );
+  await adapter.evaluate(() => {
+    const video = document.querySelector('#hero-video');
+    if (!(video instanceof HTMLVideoElement)) throw new Error('hero video not found');
+    const currentSource = video.src;
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    window.__interactionHeroNativeSetTimeout = nativeSetTimeout;
+    window.__interactionHeroSourceFallback = undefined;
+    window.__interactionHeroSourceFallbackDelay = undefined;
+    window.setTimeout = (handler, delay, ...args) => {
+      if (delay === 5000) {
+        window.__interactionHeroSourceFallbackDelay = delay;
+        window.__interactionHeroSourceFallback = () => handler(...args);
+        return 0;
+      }
+      return nativeSetTimeout(handler, delay, ...args);
+    };
+    Object.defineProperty(video, 'paused', { configurable: true, get: () => true });
+    Object.defineProperty(video, 'src', {
+      configurable: true,
+      get: () => currentSource,
+      set: (value) => { window.__interactionRequestedStalledHeroSource = value; },
+    });
+    Object.defineProperty(video, 'load', { configurable: true, value: () => {} });
+  });
+  await adapter.resize(700, 800);
+  const stalledSourceChange = await adapter.evaluate(() => {
+    const video = document.querySelector('#hero-video');
+    const button = document.querySelector('#listen-btn');
+    if (!(video instanceof HTMLVideoElement)) throw new Error('hero video not found');
+    if (!(button instanceof HTMLButtonElement)) throw new Error('hero Listen button not found');
+    const fallback = window.__interactionHeroSourceFallback;
+    if (typeof fallback === 'function') fallback();
+    button.setAttribute('aria-pressed', 'true');
+    video.dispatchEvent(new Event('pause'));
+    const result = {
+      fallbackDelay: window.__interactionHeroSourceFallbackDelay,
+      requestedSource: window.__interactionRequestedStalledHeroSource,
+      pressed: button.getAttribute('aria-pressed'),
+      muted: video.muted,
+    };
+    window.setTimeout = window.__interactionHeroNativeSetTimeout;
+    delete window.__interactionHeroNativeSetTimeout;
+    return result;
+  });
+  assert.equal(stalledSourceChange.fallbackDelay, 5000, 'a stalled hero source swap must have a bounded fallback');
+  assert.match(stalledSourceChange.requestedSource ?? '', /hero-mobile/);
+  assert.equal(stalledSourceChange.pressed, 'false', 'the Listen control must recover after a stalled source swap');
+  assert.equal(stalledSourceChange.muted, true);
+
   results.heroMedia = {
     listen: heroListen,
     persistedPagehide,
@@ -1171,6 +1278,7 @@ export async function runInteractionChecks(adapter) {
     staleResume,
     stalePlay,
     staleAutoplay,
+    stalledSourceChange,
   };
 
   return results;

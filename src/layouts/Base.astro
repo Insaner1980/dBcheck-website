@@ -250,6 +250,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
     let searchSession = 0;
     let searchGeneration = 0;
     let searchAnnouncementTimer: ReturnType<typeof setTimeout> | undefined;
+    const searchRequestTimeout = 8000;
     const isSearchEntry = (value: unknown): value is SearchEntry => {
       if (!value || typeof value !== 'object') return false;
       const entry = value as Partial<SearchEntry>;
@@ -285,14 +286,20 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       if (index) return Promise.resolve(index);
       if (indexLoad) return indexLoad;
       const pending = Promise.resolve().then(async () => {
-        const res = await fetch(overlay?.dataset.searchIndex ?? '/search.json');
-        if (!res.ok) throw new Error(`Search index request failed: ${res.status}`);
-        const loadedIndex = await res.json();
-        if (!Array.isArray(loadedIndex) || !loadedIndex.every(isSearchEntry)) {
-          throw new Error('Search index response contains invalid entries.');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), searchRequestTimeout);
+        try {
+          const res = await fetch(overlay?.dataset.searchIndex ?? '/search.json', { signal: controller.signal });
+          if (!res.ok) throw new Error(`Search index request failed: ${res.status}`);
+          const loadedIndex = await res.json();
+          if (!Array.isArray(loadedIndex) || !loadedIndex.every(isSearchEntry)) {
+            throw new Error('Search index response contains invalid entries.');
+          }
+          index = loadedIndex;
+          return index;
+        } finally {
+          clearTimeout(timeout);
         }
-        index = loadedIndex;
-        return index;
       }).catch((error) => {
         index = null;
         console.error('Unable to load the search index.', error);

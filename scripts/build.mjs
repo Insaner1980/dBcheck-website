@@ -22,24 +22,30 @@ const runAstro = (command, cwd, flags = []) => new Promise((resolveStep, rejectS
   });
 });
 
-export const runBuild = async ({ root = projectRoot, runStep = runAstro } = {}) => {
+export const runBuild = async ({ root = projectRoot, runStep = runAstro, currentYear = () => new Date().getFullYear() } = {}) => {
   const outputDirectory = resolve(root, 'dist');
   const cleanBuildArtifacts = async () => {
     await removeFreshnessMarker(root);
     await rm(outputDirectory, { recursive: true, force: true });
   };
   try {
-    await cleanBuildArtifacts();
-    const inputHashBefore = await hashBuildInputs(root);
-    await runStep('sync', root, ['--force']);
-    await runStep('check', root);
-    await runStep('build', root);
-    const inputHashAfter = await hashBuildInputs(root);
-    if (inputHashAfter !== inputHashBefore) {
-      throw new Error('Build inputs changed while Astro was building. Run "npm run build" again.');
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await cleanBuildArtifacts();
+      const buildYear = currentYear();
+      const inputHashBefore = await hashBuildInputs(root, buildYear);
+      await runStep('sync', root, ['--force']);
+      await runStep('check', root);
+      await runStep('build', root);
+      const inputHashAfter = await hashBuildInputs(root, buildYear);
+      if (inputHashAfter !== inputHashBefore) {
+        throw new Error('Build inputs changed while Astro was building. Run "npm run build" again.');
+      }
+      if (currentYear() !== buildYear) continue;
+      const outputHash = await hashBuildOutput(root);
+      await writeFreshnessMarker({ root, inputHash: inputHashAfter, outputHash, year: buildYear });
+      if (currentYear() === buildYear) return;
     }
-    const outputHash = await hashBuildOutput(root);
-    await writeFreshnessMarker({ root, inputHash: inputHashAfter, outputHash });
+    throw new Error('Calendar year changed repeatedly while Astro was building. Run "npm run build" again.');
   } catch (error) {
     await cleanBuildArtifacts().catch(() => {});
     throw error;

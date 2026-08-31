@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { runBuild } from '../scripts/build.mjs';
-import { assertFreshBuild, freshnessMarkerPath } from '../scripts/build-freshness.mjs';
+import { assertFreshBuild, freshnessMarkerPath, hashBuildInputs } from '../scripts/build-freshness.mjs';
 
 const exists = async (path) => access(path).then(() => true, () => false);
 
@@ -103,6 +103,38 @@ test('writes a valid freshness marker only after a successful build', async () =
     assert.equal(marker.year, new Date().getFullYear());
     assert.match(marker.inputHash, /^[a-f0-9]{64}$/);
     assert.match(marker.outputHash, /^[a-f0-9]{64}$/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('restarts the build with one captured year when the calendar year changes', async () => {
+  const root = await createFixture();
+  const steps = [];
+  let year = 2026;
+  let buildCount = 0;
+  try {
+    await runBuild({
+      root,
+      currentYear: () => year,
+      runStep: async (step, _root, flags = []) => {
+        steps.push([step, flags]);
+        if (step !== 'build') return;
+        buildCount += 1;
+        await writeOutput(root, `<h1>Build ${buildCount}</h1>`);
+        if (buildCount === 1) year = 2027;
+      },
+    });
+
+    assert.equal(buildCount, 2);
+    assert.deepEqual(steps, [
+      ['sync', ['--force']], ['check', []], ['build', []],
+      ['sync', ['--force']], ['check', []], ['build', []],
+    ]);
+    const marker = JSON.parse(await readFile(freshnessMarkerPath(root), 'utf8'));
+    assert.equal(marker.year, 2027);
+    assert.equal(marker.inputHash, await hashBuildInputs(root, 2027));
+    assert.equal(await readFile(join(root, 'dist', 'index.html'), 'utf8'), '<h1>Build 2</h1>');
   } finally {
     await rm(root, { recursive: true, force: true });
   }

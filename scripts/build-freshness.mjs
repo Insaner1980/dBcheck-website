@@ -95,11 +95,11 @@ const hashEntries = async (entries, metadata) => {
 
 export const freshnessMarkerPath = (root = projectRoot) => resolve(root, markerRelativePath);
 
-export const hashBuildInputs = async (root = projectRoot) => {
+export const hashBuildInputs = async (root = projectRoot, year = new Date().getFullYear()) => {
   const entries = await collectEntries(root, buildInputPaths);
   return hashEntries(entries, [
     ['node', process.version],
-    ['year', new Date().getFullYear()],
+    ['year', year],
   ]);
 };
 
@@ -118,14 +118,14 @@ export const removeFreshnessMarker = async (root = projectRoot) => {
   await rm(freshnessMarkerPath(root), { force: true });
 };
 
-export const writeFreshnessMarker = async ({ root = projectRoot, inputHash, outputHash }) => {
+export const writeFreshnessMarker = async ({ root = projectRoot, inputHash, outputHash, year = new Date().getFullYear() }) => {
   const markerPath = freshnessMarkerPath(root);
   const temporaryPath = `${markerPath}.${process.pid}.${randomUUID()}.tmp`;
   await mkdir(dirname(markerPath), { recursive: true });
   const marker = {
     version: markerVersion,
     nodeVersion: process.version,
-    year: new Date().getFullYear(),
+    year,
     inputHash,
     outputHash,
   };

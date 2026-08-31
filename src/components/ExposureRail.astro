@@ -91,6 +91,7 @@ const limitAt = scalePercent(EXPOSURE_LIMIT_DB);
 <script>
   import { animate, onScroll } from 'animejs';
   import { DISPLAY_MAX_DB, levelForDb, scalePercent } from '../lib/display-scale';
+  import { pauseAnimeScrollDataTimer } from '../scripts/anime-scroll-timer';
 
   const rail = document.querySelector<HTMLElement>('[data-exposure-rail]');
   const section = rail?.closest<HTMLElement>('[data-exposure-rail-section]');
@@ -129,7 +130,7 @@ const limitAt = scalePercent(EXPOSURE_LIMIT_DB);
         leave: 'top bottom',
         sync: 1,
         // The rail never reads velocity; stop anime.js's unbounded velocity timer after each update.
-        onUpdate: (observer) => observer.container.dataTimer.pause(),
+        onUpdate: (observer) => pauseAnimeScrollDataTimer(observer.container),
       });
       railAnimation = animate(reading, {
         db: DISPLAY_MAX_DB,

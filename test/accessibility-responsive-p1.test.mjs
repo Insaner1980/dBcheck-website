@@ -102,9 +102,11 @@ test('editorial inline code wraps long tokens without becoming a nested scroller
   assert.doesNotMatch(inlineCodeRule, /overflow-x:\s*auto|white-space:\s*nowrap/);
 });
 
-test('ExposureRail source uses direct scroll sync and tears down runtime motion', () => {
+test('ExposureRail source uses guarded direct scroll sync and tears down runtime motion', () => {
   assert.match(exposureRail, /sync:\s*1,/);
-  assert.match(exposureRail, /onUpdate:\s*\(observer\)\s*=>\s*observer\.container\.dataTimer\.pause\(\)/);
+  assert.match(exposureRail, /import \{ pauseAnimeScrollDataTimer \} from '\.\.\/scripts\/anime-scroll-timer'/);
+  assert.match(exposureRail, /onUpdate:\s*\(observer\)\s*=>\s*pauseAnimeScrollDataTimer\(observer\.container\)/);
+  assert.doesNotMatch(exposureRail, /observer\.container\.dataTimer\.pause\(\)/);
   assert.match(exposureRail, /const stop = \(\) => \{\s*railAnimation\?\.revert\(\);[\s\S]*railObserver\?\.revert\(\);[\s\S]*reading\.db = 0;\s*render\(\);/);
   assert.match(exposureRail, /const start = \(\) => \{\s*if \(reducedMotionQuery\.matches \|\| railObserver\) return;/);
 });

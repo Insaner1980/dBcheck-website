@@ -1293,9 +1293,12 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
       videoSourceChanging = true;
 
       let terminationTimer = 0;
+      let sourceFallbackTimer = 0;
       const stopWatchingSourceTermination = () => {
         if (terminationTimer) window.clearTimeout(terminationTimer);
+        if (sourceFallbackTimer) window.clearTimeout(sourceFallbackTimer);
         terminationTimer = 0;
+        sourceFallbackTimer = 0;
         video.removeEventListener('abort', handleSourceTermination);
         video.removeEventListener('emptied', handleSourceTermination);
         video.removeEventListener('error', stopWatchingSourceTermination);
@@ -1340,6 +1343,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
         video.addEventListener('abort', handleSourceTermination, { once: true });
         video.addEventListener('emptied', handleSourceTermination, { once: true });
       });
+      sourceFallbackTimer = window.setTimeout(handleSourceTermination, 5000);
     }
 
     function mediaIsAudible() {

@@ -12,6 +12,12 @@ export const formatDecimal = (value: number, digits = 1, locale = 'en') =>
     maximumFractionDigits: digits,
   }).format(normalizeRoundedZero(value, digits));
 
+export const formatPercentage = (value: number, digits = 1, locale = 'en') => {
+  const scale = 10 ** digits;
+  const rounded = Math.round(normalizeRoundedZero(value, digits) * scale) / scale;
+  return `${formatDecimal(rounded, Number.isInteger(rounded) ? 0 : digits, locale)}%`;
+};
+
 export const formatSigned = (value: number, locale = 'en') => {
   const displayValue = normalizeRoundedZero(value, 1);
   return `${displayValue < 0 ? '−' : displayValue > 0 ? '+' : ''}${formatDecimal(Math.abs(displayValue), 1, locale)}`;
@@ -152,7 +158,7 @@ const initializeNoiseDoseCalculator = (calculator: HTMLElement) => {
       return;
     }
     const digits = dose < 10 ? 2 : 1;
-    doseOutput.textContent = `${formatDecimal(dose, digits)}%`;
+    doseOutput.textContent = formatPercentage(dose, digits);
     if (Math.abs(dose - 100) < 0.05) doseDetail.textContent = 'At 100% of the daily reference dose.';
     else if (dose < 100) doseDetail.textContent = `${formatDecimal(100 - dose, digits)} percentage points below the daily reference dose.`;
     else doseDetail.textContent = `${formatDecimal(dose - 100, digits)} percentage points above the daily reference dose.`;
