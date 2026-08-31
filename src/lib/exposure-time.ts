@@ -17,6 +17,11 @@ const unitLabels: Record<'en' | 'de', Record<ExposureTimeUnit, readonly [string,
   },
 };
 
+const localeFormats = {
+  en: { numberLocale: 'en-GB', subsecond: '< 1 second' },
+  de: { numberLocale: 'de-DE', subsecond: '< 1 Sekunde' },
+} as const;
+
 const unitLabel = (locale: 'en' | 'de', unit: ExposureTimeUnit, singular: boolean) =>
   unitLabels[locale][unit][singular ? 0 : 1];
 
@@ -33,7 +38,7 @@ export const formatExposureTime = (hours: number, locale: 'en' | 'de') => {
   if (!Number.isFinite(hours) || hours <= 0) throw new RangeError('invalid-duration');
   const totalSeconds = hours * 3600;
   if (!Number.isFinite(totalSeconds)) throw new RangeError('unrepresentable-duration');
-  const numberLocale = locale === 'de' ? 'de-DE' : 'en-GB';
+  const { numberLocale, subsecond } = localeFormats[locale];
   const number = (value: number, digits = 0) => value.toLocaleString(numberLocale, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
@@ -51,7 +56,7 @@ export const formatExposureTime = (hours: number, locale: 'en' | 'de') => {
   }
   if (totalSeconds >= 120) return `${number(Math.round(totalSeconds / 60))} ${unitLabel(locale, 'minute', false)}`;
   if (totalSeconds >= 60) return `1 ${unitLabel(locale, 'minute', true)}`;
-  if (totalSeconds < 1) return locale === 'de' ? '< 1 Sekunde' : '< 1 second';
+  if (totalSeconds < 1) return subsecond;
   const seconds = Math.round(totalSeconds);
   return `${number(seconds)} ${unitLabel(locale, 'second', seconds === 1)}`;
 };
