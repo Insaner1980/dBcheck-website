@@ -27,7 +27,7 @@ const normalizeGermanNumberText = (text: string) => {
   const compact = text.replace(/[\s\u00a0\u202f']/g, '');
   if (!compact.includes(',')) return compact;
   if ((compact.match(/,/g) ?? []).length !== 1) return compact;
-  return compact.replace(/\./g, '').replace(',', '.');
+  return compact.replaceAll('.', '').replace(',', '.');
 };
 
 const insertTextAtCaret = (text: string) => {

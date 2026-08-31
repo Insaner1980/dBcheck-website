@@ -73,7 +73,13 @@ export const routePairs = [
   })),
 ];
 
-const normalizePath = (path: string) => path === '/' ? path : `${path.replace(/\/+$/, '')}/`;
+const withoutTrailingSlashes = (path: string) => {
+  let end = path.length;
+  while (end > 0 && path[end - 1] === '/') end -= 1;
+  return path.slice(0, end);
+};
+
+const normalizePath = (path: string) => path === '/' ? path : `${withoutTrailingSlashes(path)}/`;
 
 export const findRoutePair = (path: string) => {
   const normalized = normalizePath(path);

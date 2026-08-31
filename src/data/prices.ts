@@ -28,7 +28,7 @@ export function parseCloudflareTraceCountry(trace: string): string | undefined {
   for (const line of trace.split(/\r?\n/)) {
     if (line.length === 0) continue;
 
-    const field = line.match(/^([a-z][a-z0-9_]*)=([^\r\n]*)$/i);
+    const field = /^([a-z][a-z0-9_]*)=([^\r\n]*)$/i.exec(line);
     if (!field) return undefined;
 
     const [, key, value] = field;
@@ -52,8 +52,31 @@ export function getFreePriceForCountry(countryCode: string | undefined): string 
 }
 
 export function splitPriceDisplay(displayPrice: string) {
-  const parts = displayPrice.match(/^(.*?)(\d(?:[\d\s.,]*\d)?)(.*)$/);
-  return parts
-    ? { prefix: parts[1], amount: parts[2], suffix: parts[3] }
-    : { prefix: '', amount: displayPrice, suffix: '' };
+  let amountStart = -1;
+  for (let index = 0; index < displayPrice.length; index += 1) {
+    const character = displayPrice[index];
+    if (character >= '0' && character <= '9') {
+      amountStart = index;
+      break;
+    }
+  }
+  if (amountStart < 0) return { prefix: '', amount: displayPrice, suffix: '' };
+
+  let amountEnd = amountStart + 1;
+  for (let index = amountStart + 1; index < displayPrice.length; index += 1) {
+    const character = displayPrice[index];
+    const isDigit = character >= '0' && character <= '9';
+    if (isDigit) {
+      amountEnd = index + 1;
+      continue;
+    }
+    if (character === '.' || character === ',' || character.trim() === '') continue;
+    break;
+  }
+
+  return {
+    prefix: displayPrice.slice(0, amountStart),
+    amount: displayPrice.slice(amountStart, amountEnd),
+    suffix: displayPrice.slice(amountEnd),
+  };
 }

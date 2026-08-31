@@ -4,6 +4,7 @@ import {
   DEFAULT_PRO_PRICE,
   getProPriceForCountry,
   parseCloudflareTraceCountry,
+  splitPriceDisplay,
 } from '../src/data/prices.ts';
 
 test('accepts one exact Cloudflare loc field in a plain trace', () => {
@@ -75,4 +76,15 @@ test('keeps the default price for an unknown but well-formed country code', () =
 
   assert.equal(countryCode, 'ZZ');
   assert.equal(getProPriceForCountry(countryCode), DEFAULT_PRO_PRICE);
+});
+
+test('keeps every configured localized price display intact when splitting it', () => {
+  const displays = ['€14.99', '$14.99', 'US$14.99', 'CA$19.99', 'A$22.99', '£14.99', 'CHF 14.99', '₹1,299', 'R$79.90', 'Mex$299', 'NZ$24.99', '¥2 400'];
+
+  for (const display of displays) {
+    const { prefix, amount, suffix } = splitPriceDisplay(display);
+    assert.equal(`${prefix}${amount}${suffix}`, display);
+    assert.match(amount, /^\d/);
+    assert.match(amount, /\d$/);
+  }
 });

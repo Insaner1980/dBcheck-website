@@ -550,6 +550,7 @@ export async function runInteractionChecks(adapter) {
     const selectedDetail = detailButton.getAttribute('aria-pressed');
     press(second, 'End');
     const selectedTabs = tabs.filter((tab) => tab.getAttribute('aria-selected') === 'true');
+    const lastTab = tabs.at(-1);
     const activePanelId = selectedTabs[0]?.getAttribute('aria-controls');
     return {
       rightFocusedSecond,
@@ -557,7 +558,9 @@ export async function runInteractionChecks(adapter) {
       expectedDetailTitle: detailButton.dataset.featureTitle,
       selectedDetail,
       selectedTabCount: selectedTabs.length,
-      finalTabIsLast: selectedTabs[0] === tabs.at(-1) && document.activeElement === tabs.at(-1),
+      finalTabIsLast: lastTab !== undefined
+        && selectedTabs[0]?.isSameNode(lastTab) === true
+        && document.activeElement?.isSameNode(lastTab) === true,
       panels: panels.map((panel) => ({
         id: panel.id,
         hidden: panel.getAttribute('aria-hidden'),

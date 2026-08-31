@@ -57,7 +57,7 @@ export async function inspectTextWrapping(targets = []) {
   const box = (element) => {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
-    return { left: rect.left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft), right: rect.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight) };
+    return { left: rect.left + Number.parseFloat(style.borderLeftWidth) + Number.parseFloat(style.paddingLeft), right: rect.right - Number.parseFloat(style.borderRightWidth) - Number.parseFloat(style.paddingRight) };
   };
   const within = (rect, bounds, label) => {
     if (rect.left < bounds.left - 1 || rect.right > bounds.right + 1) errors.push(`${label}: outside content box (${rect.left.toFixed(1)}..${rect.right.toFixed(1)} vs ${bounds.left.toFixed(1)}..${bounds.right.toFixed(1)})`);

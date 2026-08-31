@@ -11,12 +11,17 @@ const defaultContentDir = resolve(projectRoot, 'src', 'content');
 const editorialCollections = ['articles', 'sounds'];
 let editorialLinkRenderer;
 
+const withoutOuterSlashes = (value) => {
+  const start = value.startsWith('/') ? 1 : 0;
+  const end = value.endsWith('/') ? value.length - 1 : value.length;
+  return value.slice(start, Math.max(start, end));
+};
+
 // Matches Astro's getStaticPaths parameter handling for a single dynamic slug.
-const publicRouteSlug = (slug) => slug
-  .replace(/^\/|\/$/g, '')
+const publicRouteSlug = (slug) => withoutOuterSlashes(slug)
   .normalize()
-  .replace(/#/g, '%23')
-  .replace(/\?/g, '%3F');
+  .replaceAll('#', '%23')
+  .replaceAll('?', '%3F');
 
 const editorialRoute = (collection, locale, slug) => {
   const segment = locale === 'de'
@@ -25,7 +30,21 @@ const editorialRoute = (collection, locale, slug) => {
   return `${locale === 'de' ? '/de' : ''}/${segment}/${publicRouteSlug(slug)}/`;
 };
 
-const normalizedRoute = (route) => `${route.split(/[?#]/, 1)[0].replace(/\/+$/, '')}/`;
+const normalizedRoute = (route) => {
+  const queryIndex = route.indexOf('?');
+  const fragmentIndex = route.indexOf('#');
+  let end = route.length;
+  if (queryIndex >= 0) end = queryIndex;
+  if (fragmentIndex >= 0 && fragmentIndex < end) end = fragmentIndex;
+  while (end > 0 && route[end - 1] === '/') end -= 1;
+  return `${route.slice(0, end)}/`;
+};
+
+const comparePaths = (left, right) => {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+};
 
 const linkedEditorialRoutes = async (content) => {
   editorialLinkRenderer ??= await createMarkdownProcessor({
@@ -56,7 +75,7 @@ export const readEditorialEntries = ({ contentDir = defaultContentDir } = {}) =>
   const entries = [];
   for (const collection of editorialCollections) {
     const collectionDir = join(contentDir, collection);
-    for (const sourcePath of markdownFiles(collectionDir).sort()) {
+    for (const sourcePath of markdownFiles(collectionDir).sort(comparePaths)) {
       const source = readFileSync(sourcePath, 'utf8');
       const { frontmatter, content } = parseFrontmatter(source);
       if (typeof frontmatter.locale !== 'string' || typeof frontmatter.slug !== 'string') continue;
