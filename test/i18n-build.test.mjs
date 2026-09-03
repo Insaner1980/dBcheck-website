@@ -251,7 +251,7 @@ test('English and German exposure-time pages share the same page and calculator 
   assert.doesNotMatch(de, /100% NIOSH|Safe Exposure Time Calculator/);
 });
 
-test('German HTML uses de, a content-only header navigation, reciprocal alternates, and no visible language switch', () => {
+test('German HTML uses de, localized navigation and footer links, reciprocal alternates, and no visible language switch', () => {
   const htmlFiles = [];
   const walk = (dir) => { for (const name of readdirSync(dir, { withFileTypes: true })) name.isDirectory() ? walk(join(dir, name.name)) : name.name === 'index.html' && htmlFiles.push(join(dir, name.name)); };
   walk(join(dist, 'de'));
@@ -270,14 +270,19 @@ test('German HTML uses de, a content-only header navigation, reciprocal alternat
     assert.doesNotMatch(html, /App auf Englisch|App-Vorstellung auf Englisch|Zur englischen App-Seite/, path);
     assert.match(html, /<a href="mailto:contact@finnvek\.com">Kontakt<\/a>/, path);
     assert.doesNotMatch(html, /<span class="footer-label">Kontakt<\/span>|>contact@finnvek\.com</, path);
-    assert.match(html, /<a href="https:\/\/finnvek\.com">Finnvek<\/a>/, path);
+    assert.match(html, /<span class="footer-label">Finnvek<\/span>/, path);
+    assert.match(html, /<a href="https:\/\/finnvek\.com\/about\/">Über die Entwicklerin<\/a>/, path);
+    assert.match(html, /<a href="https:\/\/finnvek\.com\/#apps">Weitere Apps<\/a>/, path);
   }
   const articleEn = readFileSync(join(dist, 'articles', 'what-is-a-decibel', 'index.html'), 'utf8');
   const homeEn = readFileSync(join(dist, 'index.html'), 'utf8');
   assert.doesNotMatch(homeEn, /class="language-switcher"/);
   const englishFooter = homeEn.match(/<footer class="site-footer">[\s\S]*?<\/footer>/)?.[0] ?? '';
   assert.doesNotMatch(englishFooter, /Sound Library|href="\/sounds\//);
-  assert.match(englishFooter, /<a href="https:\/\/finnvek\.com">Finnvek<\/a>/);
+  assert.doesNotMatch(englishFooter, /Coming soon to Google Play|Listen to the page/);
+  assert.match(englishFooter, /<span class="footer-label">Finnvek<\/span>/);
+  assert.match(englishFooter, /<a href="https:\/\/finnvek\.com\/about\/">About the maker<\/a>/);
+  assert.match(englishFooter, /<a href="https:\/\/finnvek\.com\/#apps">Other apps<\/a>/);
   const articleDe = readFileSync(join(dist, 'de', 'artikel', 'was-ist-ein-dezibel', 'index.html'), 'utf8');
   assert.match(articleDe, /<a class="wordmark" href="\/"/);
   assert.match(articleDe, /<li[^>]*><a href="\/"[^>]*>Startseite<\/a><\/li>/);

@@ -3,7 +3,7 @@ import { socialImages, type SocialImage } from '../data/social';
 import LanguageSwitcher from '../components/LanguageSwitcher.astro';
 import { defaultLocale, isLocale, localeTags, openGraphLocales, type Locale } from '../i18n/config';
 import { alternatesForPath, findRoutePair, type AlternateLink } from '../i18n/routes';
-import { getUi, ui } from '../i18n/ui';
+import { getUi } from '../i18n/ui';
 
 interface Props {
   title: string;
@@ -155,7 +155,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
   </main>
 
   <footer class="site-footer">
-    <div class:list={['footer-inner', { 'footer-inner--localized': locale === 'de' }]}>
+    <div class="footer-inner">
       <div class="footer-brand">
         <div class="footer-wordmark">
           <img class="brand-logo brand-logo--footer" src="/dbcheck-logo.svg" alt="" />
@@ -166,22 +166,20 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       <div class="footer-col">
         <span class="footer-label">{copy.footerExplore}</span>
         {locale === 'de' ? <>
-          <a href="/de/werkzeuge/">{copy.tools}</a><a href="/de/artikel/">{copy.articles}</a><a href="mailto:contact@finnvek.com">{copy.contact}</a>
+          <a href="/de/werkzeuge/">{copy.tools}</a><a href="/de/artikel/">{copy.articles}</a>
         </> : <>
           <a href="/tools/">Tools</a><a href="/#features">Features</a><a href="/#pricing">Pricing</a><a href="/articles/">Articles</a>
         </>}
       </div>
-      {locale !== 'de' && (
-        <div class="footer-col">
-          <span class="footer-label">{ui.en.app}</span>
-          <a href="/#get">{ui.en.comingSoon}</a>
-          <a href="/#hero">{ui.en.listen}</a>
-          <a href="mailto:contact@finnvek.com">{ui.en.contact}</a>
-        </div>
-      )}
+      <div class="footer-col">
+        <span class="footer-label">{copy.footerFinnvek}</span>
+        <a href="https://finnvek.com/about/">{copy.aboutMaker}</a>
+        <a href="https://finnvek.com/#apps">{copy.otherApps}</a>
+        <a href="mailto:contact@finnvek.com">{copy.contact}</a>
+      </div>
     </div>
     <div class="footer-meta">
-      <span class="footer-copyright"><span>© {new Date().getFullYear()} dBcheck</span><a href="https://finnvek.com">Finnvek</a></span>
+      <span>© {new Date().getFullYear()} dBcheck</span>
       <span>{copy.disclaimer.split('\n').map((line, index) => <Fragment>{index > 0 && <br />}{line}</Fragment>)}</span>
     </div>
   </footer>
@@ -873,7 +871,6 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px;
       padding: 48px 20px 32px;
     }
-    .footer-inner--localized { grid-template-columns: 2fr 1fr; }
     .footer-brand p { color: var(--secondary); font-size: 14px; margin: 12px 0 0; max-width: 320px; }
     .footer-col { display: grid; gap: 10px; align-content: start; }
     .footer-label { font-family: var(--font-data); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-text); }
@@ -885,9 +882,6 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
       padding: 0 20px 32px;
       color: var(--muted-text); font-size: 12px;
     }
-    .footer-meta a { color: inherit; text-underline-offset: 3px; }
-    .footer-meta a:hover { color: var(--secondary); }
-    .footer-copyright { display: grid; gap: 2px; }
     @media (max-width: 900px) {
       .nav { position: relative; gap: 12px; }
       .menu-btn {
