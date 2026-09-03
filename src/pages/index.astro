@@ -1027,16 +1027,25 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     .plan-price-note { margin: 2px 0 0; color: var(--secondary); font-size: 12px; line-height: 1.4; }
     .plan ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
     .plan li {
-      position: relative; padding-left: 26px;
+      position: relative; padding-left: 30px;
       color: var(--on-surface-v); font-size: 15px;
     }
     .plan li::before {
-      content: ''; position: absolute; left: 0; top: 9px;
-      width: 14px; height: 2px; background: var(--secondary); border-radius: 1px;
+      content: ''; position: absolute; left: 0; top: 2px;
+      width: 18px; height: 18px;
+      border: 1px solid var(--secondary); border-radius: 50%;
+    }
+    .plan li::after {
+      content: ''; position: absolute; left: 6px; top: 6px;
+      width: 5px; height: 8px;
+      border-right: 1.5px solid var(--secondary);
+      border-bottom: 1.5px solid var(--secondary);
+      transform: rotate(45deg);
     }
     .plan-pro :is(.plan-cur, .plan-sub, .plan-price-note) { color: var(--surface-chh); }
     .plan-pro li { color: var(--surface-c); }
-    .plan-pro li::before { background: var(--bg); }
+    .plan-pro li::before,
+    .plan-pro li::after { border-color: var(--bg); }
     .plan-pro .btn-primary { background: var(--bg); color: var(--primary); }
     .plan-pro .plan-btn:focus-visible { outline-color: var(--bg); }
     .plan-btn { justify-self: start; }
