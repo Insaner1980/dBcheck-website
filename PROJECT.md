@@ -129,18 +129,18 @@ Alla ovat `package-lock.json`-tiedoston ratkaistut versiot. `package.json` salli
 
 | Paketti | Lockfile-versio | Käyttö |
 | --- | --- | --- |
-| `astro` | 7.1.6 | Staattinen sivusto, reitit, komponentit ja build. |
-| `@astrojs/markdown-remark` | 7.2.2 | Markdown-prosessori; myös testien frontmatter-luenta. |
-| `@astrojs/sitemap` | 3.7.3 | Sitemap ja rekisteröityjen kieliparien linkit. |
+| `astro` | 7.3.5 | Staattinen sivusto, reitit, komponentit ja build. |
+| `@astrojs/markdown-remark` | 7.3.1 | Markdown-prosessori; myös testien frontmatter-luenta. |
+| `@astrojs/sitemap` | 3.7.4 | Sitemap ja rekisteröityjen kieliparien linkit. |
 | `animejs` | 4.5.0 | Hero-mittari, kisko, CTA-aalto ja scramble-moottori. |
 | `katex` | 0.17.0 | Kaavojen generoitu esitys ja fontti-/CSS-resurssit. |
 | `rehype-katex` | 7.0.1 | Matematiikkasolmujen renderöinti buildissa. |
 | `remark-math` | 6.0.0 | Matematiikan tunnistus Markdownissa. |
 | `@astrojs/check` | 0.9.10 | Erillinen Astro-/TypeScript-tarkistus. |
 | `typescript` | 6.0.3 | Tyyppitarkistus. |
-| `prettier` | 3.9.6 | Muotoilutyökalu. |
+| `prettier` | 3.9.9 | Muotoilutyökalu. |
 | `prettier-plugin-astro` | 0.14.1 | Astro-tiedostojen Prettier-parseri. |
-| `wrangler` | 4.125.0 | Cloudflare-kehitys- ja julkaisutyökalu. |
+| `wrangler` | 4.142.0 | Cloudflare-kehitys- ja julkaisutyökalu. |
 
 Paketti on `dbcheck-website`, versio `0.1.0`, `type: module`, `private: true`. Tämä npm-versio ei ole Android-sovelluksen release-versio.
 
