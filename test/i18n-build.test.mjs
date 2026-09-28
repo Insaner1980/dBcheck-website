@@ -271,7 +271,7 @@ test('German HTML uses de, localized navigation and footer links, reciprocal alt
     assert.match(html, /<a href="mailto:contact@finnvek\.com">Kontakt<\/a>/, path);
     assert.doesNotMatch(html, /<span class="footer-label">Kontakt<\/span>|>contact@finnvek\.com</, path);
     assert.match(html, /<span class="footer-label">Finnvek<\/span>/, path);
-    assert.match(html, /<a href="https:\/\/finnvek\.com\/about\/">Über die Entwicklerin<\/a>/, path);
+    assert.match(html, /<a href="https:\/\/finnvek\.com">Über die Entwicklerin<\/a>/, path);
     assert.match(html, /<a href="https:\/\/finnvek\.com\/#apps">Weitere Apps<\/a>/, path);
   }
   const articleEn = readFileSync(join(dist, 'articles', 'what-is-a-decibel', 'index.html'), 'utf8');
@@ -281,7 +281,7 @@ test('German HTML uses de, localized navigation and footer links, reciprocal alt
   assert.doesNotMatch(englishFooter, /Sound Library|href="\/sounds\//);
   assert.doesNotMatch(englishFooter, /Coming soon to Google Play|Listen to the page/);
   assert.match(englishFooter, /<span class="footer-label">Finnvek<\/span>/);
-  assert.match(englishFooter, /<a href="https:\/\/finnvek\.com\/about\/">About the maker<\/a>/);
+  assert.match(englishFooter, /<a href="https:\/\/finnvek\.com">About the maker<\/a>/);
   assert.match(englishFooter, /<a href="https:\/\/finnvek\.com\/#apps">Other apps<\/a>/);
   const articleDe = readFileSync(join(dist, 'de', 'artikel', 'was-ist-ein-dezibel', 'index.html'), 'utf8');
   assert.match(articleDe, /<a class="wordmark" href="\/"/);
