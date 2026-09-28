@@ -144,7 +144,7 @@ Alla ovat `package-lock.json`-tiedoston ratkaistut versiot. `package.json` salli
 
 Paketti on `dbcheck-website`, versio `0.1.0`, `type: module`, `private: true`. Tämä npm-versio ei ole Android-sovelluksen release-versio.
 
-Juuripaketin `engines` vaatii Node-version `>=22.12.0`. Tämän tarkistuksen paikallinen ympäristö: Node `24.19.0`, npm `11.17.0`.
+Juuripaketin `engines` vaatii Node-version `>=22.19.0`. Tämän tarkistuksen paikallinen ympäristö: Node `24.19.0`, npm `11.17.0`.
 
 Ei Reactia, Vuea, Tailwindia, raskasta frontend-kehystä tai erillistä asiakaspuolen tilakirjastoa. KaTeX suoritetaan sisällön build-putkessa; artikkelin matematiikka ei vaadi selaimessa ajettavaa KaTeX-renderöijää. `parse5` on testien suora dev-riippuvuus.
 
