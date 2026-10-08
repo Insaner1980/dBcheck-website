@@ -140,7 +140,7 @@ Alla ovat `package-lock.json`-tiedoston ratkaistut versiot. `package.json` salli
 | `typescript` | 6.0.3 | Tyyppitarkistus. |
 | `prettier` | 3.9.9 | Muotoilutyökalu. |
 | `prettier-plugin-astro` | 0.14.1 | Astro-tiedostojen Prettier-parseri. |
-| `wrangler` | 4.142.0 | Cloudflare-kehitys- ja julkaisutyökalu. |
+| `wrangler` | 4.147.0 | Cloudflare-kehitys- ja julkaisutyökalu. |
 
 Paketti on `dbcheck-website`, versio `0.1.0`, `type: module`, `private: true`. Tämä npm-versio ei ole Android-sovelluksen release-versio.
 
