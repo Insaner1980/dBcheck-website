@@ -17,6 +17,7 @@ const soundIndexPage = readFileSync(join(root, 'src', 'components', 'SoundIndexP
 const editorialPage = readFileSync(join(root, 'src', 'components', 'EditorialPage.astro'), 'utf8');
 const exposureCalculator = readFileSync(join(root, 'src', 'components', 'ExposureCalculator.astro'), 'utf8');
 const exposureRail = readFileSync(join(root, 'src', 'components', 'ExposureRail.astro'), 'utf8');
+const exposureRailMotion = readFileSync(join(root, 'src', 'scripts', 'exposure-rail.ts'), 'utf8');
 const homepage = readFileSync(join(root, 'src', 'pages', 'index.astro'), 'utf8');
 const motion = readFileSync(join(root, 'src', 'scripts', 'motion.ts'), 'utf8');
 const uiSource = readFileSync(join(root, 'src', 'i18n', 'ui.ts'), 'utf8');
@@ -83,7 +84,9 @@ test('source contract handles runtime reduced-motion changes by finishing option
   assert.match(homepage, /const reducedMotionQuery = matchMedia\('\(prefers-reduced-motion: reduce\)'\)/);
   assert.match(homepage, /reducedMotionQuery\.addEventListener\('change', \(\{ matches \}\) => \{[\s\S]*if \(!matches\) return;[\s\S]*if \(booting\) setListening\(false\);[\s\S]*ctaObserver\?\.disconnect\(\);[\s\S]*ctaTimeline\?\.complete\(\);[\s\S]*settleCta\(\)/);
   assert.match(homepage, /if \(reducedMotionQuery\.matches\) \{\s*settleCta\(\);\s*return;/);
-  assert.match(exposureRail, /reducedMotionQuery\.addEventListener\('change', \(\{ matches \}\) => matches \? stop\(\) : start\(\)\)/);
+  assert.match(exposureRail, /const hiddenQuery = matchMedia\('\(max-width: 900px\), \(prefers-reduced-motion: reduce\)'\)/);
+  assert.match(exposureRail, /hiddenQuery\.addEventListener\('change', \(\) => void sync\(\)\)/);
+  assert.match(exposureRail, /if \(hiddenQuery\.matches\) \{\s*stop\?\.\(\);\s*stop = undefined;\s*return;/);
   assert.match(motion, /reducedMotionQuery\.addEventListener\('change',[\s\S]*for \(const \[element, active\] of activeScrambles\) finishScramble\(element, active\)/);
 });
 
@@ -103,12 +106,13 @@ test('editorial inline code wraps long tokens without becoming a nested scroller
 });
 
 test('ExposureRail source uses guarded direct scroll sync and tears down runtime motion', () => {
-  assert.match(exposureRail, /sync:\s*1,/);
-  assert.match(exposureRail, /import \{ pauseAnimeScrollDataTimer \} from '\.\.\/scripts\/anime-scroll-timer'/);
-  assert.match(exposureRail, /onUpdate:\s*\(observer\)\s*=>\s*pauseAnimeScrollDataTimer\(observer\.container\)/);
-  assert.doesNotMatch(exposureRail, /observer\.container\.dataTimer\.pause\(\)/);
-  assert.match(exposureRail, /const stop = \(\) => \{\s*railAnimation\?\.revert\(\);[\s\S]*railObserver\?\.revert\(\);[\s\S]*reading\.db = 0;\s*render\(\);/);
-  assert.match(exposureRail, /const start = \(\) => \{\s*if \(reducedMotionQuery\.matches \|\| railObserver\) return;/);
+  assert.match(exposureRailMotion, /sync:\s*1,/);
+  assert.match(exposureRailMotion, /import \{ pauseAnimeScrollDataTimer \} from '\.\/anime-scroll-timer'/);
+  assert.match(exposureRailMotion, /onUpdate:\s*\(observer\)\s*=>\s*pauseAnimeScrollDataTimer\(observer\.container\)/);
+  assert.doesNotMatch(exposureRailMotion, /observer\.container\.dataTimer\.pause\(\)/);
+  assert.match(exposureRailMotion, /return \(\) => \{\s*animation\.revert\(\);\s*observer\.revert\(\);\s*reading\.db = 0;\s*render\(\);/);
+  assert.match(exposureRail, /await import\('\.\.\/scripts\/exposure-rail'\)/);
+  assert.match(exposureRail, /if \(!hiddenQuery\.matches && !stop\) stop = startExposureRail\(rail, section, valueElement\)/);
 });
 
 test('source contract keeps the final scramble value in the accessibility tree', () => {

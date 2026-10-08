@@ -89,59 +89,27 @@ const limitAt = scalePercent(EXPOSURE_LIMIT_DB);
 </style>
 
 <script>
-  import { animate, onScroll } from 'animejs';
-  import { DISPLAY_MAX_DB, levelForDb, scalePercent } from '../lib/display-scale';
-  import { pauseAnimeScrollDataTimer } from '../scripts/anime-scroll-timer';
-
   const rail = document.querySelector<HTMLElement>('[data-exposure-rail]');
   const section = rail?.closest<HTMLElement>('[data-exposure-rail-section]');
   const valueElement = rail?.querySelector<HTMLElement>('[data-rail-value]');
 
   if (rail && section && valueElement) {
-    const reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
-    const reading = { db: 0 };
-    let level = '';
-    let railObserver: ReturnType<typeof onScroll> | null = null;
-    let railAnimation: ReturnType<typeof animate> | null = null;
+    // Match the CSS visibility rule before loading or starting scroll tracking.
+    const hiddenQuery = matchMedia('(max-width: 900px), (prefers-reduced-motion: reduce)');
+    let stop: (() => void) | undefined;
 
-    const render = () => {
-      rail.style.setProperty('--rail-progress', `${scalePercent(reading.db)}%`);
-      valueElement.textContent = String(Math.round(reading.db));
-      const nextLevel = levelForDb(reading.db);
-      if (nextLevel === level) return;
-      rail.dataset.level = nextLevel;
-      level = nextLevel;
+    const sync = async () => {
+      if (hiddenQuery.matches) {
+        stop?.();
+        stop = undefined;
+        return;
+      }
+      const { startExposureRail } = await import('../scripts/exposure-rail');
+      // The viewport or motion preference may change while the module loads.
+      if (!hiddenQuery.matches && !stop) stop = startExposureRail(rail, section, valueElement);
     };
 
-    const stop = () => {
-      railAnimation?.revert();
-      railAnimation = null;
-      railObserver?.revert();
-      railObserver = null;
-      reading.db = 0;
-      render();
-    };
-
-    const start = () => {
-      if (reducedMotionQuery.matches || railObserver) return;
-      railObserver = onScroll({
-        target: section,
-        enter: 'bottom top',
-        leave: 'top bottom',
-        sync: 1,
-        // The rail never reads velocity; stop anime.js's unbounded velocity timer after each update.
-        onUpdate: (observer) => pauseAnimeScrollDataTimer(observer.container),
-      });
-      railAnimation = animate(reading, {
-        db: DISPLAY_MAX_DB,
-        ease: 'linear',
-        onUpdate: render,
-        autoplay: railObserver,
-      });
-    };
-
-    render();
-    if (!reducedMotionQuery.matches) start();
-    reducedMotionQuery.addEventListener('change', ({ matches }) => matches ? stop() : start());
+    void sync();
+    hiddenQuery.addEventListener('change', () => void sync());
   }
 </script>

@@ -6,3 +6,10 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+
+# The filenames are stable, so revalidate after one day rather than caching immutably.
+/dBcheck-hero-mobile.mp4
+  Cache-Control: public, max-age=86400
+
+/dBcheck-hero-desktop.mp4
+  Cache-Control: public, max-age=86400

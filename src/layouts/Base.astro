@@ -55,6 +55,7 @@ const serializeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value
   <meta name="description" content={description} />
   <meta name="generator" content={Astro.generator} />
   <meta name="theme-color" content="#080808" />
+  <slot name="head" />
   {errorDocument && <meta name="robots" content="noindex" />}
   {!errorDocument && <link rel="canonical" href={canonical} />}
   {alternates.map((alternate) => <link rel="alternate" hreflang={localeTags[alternate.locale]} href={new URL(alternate.href, Astro.site)} />)}

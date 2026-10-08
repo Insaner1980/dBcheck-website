@@ -126,6 +126,7 @@ const proPlan = [
 
 const proPriceParts = splitPriceDisplay(DEFAULT_PRO_PRICE);
 const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
+const heroPoster = '/images/hero-poster.webp';
 ---
 <Base
   title="dBcheck: sound information, tools and an Android sound meter"
@@ -139,6 +140,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
     description: 'dBcheck is an Android sound awareness app with educational sound tools.',
   }]}
 >
+  <link slot="head" rel="preload" as="image" href={heroPoster} fetchpriority="high" crossorigin="anonymous" />
   <!-- ============ HERO ============ -->
   <section class="hero" id="hero">
     <div class="hero-media" aria-hidden="true">
@@ -148,7 +150,7 @@ const freePriceParts = splitPriceDisplay(getFreePriceForCountry(undefined));
         loop
         playsinline
         preload="none"
-        poster="/images/hero-poster.webp"
+        poster={heroPoster}
         data-mobile-src="/dBcheck-hero-mobile.mp4"
         data-desktop-src="/dBcheck-hero-desktop.mp4"
         width="1920"
