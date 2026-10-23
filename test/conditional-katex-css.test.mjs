@@ -66,6 +66,7 @@ const inspectHtml = (path) => {
     headStylesheets: [],
     schemas: [],
     robots: [],
+    csp: [],
   };
   let inHead = false;
   const visit = (node) => {
@@ -74,6 +75,7 @@ const inspectHtml = (path) => {
     if (node.nodeName === 'title') result.title = textContent(node);
     if (node.nodeName === 'meta' && attrs.name === 'description') result.description = attrs.content ?? '';
     if (node.nodeName === 'meta' && attrs.name === 'robots') result.robots.push(attrs.content ?? '');
+    if (node.nodeName === 'meta' && attrs['http-equiv'] === 'content-security-policy') result.csp.push(attrs.content ?? '');
     if (node.nodeName === 'link' && (attrs.rel ?? '').split(/\s+/).includes('canonical')) result.canonical.push(attrs.href);
     if (node.nodeName === 'link' && (attrs.rel ?? '').split(/\s+/).includes('alternate') && attrs.hreflang) {
       result.alternates.push({ locale: attrs.hreflang, href: attrs.href });
@@ -267,8 +269,17 @@ test('editorial routes load KaTeX CSS exactly when generated math is present', (
   const csp = headers.match(/^\s*Content-Security-Policy:\s*(.+)$/m)?.[1]?.trim();
   assert.equal(
     csp,
-    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self'; media-src 'self'; connect-src 'self'; worker-src 'self'; upgrade-insecure-requests",
+    "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests",
   );
+  for (const { route } of entries) {
+    const inspected = inspectedOutputs.get(route);
+    assert.equal(inspected.csp.length, 1, `${route}: resource CSP`);
+    assert.match(inspected.csp[0], /(?:^|;)\s*font-src 'self' https:\/\/fonts\.gstatic\.com(?:;|$)/, route);
+    assert.match(inspected.csp[0], /(?:^|;)\s*style-src [^;]*https:\/\/fonts\.googleapis\.com(?:;|$)/, route);
+    const scriptSource = inspected.csp[0].match(/(?:^|;)\s*script-src\s+([^;]+)/)?.[1];
+    assert.ok(scriptSource, `${route}: script-src`);
+    assert.doesNotMatch(scriptSource, /'unsafe-inline'|'unsafe-eval'/, route);
+  }
 });
 
 test('conditional stylesheet loading preserves current route and editorial metadata contracts', () => {

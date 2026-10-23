@@ -9,7 +9,6 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 await assertFreshBuild({ root });
 const dist = join(root, 'dist');
 const assetDirectory = join(dist, '_astro');
-const headersPath = join(root, 'public', '_headers');
 const size3SourcePath = join(root, 'node_modules', 'katex', 'dist', 'fonts', 'KaTeX_Size3-Regular.woff2');
 const germanMathRoutes = [
   'db-und-dba-unterschied',
@@ -67,16 +66,16 @@ test('fresh dist emits same-origin KaTeX fonts allowed by the checked-in CSP', (
   assert.equal(size3Assets.length, 1, 'expected one emitted KaTeX_Size3 WOFF2 asset');
   assert.ok(readFileSync(size3Assets[0].outputPath).equals(readFileSync(size3SourcePath)));
 
-  const headers = readFileSync(headersPath, 'utf8');
-  const fontSource = headers.match(/font-src\s+([^;]+)/)?.[1];
-  assert.equal(fontSource, "'self' https://fonts.gstatic.com");
-  assert.doesNotMatch(fontSource, /(?:^|\s)data:/i);
-
   let katex = 0;
   let mathml = 0;
   let annotations = 0;
   for (const slug of germanMathRoutes) {
     const html = readFileSync(join(dist, 'de', 'artikel', slug, 'index.html'), 'utf8');
+    const csp = html.match(/<meta http-equiv="content-security-policy" content="([^"]+)"/)?.[1];
+    assert.ok(csp, `${slug}: generated resource CSP is missing`);
+    const fontSource = csp.match(/font-src\s+([^;]+)/)?.[1];
+    assert.equal(fontSource, "'self' https://fonts.gstatic.com", slug);
+    assert.doesNotMatch(fontSource, /(?:^|\s)data:/i);
     katex += (html.match(/class="katex"/g) ?? []).length;
     mathml += (html.match(/<math(?:\s|>)/g) ?? []).length;
     annotations += (html.match(/encoding="application\/x-tex"/g) ?? []).length;

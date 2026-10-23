@@ -520,7 +520,7 @@ export async function runInteractionChecks(adapter) {
   const initialReducedRail = await adapter.evaluate(() => ({
     display: getComputedStyle(document.querySelector('[data-exposure-rail]')).display,
     value: document.querySelector('[data-rail-value]')?.textContent,
-    progress: document.querySelector('[data-exposure-rail]')?.style.getPropertyValue('--rail-progress'),
+    progress: getComputedStyle(document.querySelector('[data-exposure-rail]')).getPropertyValue('--rail-progress').trim(),
   }));
   assert.equal(initialReducedRail.display, 'none');
   assert.equal(initialReducedRail.value, '0');
