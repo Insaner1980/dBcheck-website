@@ -168,6 +168,7 @@ export default defineConfig({
     routing: { prefixDefaultLocale: false },
   },
   markdown: {
+    syntaxHighlight: false,
     processor: unified({
       remarkPlugins: [remarkValidateLocalImages, remarkEditorialSafety, remarkMath, remarkMathPresence],
       rehypePlugins: [rehypeKatex, rehypeKatexErrors, rehypeRawUrls],
