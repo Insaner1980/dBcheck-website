@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { parse } from "parse5";
 
@@ -68,3 +71,19 @@ if (existsSync("scripts/inline-script-csp.mjs")) {
     assert.match(hashInlineScripts(redirect), /default-src 'none'; script-src 'none'/);
   });
 }
+
+test("build hook finishes sibling writes before reporting an invalid page", async (t) => {
+  const { default: inlineScriptCsp, hashInlineScripts } = await import("./inline-script-csp.mjs");
+  const root = await mkdtemp(join(tmpdir(), "dbcheck-csp-test-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const valid = '<head><meta http-equiv="content-security-policy" content="script-src \'self\'"></head><body><script data-csp-hash>window.example = true;</script></body>';
+  await Promise.all([
+    writeFile(join(root, "valid.html"), valid),
+    writeFile(join(root, "invalid.html"), "<html><head></head><body>Missing CSP</body></html>"),
+    writeFile(join(root, "keep.txt"), "unchanged"),
+  ]);
+  const buildDone = inlineScriptCsp().hooks["astro:build:done"];
+  await assert.rejects(buildDone({ dir: pathToFileURL(root) }), /Pages require Astro security.csp/);
+  assert.equal(await readFile(join(root, "valid.html"), "utf8"), hashInlineScripts(valid));
+  assert.equal(await readFile(join(root, "keep.txt"), "utf8"), "unchanged");
+});
