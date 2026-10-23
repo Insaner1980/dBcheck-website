@@ -1,5 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import inlineScriptCsp from './scripts/inline-script-csp.mjs';
 import { existsSync, renameSync, rmdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import sitemap from '@astrojs/sitemap';
@@ -129,7 +130,20 @@ const rehypeKatexErrors = () => (tree, file) => {
 // https://astro.build/config
 export default defineConfig({
   site: siteUrl,
-  integrations: [emitLocalizedErrorDocuments(), sitemap({
+  security: {
+    csp: {
+      directives: [
+        "default-src 'self'",
+        "connect-src 'self' https://cloudflareinsights.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "frame-src 'none'",
+        "object-src 'none'",
+      ],
+      scriptDirective: { resources: ["'self'", 'https://static.cloudflareinsights.com'] },
+      styleDirective: { resources: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'] },
+    },
+  },
+  integrations: [emitLocalizedErrorDocuments(), inlineScriptCsp(), sitemap({
     i18n: {
       defaultLocale,
       locales: Object.fromEntries(locales.map((locale) => [locale, locale])),

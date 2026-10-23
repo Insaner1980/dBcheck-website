@@ -15,6 +15,7 @@ const buildInputPaths = [
   'public',
   'scripts/build-freshness.mjs',
   'scripts/build.mjs',
+  'scripts/inline-script-csp.mjs',
   'src',
   'tsconfig.json',
 ];

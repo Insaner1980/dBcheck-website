@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22.19.0"
+    "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
   },
   "scripts": {
     "dev": "astro dev",
@@ -21,18 +21,21 @@
     "@astrojs/markdown-remark": "7.3.1",
     "@astrojs/sitemap": "3.7.4",
     "animejs": "^4.5.0",
-    "astro": "^7.3.5",
-    "katex": "0.17.0",
+    "astro": "^7.4.2",
+    "katex": "0.19.0",
     "rehype-katex": "7.0.1",
     "remark-math": "6.0.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "parse5": "7.3.0",
+    "parse5": "8.0.1",
     "prettier": "^3.9.9",
     "prettier-plugin-astro": "^0.14.1",
     "typescript": "^6.0.3",
-    "wrangler": "^4.147.0"
+    "wrangler": "^4.152.0"
+  },
+  "overrides": {
+    "katex": "$katex"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
